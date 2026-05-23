@@ -4,13 +4,12 @@
  * Comprehensive component showcase dashboard organized by tabs.
  *
  * Tabs:
- *   Basic       — Simple Box layout with row/column containers
- *   Responsive  — Flex grow/shrink layout adapting to space
+ *   Layout      — Flex grow/shrink layout adapting to space
  *   Resizable   — Mouse-draggable Splitter panels
  *   Shortcuts   — Direct-access key bindings
  *   Text        — TextInput and Autocomplete (dropdown + inline)
  *   UI          — Checkbox toggles and ListBox selection
- *   Animation   — ProgressBar with real-time updates
+ *   Animation   — Spinners, metric bars, countdown
  *
  * Controls:
  *   Tab / Shift+Tab      — cycle focus
@@ -34,6 +33,7 @@ import {
   ProgressBar,
   Autocomplete,
   Tabs,
+  RadioGroup,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -48,6 +48,7 @@ let chkOptionA = false;
 let chkOptionB = true;
 let chkOptionC = false;
 let selectedProfile = "Profile Alpha";
+let selectedOption = "option_a";
 let progressValue = 0.35;
 let shortcutTarget = "";
 
@@ -498,6 +499,24 @@ const profileList = new ListBox(profiles, (item) => {
 profileList.selectedIndex = 0;
 profileList.height = { fixed: 6 };
 
+const radioLabel = new Box("radio-label");
+radioLabel.style.fg = defaultTheme.highlight;
+radioLabel.height = { fixed: 1 };
+radioLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "RadioGroup:", 0, theme.highlight);
+};
+
+const radioGroup = new RadioGroup(
+  "options",
+  [
+    { label: "Option Alpha", value: "option_a" },
+    { label: "Option Beta", value: "option_b" },
+    { label: "Option Gamma", value: "option_c" },
+  ],
+  selectedOption,
+  (val) => { selectedOption = val; },
+);
+
 const uiStatus = new Box("ui-status");
 uiStatus.height = { fixed: 1 };
 uiStatus.style.bg = defaultTheme.bg;
@@ -506,56 +525,193 @@ uiStatus.onPaint = (_buf, rect, theme) => {
     `A:${chkOptionA ? "✓" : "✗"}`,
     `B:${chkOptionB ? "✓" : "✗"}`,
     `C:${chkOptionC ? "✓" : "✗"}`,
+    `Radio: ${selectedOption.replace("option_", "")}`,
     `Profile: ${selectedProfile}`,
   ];
   paintText(_buf, rect, `  ${parts.join("  │  ")}`, 0, theme.muted);
 };
 
-uiTab.add(chkLabel, chk1, chk2, chk3, listLabel, profileList, uiStatus);
+uiTab.add(chkLabel, chk1, chk2, chk3, radioLabel, radioGroup, listLabel, profileList, uiStatus);
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB: Animation (ProgressBar)
+// TAB: Animation Dashboard
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const progressBtn = new Button("Advance Progress", () => {
-  progressValue += 0.10;
-  if (progressValue > 1.05) progressValue = 0.0;
-});
+// ─── State ────────────────────────────────────────────────────────────────────
 
-const autoProgressBtn = new Button("Auto-Animate (toggle)", () => {
-  isAutoAnimating = !isAutoAnimating;
-});
-let isAutoAnimating = false;
+let animEnabled = true;
+const SPINNER_SETS = [
+  ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  ["─", "╲", "│", "╱"],
+  ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙"],
+  ["⣀", "⣄", "⣤", "⣦", "⣶", "⣷", "⣿", "⣾", "⣴"],
+];
+let spinnerTicks = [0, 0, 0, 0];
 
-const pBar = new ProgressBar("Progress", progressValue);
+let cpuVal = 0.67, memVal = 0.45, dskVal = 0.92, netVal = 0.18;
+let countdownSec = 300;
 
-const animTab = Box.col("Animation");
-animTab.style.gutter = 1;
-animTab.style.bg = defaultTheme.bg;
-animTab.onPaint = (_buf, rect, theme) => {
+// ─── Spinner Widget ──────────────────────────────────────────────────────────
+
+class SpinnerBox extends Box {
+  private _frames: string[];
+  private _idx: number;
+  constructor(label: string, frames: string[], idx: number) {
+    super(label);
+    this._frames = frames;
+    this._idx = idx;
+    this.height = { fixed: 1 };
+    this.onPaint = (buf, rect, theme) => {
+      const ch = this._frames[spinnerTicks[this._idx] % this._frames.length];
+      const text = ` ${ch}  ${label}`;
+      for (let i = 0; i < text.length && i < rect.width; i++) {
+        buf.set(rect.x + i, rect.y, {
+          char: text[i],
+          fg: theme.highlight,
+          bg: defaultTheme.panelBg,
+        });
+      }
+    };
+  }
+}
+
+// ─── Metric Bar ──────────────────────────────────────────────────────────────
+
+function makeMetricBar(
+  label: string,
+  color: { r: number; g: number; b: number },
+  getVal: () => number,
+): Box {
+  const row = Box.row(`${label}-row`);
+  row.height = { fixed: 1 };
+  row.style.gutter = 1;
+
+  const lbl = new Box(`${label}-lbl`);
+  lbl.width = { fixed: 5 };
+  lbl.onPaint = (buf, rect, _t) => {
+    paintText(buf, rect, ` ${label} `, 0, defaultTheme.text);
+  };
+
+  const bar = new Box(`${label}-bar`);
+  bar.onPaint = (buf, rect, theme) => {
+    const val = getVal();
+    const filled = Math.floor(val * rect.width);
+    for (let i = 0; i < rect.width; i++) {
+      const ch = i < filled ? "█" : "░";
+      const fg = i < filled ? color : theme.muted;
+      buf.set(rect.x + i, rect.y, { char: ch, fg, bg: defaultTheme.panelBg });
+    }
+  };
+
+  const pct = new Box(`${label}-pct`);
+  pct.width = { fixed: 5 };
+  pct.onPaint = (buf, rect, theme) => {
+    const val = getVal();
+    const s = `${(val * 100).toFixed(0).padStart(3)}%`;
+    paintText(buf, rect, s, 0, theme.highlight, true);
+  };
+
+  row.add(lbl, bar, pct);
+  return row;
+}
+
+// ─── Build Animation Tab ─────────────────────────────────────────────────────
+
+const animLabel = new Box("anim-label");
+animLabel.height = { fixed: 1 };
+animLabel.style.bg = defaultTheme.bg;
+animLabel.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
-    { x: rect.x, y: rect.y, width: rect.width, height: 1 },
-    "ProgressBar with real-time updates — click or auto-animate",
+    rect,
+    "✦  Animation Dashboard  —  real-time metrics",
     theme.muted,
     theme.bg,
   );
 };
 
-const btnRow = Box.row("btn-row");
-btnRow.style.gutter = 2;
-btnRow.add(progressBtn, autoProgressBtn);
+// ── Spinners ──
+const spinnerBox = Box.col("spinner-col");
+spinnerBox.style.border = "single";
+spinnerBox.style.gutter = 1;
+spinnerBox.style.padding = edgesAll(1);
 
-const animStatus = new Box("anim-status");
-animStatus.height = { fixed: 1 };
-animStatus.style.bg = defaultTheme.bg;
-animStatus.onPaint = (_buf, rect, theme) => {
-  const pct = (progressValue * 100).toFixed(0);
-  const mode = isAutoAnimating ? "AUTO ●" : "manual";
-  paintText(_buf, rect, `  Progress: ${pct}%  [${mode}]`, 0, theme.muted);
+const spinnerHeader = new Box("spinner-hdr");
+spinnerHeader.height = { fixed: 1 };
+spinnerHeader.onPaint = (buf, rect, theme) => {
+  paintText(buf, rect, " Spinners", 0, theme.muted);
 };
 
-animTab.add(btnRow, pBar, animStatus);
+const spinnerRow = Box.row("spinner-row");
+spinnerRow.style.gutter = 3;
+spinnerRow.add(
+  new SpinnerBox("Loading", SPINNER_SETS[0], 0),
+  new SpinnerBox("Processing", SPINNER_SETS[1], 1),
+  new SpinnerBox("Syncing", SPINNER_SETS[2], 2),
+  new SpinnerBox("Saving", SPINNER_SETS[3], 3),
+);
+spinnerBox.add(spinnerHeader, spinnerRow);
+
+// ── Metrics ──
+const metricsBox = Box.col("metrics-col");
+metricsBox.style.border = "single";
+metricsBox.style.gutter = 1;
+metricsBox.style.padding = edgesAll(1);
+
+const metricsHeader = new Box("metrics-hdr");
+metricsHeader.height = { fixed: 1 };
+metricsHeader.onPaint = (buf, rect, theme) => {
+  paintText(buf, rect, " System Metrics", 0, theme.muted);
+};
+
+const cpuBar = makeMetricBar("CPU", { r: 100, g: 180, b: 255 }, () => cpuVal);
+const memBar = makeMetricBar("MEM", { r: 100, g: 220, b: 140 }, () => memVal);
+const dskBar = makeMetricBar("DSK", { r: 255, g: 200, b: 100 }, () => dskVal);
+const netBar = makeMetricBar("NET", { r: 255, g: 130, b: 130 }, () => netVal);
+metricsBox.add(metricsHeader, cpuBar, memBar, dskBar, netBar);
+
+// ── Countdown ──
+const countdownBox = Box.col("countdown-col");
+countdownBox.style.border = "single";
+countdownBox.style.gutter = 0;
+countdownBox.style.padding = edgesAll(1);
+countdownBox.height = { fixed: 6 };
+
+const cdHeader = new Box("cd-hdr");
+cdHeader.height = { fixed: 1 };
+cdHeader.onPaint = (buf, rect, theme) => {
+  paintText(buf, rect, " Countdown", 0, theme.muted);
+};
+
+const cdDisplay = new Box("cd-display");
+cdDisplay.onPaint = (buf, rect, theme) => {
+  const m = Math.floor(countdownSec / 60);
+  const s = countdownSec % 60;
+  const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  paintCenteredText(buf, rect, timeStr, theme.highlight, null, true);
+};
+countdownBox.add(cdHeader, cdDisplay);
+
+// ── Controls ──
+const animBtnRow = Box.row("anim-btns");
+animBtnRow.style.gutter = 2;
+const autoAnimBtn = new Button("Auto-Animate (toggle)", () => {
+  animEnabled = !animEnabled;
+});
+const resetBtn = new Button("Reset All", () => {
+  cpuVal = 0.67;
+  memVal = 0.45;
+  dskVal = 0.92;
+  netVal = 0.18;
+  countdownSec = 300;
+});
+animBtnRow.add(autoAnimBtn, resetBtn);
+
+// ── Assemble Tab ──
+const animTab = Box.col("Animation");
+animTab.style.gutter = 1;
+animTab.style.bg = defaultTheme.bg;
+animTab.add(animLabel, spinnerBox, metricsBox, countdownBox, animBtnRow);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tabs Container
@@ -563,8 +719,7 @@ animTab.add(btnRow, pBar, animStatus);
 
 const tabs = new Tabs(
   [
-    { label: "Basic", content: basicTab },
-    { label: "Responsive", content: responsiveTab },
+    { label: "Layout", content: responsiveTab },
     { label: "Resizable", content: resizableContent },
     { label: "Shortcuts", content: shortcutTab },
     { label: "Text", content: textTab },
@@ -614,11 +769,17 @@ for (const [key, box] of appShortcuts) {
 
 // Auto-animate timer
 setInterval(() => {
-  if (isAutoAnimating) {
-    progressValue += 0.02;
-    if (progressValue > 1.0) progressValue = 0.0;
-  }
-  pBar.progress = progressValue;
-}, 80);
+  if (!animEnabled) return;
+  for (let i = 0; i < spinnerTicks.length; i++) spinnerTicks[i]++;
+  cpuVal += (Math.random() - 0.5) * 0.04;
+  cpuVal = Math.max(0.1, Math.min(0.95, cpuVal));
+  memVal += (Math.random() - 0.5) * 0.03;
+  memVal = Math.max(0.1, Math.min(0.95, memVal));
+  dskVal += (Math.random() - 0.5) * 0.02;
+  dskVal = Math.max(0.1, Math.min(0.95, dskVal));
+  netVal += (Math.random() - 0.5) * 0.06;
+  netVal = Math.max(0.05, Math.min(0.95, netVal));
+  if (countdownSec > 0) countdownSec--;
+}, 120);
 
 await app.run();

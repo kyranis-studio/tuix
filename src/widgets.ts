@@ -110,6 +110,7 @@ export class Checkbox extends Box {
 export class TextInput extends Box {
   value = "";
   placeholder = "";
+  cursorPos = 0;
   onChange: ((val: string) => void) | null = null;
   onSubmit: ((val: string) => void) | null = null;
 
@@ -119,50 +120,65 @@ export class TextInput extends Box {
     this.tabIndex = 0;
     this.placeholder = placeholder;
     this.value = value;
+    this.cursorPos = 0;
     this.onChange = onChange ?? null;
 
     this.style.border = "single";
     this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-    this.height = { fixed: 3 }; // typical input (border + 1 text row)
+    this.height = { fixed: 3 };
+
+    this.onFocus = () => {
+      this.cursorPos = 0;
+    };
 
     this.onPaint = (buf, rect, theme) => {
       const isFocused = this.focused;
-      const textVal = this.value || this.placeholder;
-      const isPlaceholder = !this.value;
-      const fg = isPlaceholder ? theme.muted : theme.text;
+      const showPlaceholder = !this.value;
+      const displayText = showPlaceholder ? this.placeholder : this.value;
+      const fg = showPlaceholder ? theme.muted : theme.text;
       const bg = theme.panelBg;
 
-      // Draw the text value
-      let col = rect.x;
-      for (let i = 0; i < textVal.length && i < rect.width; i++) {
-        buf.set(col, rect.y, {
-          char: textVal[i],
-          fg,
-          bg,
-        });
-        col++;
-      }
-
-      // Draw block cursor if focused
-      if (isFocused && col < rect.x + rect.width) {
-        buf.set(col, rect.y, {
-          char: " ",
-          fg: theme.bg,
-          bg: theme.highlight,
-        });
+      for (let i = 0; i < rect.width; i++) {
+        if (i < displayText.length) {
+          const isCursorHere = isFocused && i === this.cursorPos;
+          buf.set(rect.x + i, rect.y, {
+            char: displayText[i],
+            fg: isCursorHere ? bg : fg,
+            bg: isCursorHere ? fg : bg,
+            bold: isCursorHere,
+          });
+        } else if (isFocused && i === this.cursorPos) {
+          buf.set(rect.x + i, rect.y, {
+            char: " ",
+            fg: bg,
+            bg: theme.highlight,
+          });
+        } else {
+          buf.set(rect.x + i, rect.y, { char: " ", fg, bg });
+        }
       }
     };
 
     this.onKey = (key, modifiers) => {
       if (key === "Backspace") {
-        if (this.value.length > 0) {
-          this.value = this.value.slice(0, -1);
+        if (this.cursorPos > 0) {
+          this.value = this.value.slice(0, this.cursorPos - 1) + this.value.slice(this.cursorPos);
+          this.cursorPos--;
           if (this.onChange) this.onChange(this.value);
         }
       } else if (key === "Enter") {
         if (this.onSubmit) this.onSubmit(this.value);
+      } else if (key === "ArrowLeft") {
+        if (this.cursorPos > 0) this.cursorPos--;
+      } else if (key === "ArrowRight") {
+        if (this.cursorPos < this.value.length) this.cursorPos++;
+      } else if (key === "Home") {
+        this.cursorPos = 0;
+      } else if (key === "End") {
+        this.cursorPos = this.value.length;
       } else if (key.length === 1 && !modifiers.ctrl && !modifiers.alt) {
-        this.value += key;
+        this.value = this.value.slice(0, this.cursorPos) + key + this.value.slice(this.cursorPos);
+        this.cursorPos++;
         if (this.onChange) this.onChange(this.value);
       }
     };
@@ -329,6 +345,7 @@ export class Autocomplete extends Box {
   selectedIndex = 0;
   value = "";
   placeholder = "";
+  cursorPos = 0;
   dropdownOpen = false;
   maxVisibleItems = 6;
   mode: AutocompleteMode = "dropdown";
@@ -357,6 +374,10 @@ export class Autocomplete extends Box {
     this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
     this.height = { fixed: this._inputHeight };
 
+    this.onFocus = () => {
+      this.cursorPos = 0;
+    };
+
     this.onPaint = (buf, rect, theme) => {
       if (!this.focused) {
         this.dropdownOpen = false;
@@ -368,43 +389,51 @@ export class Autocomplete extends Box {
       }
 
       const isFocused = this.focused;
-      const textVal = this.value || this.placeholder;
-      const isPlaceholder = !this.value;
-      const fg = isPlaceholder ? theme.muted : theme.text;
+      const showPlaceholder = !this.value;
+      const displayText = showPlaceholder ? this.placeholder : this.value;
+      const fg = showPlaceholder ? theme.muted : theme.text;
       const bg = theme.panelBg;
 
-      let col = rect.x;
-      for (let i = 0; i < textVal.length && i < rect.width; i++) {
-        buf.set(col, rect.y, { char: textVal[i], fg, bg });
-        col++;
-      }
-
-      if (isFocused && col < rect.x + rect.width) {
-        const completion = this._completion;
-        if (this.mode === "inline" && completion && this.value.length > 0) {
-          const ghostLen = Math.min(
-            completion.length - 1,
-            rect.x + rect.width - col - 1,
-          );
-          buf.set(col, rect.y, {
-            char: completion[0],
-            fg: theme.bg,
+      for (let i = 0; i < rect.width; i++) {
+        if (i < displayText.length) {
+          const isCursorHere = isFocused && i === this.cursorPos;
+          buf.set(rect.x + i, rect.y, {
+            char: displayText[i],
+            fg: isCursorHere ? bg : fg,
+            bg: isCursorHere ? fg : bg,
+            bold: isCursorHere,
+          });
+        } else if (isFocused && i === this.cursorPos) {
+          buf.set(rect.x + i, rect.y, {
+            char: " ",
+            fg: bg,
             bg: theme.highlight,
           });
-          for (let i = 0; i < ghostLen; i++) {
-            buf.set(col + 1 + i, rect.y, {
-              char: completion[i + 1],
+        } else {
+          buf.set(rect.x + i, rect.y, { char: " ", fg, bg });
+        }
+      }
+
+      if (isFocused && this.mode === "inline" && this._completion && this.value.length > 0) {
+        const ghostStart = rect.x + this.value.length;
+        const ghostLen = Math.min(
+          this._completion.length,
+          rect.x + rect.width - ghostStart,
+        );
+        if (ghostLen > 0) {
+          buf.set(ghostStart, rect.y, {
+            char: this._completion[0],
+            fg: bg,
+            bg: theme.highlight,
+          });
+          for (let i = 1; i < ghostLen; i++) {
+            buf.set(ghostStart + i, rect.y, {
+              char: this._completion[i],
               fg: theme.muted,
               bg,
               dim: true,
             });
           }
-        } else {
-          buf.set(col, rect.y, {
-            char: " ",
-            fg: theme.bg,
-            bg: theme.highlight,
-          });
         }
       }
 
@@ -460,13 +489,23 @@ export class Autocomplete extends Box {
       }
 
       if (key === "Backspace") {
-        if (this.value.length > 0) {
-          this.value = this.value.slice(0, -1);
+        if (this.cursorPos > 0) {
+          this.value = this.value.slice(0, this.cursorPos - 1) + this.value.slice(this.cursorPos);
+          this.cursorPos--;
           this._updateFilter();
           if (this.onChange) this.onChange(this.value);
         }
+      } else if (key === "ArrowLeft") {
+        if (this.cursorPos > 0) this.cursorPos--;
+      } else if (key === "ArrowRight") {
+        if (this.cursorPos < this.value.length) this.cursorPos++;
+      } else if (key === "Home") {
+        this.cursorPos = 0;
+      } else if (key === "End") {
+        this.cursorPos = this.value.length;
       } else if (key.length === 1 && !modifiers.ctrl && !modifiers.alt) {
-        this.value += key;
+        this.value = this.value.slice(0, this.cursorPos) + key + this.value.slice(this.cursorPos);
+        this.cursorPos++;
         this._updateFilter();
         if (this.onChange) this.onChange(this.value);
       }
@@ -491,6 +530,7 @@ export class Autocomplete extends Box {
     this.handleTab = () => {
       if (this.mode === "inline" && this._completion && this.value.length > 0) {
         this.value += this._completion;
+        this.cursorPos = this.value.length;
         this._completion = "";
         if (this.onSelect) this.onSelect(this.value);
         if (this.onChange) this.onChange(this.value);
@@ -700,5 +740,100 @@ export class Tabs extends Box {
       if (hit) return hit;
     }
     return this;
+  }
+}
+
+// ─── Radio Button Widget ────────────────────────────────────────────────────
+
+export class RadioButton extends Box {
+  value: string;
+  selected = false;
+  onChange: ((value: string) => void) | null = null;
+
+  constructor(label: string, value: string, selected = false) {
+    super(label);
+    this.focusable = true;
+    this.tabIndex = 0;
+    this.value = value;
+    this.selected = selected;
+
+    this.style.border = "none";
+    this.height = { fixed: 1 };
+
+    this.onPaint = (buf, rect, theme) => {
+      const dot = this.selected ? "•" : "○";
+      const fg = this.focused ? theme.highlight : theme.text;
+      const text = ` ${dot} ${this.label}`;
+      for (let i = 0; i < text.length && i < rect.width; i++) {
+        buf.set(rect.x + i, rect.y, {
+          char: text[i],
+          fg: (i < 3 && this.focused) ? theme.highlight : fg,
+          bg: theme.panelBg,
+          bold: this.selected && this.focused,
+        });
+      }
+    };
+
+    this.onKey = (key) => {
+      if (key === "Enter" || key === " ") {
+        this.select();
+      }
+    };
+
+    this.onMouse = (_col, _row, action) => {
+      if (action === "press") {
+        this.select();
+      }
+    };
+  }
+
+  select(): void {
+    if (!this.selected) {
+      this.selected = true;
+      if (this.onChange) this.onChange(this.value);
+    }
+  }
+}
+
+// ─── Radio Group Widget ─────────────────────────────────────────────────────
+
+export class RadioGroup extends Box {
+  selectedValue: string;
+  onChange: ((value: string) => void) | null = null;
+  private _buttons: RadioButton[] = [];
+
+  constructor(
+    label: string,
+    options: { label: string; value: string }[],
+    selectedValue?: string,
+    onChange?: (value: string) => void,
+  ) {
+    super(label);
+    this.style.direction = "column";
+    this.style.border = "single";
+    this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+    this.selectedValue = selectedValue ?? (options.length > 0 ? options[0].value : "");
+    this.onChange = onChange ?? null;
+
+    for (const opt of options) {
+      const rb = new RadioButton(opt.label, opt.value, opt.value === this.selectedValue);
+      rb.onChange = (val) => this._onChildChange(val);
+      this._buttons.push(rb);
+      this.add(rb);
+    }
+
+    this.height = { fixed: 2 + this._buttons.length };
+  }
+
+  select(value: string): void {
+    this._onChildChange(value);
+  }
+
+  private _onChildChange(value: string): void {
+    this.selectedValue = value;
+    for (const rb of this._buttons) {
+      rb.selected = rb.value === value;
+    }
+    if (this.onChange) this.onChange(value);
   }
 }

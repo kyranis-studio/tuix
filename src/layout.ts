@@ -122,6 +122,9 @@ export class Box {
   /** If set, called when Tab is pressed instead of navigating focus. Return true to consume Tab. */
   handleTab: (() => boolean) | null;
 
+  /** Called when this box gains focus */
+  onFocus: (() => void) | null;
+
   // Tree
   children: Box[];
   parent: Box | null;
@@ -143,6 +146,7 @@ export class Box {
     this.onKey = null;
     this.onMouse = null;
     this.handleTab = null;
+    this.onFocus = null;
     this.children = [];
     this.parent = null;
     this.rect = { x: 0, y: 0, width: 0, height: 0 };

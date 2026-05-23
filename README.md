@@ -15,9 +15,12 @@
 2. **Stateful TUI Component Library**
    - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings.
    - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks.
-   - **`TextInput`**: Stateful editable text input with backspacing, custom placeholders, and a block cursor.
+   - **`TextInput`**: Editable text input with `cursorPos`, arrow/Home/End navigation, character insertion at cursor, block cursor showing the character underneath, and placeholder shown when empty.
    - **`ListBox`**: Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights.
    - **`ProgressBar`**: Stateful percentage loading bar utilizing character block levels (`█████░░░░░ 50%`).
+   - **`Autocomplete`**: Dropdown and inline suggestion completion with keyboard/mouse filtering and selection, cursor position tracking with `cursorPos`.
+   - **`RadioButton`** / **`RadioGroup`**: Mutually exclusive radio selection with `(•)` / `(○)` indicators, keyboard and mouse support.
+   - **`Tabs`**: Multi-tab container with keyboard (←/→) and mouse-driven tab switching.  
 
 3. **Resizable Panel Splitters**
    - Horizontally and vertically draggable divider panes (`Splitter`).
@@ -31,6 +34,7 @@
 
 5. **Focus Management & Theme Registry**
    - Centralized `FocusManager` managing Tab / Shift+Tab cycles, tab-indices, direct direct-jump shortcuts.
+   - `Box.onFocus` callback fires when a widget gains focus, enabling cursor reset and other focus-side effects.
    - Built-in premium VS Code Dark+ theme (dark charcoal with rich yellow/gold highlights) activated by default, alongside classical secondary/named themes.
 
 ---
@@ -44,7 +48,7 @@ tuix/
     app.ts              — Main application loop, event loop, mouse/keyboard dispatcher
     terminal.ts         — Double-buffered CellBuffer renderer, raw mode setups, ANSI sequences
     layout.ts           — Box structure, recursive layout engine, coordinate positioning
-    widgets.ts          — Button, Checkbox, TextInput, ListBox, ProgressBar components
+    widgets.ts          — Button, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
     events.ts           — Async keyboard and SGR mouse event parser
@@ -55,7 +59,7 @@ tuix/
     03_resizable.ts     — Vertical/horizontal nested splitters with mouse resizing
     04_spacing.ts       — Spacing visualizations (gutter, padding, margin)
     05_borders.ts       — Visual preview of all border types (single, double, rounded, bold, none)
-    06_showcase.ts      — Premium interactive VS Code Component Showcase dashboard
+     06_showcase.ts      — 7-tab interactive showcase: Layout, Resizable, Shortcuts, Text, UI, Animation (spinners, metric bars, countdown)
   deno.json             — Deno config and script tasks
 ```
 
@@ -103,7 +107,7 @@ deno task example:05
 Below is a brief demonstration of how to instantiate a column box, add stateful components, and run a **tuix** application:
 
 ```typescript
-import { App, Box, Button, TextInput, Checkbox, defaultTheme } from "./src/mod.ts";
+import { App, Box, Button, TextInput, Checkbox, RadioGroup, defaultTheme } from "./src/mod.ts";
 
 // 1. Create a column layout container
 const container = Box.col("Main Layout");
@@ -122,6 +126,14 @@ const telemetryChk = new Checkbox("Enable Remote Logs", false, (checked) => {
 });
 telemetryChk.tabIndex = 2;
 
+const modeGroup = new RadioGroup("Mode", [
+  { label: "Automatic", value: "auto" },
+  { label: "Manual", value: "manual" },
+  { label: "Scheduled", value: "sched" },
+], "auto", (val) => {
+  console.log(`Mode: ${val}`);
+});
+
 const actionBtn = new Button("Apply System Settings", () => {
   console.log("Settings applied successfully!");
 });
@@ -129,9 +141,10 @@ actionBtn.tabIndex = 3;
 
 // Assemble layout hierarchy
 container.add(
-  new Box("System Profile").style.fg = defaultTheme.highlight,
+  new Box("System Profile"),
   inputField,
   telemetryChk,
+  modeGroup,
   actionBtn
 );
 

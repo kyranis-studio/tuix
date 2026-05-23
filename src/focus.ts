@@ -37,9 +37,12 @@ export class FocusManager {
   }
 
   focusBox(box: Box): void {
-    if (this.focused) this.focused.focused = false;
+    if (this.focused) {
+      this.focused.focused = false;
+    }
     this.focused = box;
     box.focused = true;
+    box.onFocus?.();
   }
 
   focusFirst(): void {
