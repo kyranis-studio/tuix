@@ -1,7 +1,12 @@
 import { Box, paintCenteredText } from "../layout.ts";
+import type { CellBuffer } from "../terminal.ts";
+import type { Theme } from "../theme.ts";
+import { getBorderChars } from "../theme.ts";
 
 export class Button extends Box {
   onClick: (() => void) | null = null;
+  disabled = false;
+  toggled = false;
 
   constructor(label: string, onClick?: () => void) {
     super(label);
@@ -13,24 +18,70 @@ export class Button extends Box {
     this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
     this.height = { fixed: 3 };
 
-    this.onPaint = (buf, rect, theme) => {
-      const isFocused = this.focused;
-      const textFg = isFocused ? theme.bg : theme.highlight;
-      const textBg = isFocused ? theme.highlight : theme.panelBg;
+    this.paint = (buf: CellBuffer, theme: Theme) => {
+      const r = this.rect;
+      if (r.width <= 0 || r.height <= 0) return;
 
-      paintCenteredText(buf, rect, this.label, textFg, textBg, isFocused);
-    };
+      const isDisabled = this.disabled;
+      const isFocused = this.focused && !isDisabled;
+      const isToggled = this.toggled && !isDisabled;
 
-    this.onKey = (key) => {
-      if (key === "Enter" || key === " ") {
-        if (this.onClick) this.onClick();
+      let borderColor: { r: number; g: number; b: number };
+      let fillBg: { r: number; g: number; b: number };
+      let textFg: { r: number; g: number; b: number };
+
+      if (isDisabled) {
+        borderColor = theme.disabled;
+        fillBg = theme.disabled;
+        textFg = theme.muted;
+      } else if (isToggled) {
+        borderColor = isFocused ? theme.focusBorder : theme.highlight;
+        fillBg = theme.highlight;
+        textFg = theme.bg;
+      } else {
+        borderColor = isFocused ? theme.focusBorder : theme.border;
+        fillBg = theme.panelBg;
+        textFg = theme.highlight;
       }
-    };
 
-    this.onMouse = (_col, _row, action) => {
-      if (action === "press") {
-        if (this.onClick) this.onClick();
+      buf.fill(r.x, r.y, r.width, r.height, { char: " ", fg: null, bg: fillBg });
+
+      if (this.style.border !== "none") {
+        const chars = getBorderChars(this.style.border);
+        buf.set(r.x, r.y, { char: chars.topLeft, fg: borderColor, bg: fillBg });
+        buf.set(r.x + r.width - 1, r.y, { char: chars.topRight, fg: borderColor, bg: fillBg });
+        for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
+          buf.set(col, r.y, { char: chars.horizontal, fg: borderColor, bg: fillBg });
+        }
+        buf.set(r.x, r.y + r.height - 1, { char: chars.bottomLeft, fg: borderColor, bg: fillBg });
+        buf.set(r.x + r.width - 1, r.y + r.height - 1, { char: chars.bottomRight, fg: borderColor, bg: fillBg });
+        for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
+          buf.set(col, r.y + r.height - 1, { char: chars.horizontal, fg: borderColor, bg: fillBg });
+        }
+        for (let row = r.y + 1; row < r.y + r.height - 1; row++) {
+          buf.set(r.x, row, { char: chars.vertical, fg: borderColor, bg: fillBg });
+          buf.set(r.x + r.width - 1, row, { char: chars.vertical, fg: borderColor, bg: fillBg });
+        }
       }
+
+      const hasBorder = this.style.border !== "none";
+      const bOff = hasBorder ? 1 : 0;
+      const p = this.style.padding;
+      const cx = r.x + bOff + p.left;
+      const cy = r.y + bOff + p.top;
+      const cw = Math.max(0, r.width - bOff * 2 - p.left - p.right);
+      const ch = Math.max(0, r.height - bOff * 2 - p.top - p.bottom);
+      const contentRect = { x: cx, y: cy, width: cw, height: ch };
+      paintCenteredText(buf, contentRect, this.label, textFg, fillBg, isFocused || isToggled);
     };
+  }
+
+  setDisabled(v: boolean): void {
+    this.disabled = v;
+    this.focusable = !v;
+  }
+
+  setToggled(v: boolean): void {
+    this.toggled = v;
   }
 }

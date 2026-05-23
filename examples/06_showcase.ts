@@ -35,6 +35,8 @@ import {
   Tabs,
   RadioGroup,
   TextArea,
+  Dropdown,
+  ButtonGroup,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -51,6 +53,8 @@ let chkOptionC = false;
 let selectedProfile = "Profile Alpha";
 let selectedOption = "option_a";
 let clickCount = 0;
+let selectedTheme = "VS Code Dark";
+let selectedAlign = "Left";
 let progressValue = 0.35;
 let shortcutTarget = "";
 
@@ -92,71 +96,50 @@ basicTab.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
     { x: rect.x, y: rect.y, width: rect.width, height: 1 },
-    "Row and column containers with fixed and grow sizing",
+    "Scrollable column — Arrow keys to scroll, PageUp/Down for fast scroll",
     theme.muted,
     theme.bg,
   );
 };
 
-const rowDemo = Box.row("row-demo");
-rowDemo.style.border = "single";
-rowDemo.style.gutter = 1;
-rowDemo.style.padding = edgesAll(1);
-rowDemo.height = { fixed: 7 };
+const scrollCol = Box.col("scroll-col");
+scrollCol.style.border = "single";
+scrollCol.style.gutter = 1;
+scrollCol.style.padding = edgesAll(1);
 
-const boxA = new Box("A");
-boxA.style.bg = { r: 60, g: 60, b: 80 };
-boxA.width = { fixed: 12 };
-boxA.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Fixed 12", { r: 200, g: 200, b: 220 }, null);
-};
+for (let i = 1; i <= 20; i++) {
+  const item = new Box(`item-${i}`);
+  const r = Math.floor(40 + Math.sin(i * 1.5) * 20);
+  const g = Math.floor(50 + Math.cos(i * 0.7) * 15);
+  const b = Math.floor(60 + Math.sin(i * 0.3) * 25);
+  item.style.bg = { r, g, b };
+  item.height = { fixed: 3 };
+  const itemColors = [
+    "Crimson",
+    "Amber",
+    "Forest",
+    "Ocean",
+    "Plum",
+    "Slate",
+    "Teal",
+    "Rose",
+    "Gold",
+    "Coral",
+  ];
+  const name = itemColors[i % itemColors.length];
+  item.onPaint = (buf, rect, _t) => {
+    paintCenteredText(
+      buf,
+      rect,
+      `${i}. ${name} (fixed 3)`,
+      { r: 220, g: 220, b: 230 },
+      null,
+    );
+  };
+  scrollCol.add(item);
+}
 
-const boxB = new Box("B");
-boxB.style.bg = { r: 70, g: 55, b: 50 };
-boxB.width = { grow: 1 };
-boxB.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Grow 1", { r: 220, g: 200, b: 180 }, null);
-};
-
-const boxC = new Box("C");
-boxC.style.bg = { r: 50, g: 70, b: 60 };
-boxC.width = { grow: 2 };
-boxC.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Grow 2", { r: 180, g: 220, b: 200 }, null);
-};
-
-rowDemo.add(boxA, boxB, boxC);
-
-const colDemo = Box.col("col-demo");
-colDemo.style.border = "single";
-colDemo.style.gutter = 1;
-colDemo.style.padding = edgesAll(1);
-colDemo.height = { grow: 1 };
-
-const boxTop = new Box("top");
-boxTop.style.bg = { r: 55, g: 60, b: 70 };
-boxTop.height = { fixed: 3 };
-boxTop.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Fixed 3", { r: 200, g: 210, b: 230 }, null);
-};
-
-const boxMid = new Box("mid");
-boxMid.style.bg = { r: 65, g: 55, b: 60 };
-boxMid.height = { grow: 1 };
-boxMid.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Grow", { r: 230, g: 200, b: 210 }, null);
-};
-
-const boxBot = new Box("bot");
-boxBot.style.bg = { r: 55, g: 65, b: 55 };
-boxBot.height = { fixed: 3 };
-boxBot.onPaint = (buf, rect, _theme) => {
-  paintCenteredText(buf, rect, "Fixed 3", { r: 200, g: 230, b: 200 }, null);
-};
-
-colDemo.add(boxTop, boxMid, boxBot);
-
-basicTab.add(rowDemo, colDemo);
+basicTab.add(scrollCol);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: Responsive
@@ -194,11 +177,23 @@ row1.style.border = "single";
 row1.style.gutter = 1;
 row1.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
 row1.height = { fixed: 5 };
-const r1a = colorBox("fixed 10", { r: 60, g: 60, b: 80 }, { r: 200, g: 200, b: 220 });
+const r1a = colorBox(
+  "fixed 10",
+  { r: 60, g: 60, b: 80 },
+  { r: 200, g: 200, b: 220 },
+);
 r1a.width = { fixed: 10 };
-const r1b = colorBox("grow 1", { r: 70, g: 55, b: 50 }, { r: 220, g: 200, b: 180 });
+const r1b = colorBox(
+  "grow 1",
+  { r: 70, g: 55, b: 50 },
+  { r: 220, g: 200, b: 180 },
+);
 r1b.width = { grow: 1 };
-const r1c = colorBox("grow 2", { r: 50, g: 70, b: 60 }, { r: 180, g: 220, b: 200 });
+const r1c = colorBox(
+  "grow 2",
+  { r: 50, g: 70, b: 60 },
+  { r: 180, g: 220, b: 200 },
+);
 r1c.width = { grow: 2 };
 row1.add(r1a, r1b, r1c);
 
@@ -208,11 +203,23 @@ col1.style.border = "single";
 col1.style.gutter = 1;
 col1.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
 col1.height = { grow: 1 };
-const c1a = colorBox("fixed 2", { r: 55, g: 60, b: 70 }, { r: 200, g: 210, b: 230 });
+const c1a = colorBox(
+  "fixed 2",
+  { r: 55, g: 60, b: 70 },
+  { r: 200, g: 210, b: 230 },
+);
 c1a.height = { fixed: 2 };
-const c1b = colorBox("grow 1", { r: 65, g: 55, b: 60 }, { r: 230, g: 200, b: 210 });
+const c1b = colorBox(
+  "grow 1",
+  { r: 65, g: 55, b: 60 },
+  { r: 230, g: 200, b: 210 },
+);
 c1b.height = { grow: 1 };
-const c1c = colorBox("fixed 2", { r: 55, g: 65, b: 55 }, { r: 200, g: 230, b: 200 });
+const c1c = colorBox(
+  "fixed 2",
+  { r: 55, g: 65, b: 55 },
+  { r: 200, g: 230, b: 200 },
+);
 c1c.height = { fixed: 2 };
 col1.add(c1a, c1b, c1c);
 
@@ -222,11 +229,23 @@ row2.style.border = "single";
 row2.style.gutter = 1;
 row2.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
 row2.height = { fixed: 5 };
-const r2a = colorBox("grow 1", { r: 60, g: 70, b: 80 }, { r: 200, g: 210, b: 230 });
+const r2a = colorBox(
+  "grow 1",
+  { r: 60, g: 70, b: 80 },
+  { r: 200, g: 210, b: 230 },
+);
 r2a.width = { grow: 1 };
-const r2b = colorBox("fixed 12", { r: 70, g: 70, b: 60 }, { r: 230, g: 230, b: 200 });
+const r2b = colorBox(
+  "fixed 12",
+  { r: 70, g: 70, b: 60 },
+  { r: 230, g: 230, b: 200 },
+);
 r2b.width = { fixed: 12 };
-const r2c = colorBox("grow 1", { r: 60, g: 60, b: 70 }, { r: 210, g: 210, b: 230 });
+const r2c = colorBox(
+  "grow 1",
+  { r: 60, g: 60, b: 70 },
+  { r: 210, g: 210, b: 230 },
+);
 r2c.width = { grow: 1 };
 row2.add(r2a, r2b, r2c);
 
@@ -248,7 +267,11 @@ function makeResizePanel(label: string, body: string[], tabIdx: number): Box {
     paintText(buf, rect, label, 0, titleColor, box.focused);
     if (box.focused) {
       for (let c = rect.x; c < rect.x + label.length; c++) {
-        buf.set(c, rect.y + 1, { char: "▔", fg: theme.highlight, bg: theme.panelBg });
+        buf.set(c, rect.y + 1, {
+          char: "▔",
+          fg: theme.highlight,
+          bg: theme.panelBg,
+        });
       }
     }
     for (let i = 0; i < body.length; i++) {
@@ -260,36 +283,48 @@ function makeResizePanel(label: string, body: string[], tabIdx: number): Box {
   return box;
 }
 
-const rTopLeft = makeResizePanel("◎ File Explorer", [
-  "  src/",
-  "    mod.ts",
-  "    layout.ts",
-  "    theme.ts",
-  "    events.ts",
-  "    focus.ts",
-  "    splitter.ts",
-  "    app.ts",
-  "  examples/",
-], 1);
+const rTopLeft = makeResizePanel(
+  "◎ File Explorer",
+  [
+    "  src/",
+    "    mod.ts",
+    "    layout.ts",
+    "    theme.ts",
+    "    events.ts",
+    "    focus.ts",
+    "    splitter.ts",
+    "    app.ts",
+    "  examples/",
+  ],
+  1,
+);
 
-const rTopRight = makeResizePanel("◎ Editor", [
-  "  // Resizable panel demo",
-  "  // Drag the ◈ handle",
-  "  // to resize panels",
-  "",
-  "  const splitter = new",
-  "    Splitter('horizontal',",
-  "      panelA, panelB,",
-  "      { initialSplit: 30 }",
-  "    );",
-], 2);
+const rTopRight = makeResizePanel(
+  "◎ Editor",
+  [
+    "  // Resizable panel demo",
+    "  // Drag the ◈ handle",
+    "  // to resize panels",
+    "",
+    "  const splitter = new",
+    "    Splitter('horizontal',",
+    "      panelA, panelB,",
+    "      { initialSplit: 30 }",
+    "    );",
+  ],
+  2,
+);
 
-const rBottom = makeResizePanel("◎ Terminal Output", [
-  "  $ deno run 06_showcase.ts",
-  "  tuix v0.1.0 — resizable panels",
-  "  Drag the ◈ handle to resize.",
-  "  Tab to cycle panel focus.",
-], 3);
+const rBottom = makeResizePanel(
+  "◎ Terminal Output",
+  [
+    "  $ deno run 06_showcase.ts",
+    "  tuix v0.1.0 — resizable panels",
+    "  Drag the ◈ handle to resize.",
+    "  Tab to cycle panel focus.",
+  ],
+  3,
+);
 
 const rHSplit = new Splitter("horizontal", rTopLeft, rTopRight, {
   initialSplit: 30,
@@ -330,7 +365,13 @@ zone1.focusable = true;
 zone1.tabIndex = 1;
 zone1.shortcut = "1";
 zone1.onPaint = (buf, rect, theme) => {
-  paintCenteredText(buf, rect, "Zone 1  [key: 1]", theme.highlight, theme.panelBg);
+  paintCenteredText(
+    buf,
+    rect,
+    "Zone 1  [key: 1]",
+    theme.highlight,
+    theme.panelBg,
+  );
 };
 
 const zone2 = new Box("Zone 2");
@@ -339,7 +380,13 @@ zone2.focusable = true;
 zone2.tabIndex = 2;
 zone2.shortcut = "2";
 zone2.onPaint = (buf, rect, theme) => {
-  paintCenteredText(buf, rect, "Zone 2  [key: 2]", theme.highlight, theme.panelBg);
+  paintCenteredText(
+    buf,
+    rect,
+    "Zone 2  [key: 2]",
+    theme.highlight,
+    theme.panelBg,
+  );
 };
 
 const zone3 = new Box("Zone 3");
@@ -348,7 +395,13 @@ zone3.focusable = true;
 zone3.tabIndex = 3;
 zone3.shortcut = "3";
 zone3.onPaint = (buf, rect, theme) => {
-  paintCenteredText(buf, rect, "Zone 3  [key: 3]", theme.highlight, theme.panelBg);
+  paintCenteredText(
+    buf,
+    rect,
+    "Zone 3  [key: 3]",
+    theme.highlight,
+    theme.panelBg,
+  );
 };
 
 const zonesRow = Box.row("zones");
@@ -419,8 +472,23 @@ autoDropdownLabel.onPaint = (_buf, rect, theme) => {
 
 const autoDropdown = new Autocomplete(
   "Search framework...",
-  ["React", "Vue", "Angular", "Svelte", "Solid", "Deno", "Node.js", "Express", "Next.js", "Nuxt", "Remix", "Astro"],
-  (item) => { selectedFramework = item; },
+  [
+    "React",
+    "Vue",
+    "Angular",
+    "Svelte",
+    "Solid",
+    "Deno",
+    "Node.js",
+    "Express",
+    "Next.js",
+    "Nuxt",
+    "Remix",
+    "Astro",
+  ],
+  (item) => {
+    selectedFramework = item;
+  },
 );
 autoDropdown.maxVisibleItems = 5;
 
@@ -428,13 +496,34 @@ const autoInlineLabel = new Box("auto-inline-label");
 autoInlineLabel.style.fg = defaultTheme.highlight;
 autoInlineLabel.height = { fixed: 1 };
 autoInlineLabel.onPaint = (_buf, rect, theme) => {
-  paintText(_buf, rect, "Autocomplete (inline mode, Tab to complete):", 0, theme.highlight);
+  paintText(
+    _buf,
+    rect,
+    "Autocomplete (inline mode, Tab to complete):",
+    0,
+    theme.highlight,
+  );
 };
 
 const autoInline = new Autocomplete(
   "Type a command...",
-  ["deploy", "deploy:prod", "deploy:staging", "build", "build:watch", "test", "test:watch", "lint", "lint:fix", "clean", "format", "typecheck"],
-  (item) => { selectedCommand = item; },
+  [
+    "deploy",
+    "deploy:prod",
+    "deploy:staging",
+    "build",
+    "build:watch",
+    "test",
+    "test:watch",
+    "lint",
+    "lint:fix",
+    "clean",
+    "format",
+    "typecheck",
+  ],
+  (item) => {
+    selectedCommand = item;
+  },
 );
 autoInline.mode = "inline";
 
@@ -446,7 +535,10 @@ textStatus.onPaint = (_buf, rect, theme) => {
   if (textInput.value) parts.push(`Input: "${textInput.value}"`);
   if (selectedFramework) parts.push(`Framework: ${selectedFramework}`);
   if (selectedCommand) parts.push(`Command: ${selectedCommand}`);
-  const text = parts.length > 0 ? `  ${parts.join("  │  ")}` : "  Start typing to see results here";
+  const text =
+    parts.length > 0
+      ? `  ${parts.join("  │  ")}`
+      : "  Start typing to see results here";
   paintText(_buf, rect, text, 0, theme.muted);
 };
 
@@ -472,7 +564,7 @@ textTab.add(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB: UI (Checkbox + ListBox)
+// TAB: UI (Checkboxes, Radio, Buttons, Dropdown, ButtonGroup, ListBox)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const uiTab = Box.col("UI Controls");
@@ -482,7 +574,7 @@ uiTab.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
     { x: rect.x, y: rect.y, width: rect.width, height: 1 },
-    "Checkboxes and ListBox — Space/Enter to toggle, Arrows to navigate",
+    "Interactive Controls — Toggle, Select, Button, Dropdown, and Group",
     theme.muted,
     theme.bg,
   );
@@ -495,9 +587,15 @@ chkLabel.onPaint = (_buf, rect, theme) => {
   paintText(_buf, rect, "Checkboxes:", 0, theme.highlight);
 };
 
-const chk1 = new Checkbox("Enable Feature A", chkOptionA, (v) => { chkOptionA = v; });
-const chk2 = new Checkbox("Enable Feature B", chkOptionB, (v) => { chkOptionB = v; });
-const chk3 = new Checkbox("Enable Feature C", chkOptionC, (v) => { chkOptionC = v; });
+const chk1 = new Checkbox("Enable Feature A", chkOptionA, (v) => {
+  chkOptionA = v;
+});
+const chk2 = new Checkbox("Enable Feature B", chkOptionB, (v) => {
+  chkOptionB = v;
+});
+const chk3 = new Checkbox("Enable Feature C", chkOptionC, (v) => {
+  chkOptionC = v;
+});
 
 const listLabel = new Box("list-label");
 listLabel.style.fg = defaultTheme.highlight;
@@ -527,7 +625,9 @@ const radioGroup = new RadioGroup(
     { label: "Option Gamma", value: "option_c" },
   ],
   selectedOption,
-  (val) => { selectedOption = val; },
+  (val) => {
+    selectedOption = val;
+  },
 );
 
 const btnLabel = new Box("btn-label");
@@ -554,11 +654,46 @@ const btnToggle = new Button("Toggle Checkboxes", () => {
   chkOptionA = !chkOptionA;
   chkOptionB = !chkOptionB;
   chkOptionC = !chkOptionC;
+  btnToggle.toggled = chkOptionA || chkOptionB || chkOptionC;
 });
 const btnCount = new Button("Click Count", () => {
   clickCount++;
 });
-btnRow.add(btnReset, btnToggle, btnCount);
+const btnDisabled = new Button("Locked");
+btnDisabled.setDisabled(true);
+btnRow.add(btnReset, btnToggle, btnCount, btnDisabled);
+
+const dropdownLabel = new Box("dropdown-label");
+dropdownLabel.style.fg = defaultTheme.highlight;
+dropdownLabel.height = { fixed: 1 };
+dropdownLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "Dropdown:", 0, theme.highlight);
+};
+
+const themeDropdown = new Dropdown(
+  "Theme",
+  ["VS Code Dark", "Amber", "Monokai", "Solarized", "Nord"],
+  0,
+  (val) => {
+    selectedTheme = val;
+  },
+);
+
+const groupLabel = new Box("group-label");
+groupLabel.style.fg = defaultTheme.highlight;
+groupLabel.height = { fixed: 1 };
+groupLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "ButtonGroup (Align):", 0, theme.highlight);
+};
+
+const alignGroup = new ButtonGroup(
+  "Align",
+  ["Left", "Center", "Right", "Justify"],
+  0,
+  (val) => {
+    selectedAlign = val;
+  },
+);
 
 const uiStatus = new Box("ui-status");
 uiStatus.height = { fixed: 1 };
@@ -571,11 +706,35 @@ uiStatus.onPaint = (_buf, rect, theme) => {
     `Radio: ${selectedOption.replace("option_", "")}`,
     `Profile: ${selectedProfile}`,
     `Clicks: ${clickCount}`,
+    `Theme: ${selectedTheme}`,
+    `Align: ${selectedAlign}`,
   ];
   paintText(_buf, rect, `  ${parts.join("  │  ")}`, 0, theme.muted);
 };
 
-uiTab.add(chkLabel, chk1, chk2, chk3, radioLabel, radioGroup, btnLabel, btnRow, listLabel, profileList, uiStatus);
+// Wrap all controls in a scrollable bordered column so the scrollbar is always visible
+const uiScroll = Box.col("ui-scroll");
+uiScroll.style.border = "single";
+uiScroll.style.gutter = 1;
+uiScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+uiScroll.add(
+  chkLabel,
+  chk1,
+  chk2,
+  chk3,
+  radioLabel,
+  radioGroup,
+  btnLabel,
+  btnRow,
+  dropdownLabel,
+  themeDropdown,
+  groupLabel,
+  alignGroup,
+  listLabel,
+  profileList,
+);
+
+uiTab.add(uiScroll, uiStatus);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: Animation Dashboard
@@ -592,7 +751,10 @@ const SPINNER_SETS = [
 ];
 let spinnerTicks = [0, 0, 0, 0];
 
-let cpuVal = 0.67, memVal = 0.45, dskVal = 0.92, netVal = 0.18;
+let cpuVal = 0.67,
+  memVal = 0.45,
+  dskVal = 0.92,
+  netVal = 0.18;
 let countdownSec = 300;
 
 // ─── Spinner Widget ──────────────────────────────────────────────────────────
@@ -785,7 +947,11 @@ statusBar.onPaint = (_buf, rect, theme) => {
   const hint =
     " Tab: focus  │  ← →: tabs  │  ↑ ↓: list  │  Spc: toggle  │  Esc: close  │  Ctrl+C: quit";
   for (let i = 0; i < hint.length && i < rect.width; i++) {
-    _buf.set(rect.x + i, rect.y, { char: hint[i], fg: theme.muted, bg: theme.bg });
+    _buf.set(rect.x + i, rect.y, {
+      char: hint[i],
+      fg: theme.muted,
+      bg: theme.bg,
+    });
   }
 };
 

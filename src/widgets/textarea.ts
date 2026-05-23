@@ -4,12 +4,16 @@ export class TextArea extends Box {
   value = "";
   placeholder = "";
   cursorPos = 0;
-  scrollRow = 0;
   minRows = 3;
   maxLines: number | null = null;
   onChange: ((val: string) => void) | null = null;
 
-  constructor(placeholder = "", value = "", onChange?: (val: string) => void, maxLines?: number) {
+  constructor(
+    placeholder = "",
+    value = "",
+    onChange?: (val: string) => void,
+    maxLines?: number,
+  ) {
     super("TextArea");
     this.focusable = true;
     this.tabIndex = 0;
@@ -24,46 +28,51 @@ export class TextArea extends Box {
     this._syncHeight();
 
     this.onFocus = () => {
-      this.cursorPos = 0;
-      this.scrollRow = 0;
+      this.cursorPos = Math.max(0, Math.min(this.cursorPos, this.value.length));
     };
 
+    // rect is already the content rect (border+padding stripped by layout engine).
+    // The layout engine paints a scrollbar in the rightmost column, so we write
+    // text only into columns [0, width-2] — leaving width-1 for the track.
     this.onPaint = (buf, rect, theme) => {
       const isFocused = this.focused;
       const showPlaceholder = !this.value;
       const bg = theme.panelBg;
+      const ch = rect.height;
+      // Reserve last column for the scrollbar drawn by layout engine
+      const cw = Math.max(0, rect.width - 1);
 
-      const hasBorder = this.style.border !== "none";
-      const bOff = hasBorder ? 1 : 0;
-      const p = this.style.padding;
-      const cx = rect.x + bOff + p.left;
-      const cy = rect.y + bOff + p.top;
-      const cw = Math.max(1, rect.width - bOff * 2 - p.left - p.right);
-      const ch = Math.max(1, rect.height - bOff * 2 - p.top - p.bottom);
-
+      // Clear content area
       for (let row = 0; row < ch; row++) {
         for (let col = 0; col < cw; col++) {
-          buf.set(cx + col, cy + row, { char: " ", fg: theme.text, bg });
+          buf.set(rect.x + col, rect.y + row, {
+            char: " ",
+            fg: theme.text,
+            bg,
+          });
         }
       }
 
       if (showPlaceholder) {
-        for (let col = 0; col < cw; col++) {
-          if (col < this.placeholder.length) {
-            const isCur = isFocused && col === this.cursorPos;
-            buf.set(cx + col, cy, {
-              char: this.placeholder[col],
-              fg: isCur ? bg : theme.muted,
-              bg: isCur ? theme.muted : bg,
-              bold: isCur,
-            });
-          } else if (isFocused && col === this.cursorPos) {
-            buf.set(cx + col, cy, {
-              char: " ",
-              fg: bg,
-              bg: theme.highlight,
-            });
-          }
+        for (let col = 0; col < cw && col < this.placeholder.length; col++) {
+          const isCur = isFocused && col === this.cursorPos;
+          buf.set(rect.x + col, rect.y, {
+            char: this.placeholder[col],
+            fg: isCur ? bg : theme.muted,
+            bg: isCur ? theme.muted : bg,
+            bold: isCur,
+          });
+        }
+        if (
+          isFocused &&
+          this.cursorPos < cw &&
+          this.cursorPos >= this.placeholder.length
+        ) {
+          buf.set(rect.x + this.cursorPos, rect.y, {
+            char: " ",
+            fg: bg,
+            bg: theme.highlight,
+          });
         }
         return;
       }
@@ -71,25 +80,29 @@ export class TextArea extends Box {
       const cursorRow = this._cursorRow();
       const cursorCol = this._cursorCol();
 
-      if (cursorRow < this.scrollRow) this.scrollRow = cursorRow;
-      else if (cursorRow >= this.scrollRow + ch) this.scrollRow = cursorRow - ch + 1;
+      // Scroll to keep cursor visible — update Box.scrollY directly
+      if (cursorRow < this.scrollY) this.scrollY = cursorRow;
+      else if (cursorRow >= this.scrollY + ch)
+        this.scrollY = cursorRow - ch + 1;
+      this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
 
       const lines = this._lines();
       for (let row = 0; row < ch; row++) {
-        const lineIdx = this.scrollRow + row;
+        const lineIdx = this.scrollY + row;
         if (lineIdx >= lines.length) break;
         const line = lines[lineIdx];
         for (let col = 0; col < cw; col++) {
           if (col < line.length) {
-            const isCur = isFocused && lineIdx === cursorRow && col === cursorCol;
-            buf.set(cx + col, cy + row, {
+            const isCur =
+              isFocused && lineIdx === cursorRow && col === cursorCol;
+            buf.set(rect.x + col, rect.y + row, {
               char: line[col],
               fg: isCur ? bg : theme.text,
               bg: isCur ? theme.text : bg,
               bold: isCur,
             });
           } else if (isFocused && lineIdx === cursorRow && col === cursorCol) {
-            buf.set(cx + col, cy + row, {
+            buf.set(rect.x + col, rect.y + row, {
               char: " ",
               fg: bg,
               bg: theme.highlight,
@@ -97,27 +110,31 @@ export class TextArea extends Box {
           }
         }
       }
-
-      if (this.maxLines !== null && lines.length > ch) {
-        if (this.scrollRow > 0) {
-          buf.set(cx + cw - 1, cy, { char: "▲", fg: theme.text, bg });
-        }
-        if (this.scrollRow + ch < lines.length) {
-          buf.set(cx + cw - 1, cy + ch - 1, { char: "▼", fg: theme.text, bg });
-        }
-      }
     };
 
     this.onKey = (key, modifiers) => {
       if (key === "Backspace") {
         if (this.cursorPos > 0) {
-          this.value = this.value.slice(0, this.cursorPos - 1) + this.value.slice(this.cursorPos);
+          this.value =
+            this.value.slice(0, this.cursorPos - 1) +
+            this.value.slice(this.cursorPos);
           this.cursorPos--;
           this._syncHeight();
           if (this.onChange) this.onChange(this.value);
         }
+      } else if (key === "Delete") {
+        if (this.cursorPos < this.value.length) {
+          this.value =
+            this.value.slice(0, this.cursorPos) +
+            this.value.slice(this.cursorPos + 1);
+          this._syncHeight();
+          if (this.onChange) this.onChange(this.value);
+        }
       } else if (key === "Enter") {
-        this.value = this.value.slice(0, this.cursorPos) + "\n" + this.value.slice(this.cursorPos);
+        this.value =
+          this.value.slice(0, this.cursorPos) +
+          "\n" +
+          this.value.slice(this.cursorPos);
         this.cursorPos++;
         this._syncHeight();
         if (this.onChange) this.onChange(this.value);
@@ -129,22 +146,29 @@ export class TextArea extends Box {
         const col = this._cursorCol();
         const row = this._cursorRow();
         if (row > 0) {
-          const prevLen = this._lineLength(row - 1);
-          this.cursorPos = this._lineStart(row - 1) + Math.min(col, prevLen);
+          this.cursorPos =
+            this._lineStart(row - 1) + Math.min(col, this._lineLength(row - 1));
         }
       } else if (key === "ArrowDown") {
         const col = this._cursorCol();
         const row = this._cursorRow();
         if (row < this._rowCount() - 1) {
-          const nextLen = this._lineLength(row + 1);
-          this.cursorPos = this._lineStart(row + 1) + Math.min(col, nextLen);
+          this.cursorPos =
+            this._lineStart(row + 1) + Math.min(col, this._lineLength(row + 1));
         }
       } else if (key === "Home") {
-        this.cursorPos = this._lineStart(this._cursorRow());
+        this.cursorPos = modifiers.ctrl
+          ? 0
+          : this._lineStart(this._cursorRow());
       } else if (key === "End") {
-        this.cursorPos = this._lineEnd(this._cursorRow());
+        this.cursorPos = modifiers.ctrl
+          ? this.value.length
+          : this._lineEnd(this._cursorRow());
       } else if (key.length === 1 && !modifiers.ctrl && !modifiers.alt) {
-        this.value = this.value.slice(0, this.cursorPos) + key + this.value.slice(this.cursorPos);
+        this.value =
+          this.value.slice(0, this.cursorPos) +
+          key +
+          this.value.slice(this.cursorPos);
         this.cursorPos++;
         this._syncHeight();
         if (this.onChange) this.onChange(this.value);
@@ -156,15 +180,18 @@ export class TextArea extends Box {
         const hasBorder = this.style.border !== "none";
         const bOff = hasBorder ? 1 : 0;
         const p = this.style.padding;
-        const cy = this.rect.y + bOff + p.top;
-        const relRow = row - cy;
+        const contentX = this.rect.x + bOff + p.left;
+        const contentY = this.rect.y + bOff + p.top;
+        const relRow = row - contentY;
         if (relRow >= 0) {
-          const lineIdx = this.scrollRow + relRow;
+          const lineIdx = this.scrollY + relRow;
           const lines = this._lines();
           if (lineIdx >= 0 && lineIdx < lines.length) {
-            const cx = this.rect.x + bOff + p.left;
-            const relCol = col - cx;
-            const clamped = Math.max(0, Math.min(relCol, lines[lineIdx].length));
+            const relCol = col - contentX;
+            const clamped = Math.max(
+              0,
+              Math.min(relCol, lines[lineIdx].length),
+            );
             this.cursorPos = this._lineStart(lineIdx) + clamped;
           }
         }
@@ -216,7 +243,11 @@ export class TextArea extends Box {
     const bOff = hasBorder ? 1 : 0;
     const lines = this._lines().length;
     const needed = Math.max(lines + 1, this.minRows);
-    const capped = this.maxLines !== null ? Math.min(needed, this.maxLines) : needed;
+    const capped =
+      this.maxLines !== null ? Math.min(needed, this.maxLines) : needed;
     this.height.fixed = bOff * 2 + p.top + p.bottom + capped;
+    // Keep Box.scrollMaxY in sync so the layout engine draws the scrollbar correctly
+    this.scrollMaxY = Math.max(0, lines - capped);
+    this.scrollY = Math.min(this.scrollY, this.scrollMaxY);
   }
 }

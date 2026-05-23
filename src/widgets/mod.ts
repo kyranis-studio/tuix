@@ -17,3 +17,7 @@ export { TextArea } from "./textarea.ts";
 
 export { Tabs } from "./tabs.ts";
 export type { TabDefinition } from "./tabs.ts";
+
+export { Dropdown } from "./dropdown.ts";
+
+export { ButtonGroup } from "./button_group.ts";

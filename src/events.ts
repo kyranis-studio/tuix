@@ -17,11 +17,12 @@ export interface KeyEvent {
 
 export interface MouseEvent {
   type: "mouse";
-  action: "press" | "release" | "move";
+  action: "press" | "release" | "move" | "wheel";
   button: 0 | 1 | 2 | 3; // 0=left,1=middle,2=right,3=none(move)
   col: number; // 0-indexed
   row: number; // 0-indexed
   modifiers: KeyModifiers;
+  wheelDelta?: number; // -1 (up) or 1 (down) for wheel events
 }
 
 export type TuixEvent = KeyEvent | MouseEvent;
@@ -135,6 +136,25 @@ function parseMouse(bytes: Uint8Array): MouseEvent | null {
   const col = parseInt(m[2]) - 1;
   const row = parseInt(m[3]) - 1;
   const release = m[4] === "m";
+
+  const isWheel = btnCode >= 64;
+  if (isWheel) {
+    if (release) return null; // ignore wheel release
+    return {
+      type: "mouse",
+      action: "wheel",
+      button: 0 as 0,
+      col,
+      row,
+      wheelDelta: (btnCode & 1) === 0 ? -1 : 1,
+      modifiers: {
+        ctrl: (btnCode & 16) !== 0,
+        alt:  (btnCode & 8)  !== 0,
+        shift: (btnCode & 4) !== 0,
+      },
+    };
+  }
+
   const isMove = (btnCode & 32) !== 0;
 
   return {

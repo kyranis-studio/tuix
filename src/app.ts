@@ -162,6 +162,54 @@ export class App {
 
       // Dispatch to focused widget
       this.focus.dispatchKey(key, modifiers);
+
+      // Scroll keys — walk up from focused widget to find a scrollable container.
+      // Skip if the focused widget has its own onKey handler; it already consumed the key.
+      const focusedWidget = this.focus.current();
+      if (
+        key === "ArrowDown" ||
+        key === "ArrowUp" ||
+        key === "PageDown" ||
+        key === "PageUp"
+      ) {
+        if (focusedWidget?.onKey) return;
+        let box: Box | null = focusedWidget;
+        while (box) {
+          const dy =
+            key === "ArrowDown"
+              ? 1
+              : key === "ArrowUp"
+                ? -1
+                : key === "PageDown"
+                  ? 5
+                  : -5;
+          if (box.scrollMaxY > 0) {
+            const prev = box.scrollY;
+            box.scrollY = Math.max(
+              0,
+              Math.min(box.scrollY + dy, box.scrollMaxY),
+            );
+            if (box.scrollY !== prev) break;
+          }
+          if (box.scrollMaxX > 0) {
+            const dx =
+              key === "ArrowDown"
+                ? 1
+                : key === "ArrowUp"
+                  ? -1
+                  : key === "PageDown"
+                    ? 5
+                    : -5;
+            const prev = box.scrollX;
+            box.scrollX = Math.max(
+              0,
+              Math.min(box.scrollX + dx, box.scrollMaxX),
+            );
+            if (box.scrollX !== prev) break;
+          }
+          box = box.parent;
+        }
+      }
     } else if (ev.type === "mouse") {
       this._handleMouse(ev);
     }
@@ -170,15 +218,41 @@ export class App {
   private _activeSplitter: Splitter | null = null;
 
   private _handleMouse(ev: import("./events.ts").MouseEvent): void {
-    const { action, col, row, button } = ev;
+    const { action, col, row, button, wheelDelta } = ev;
+
+    if (action === "wheel" && wheelDelta) {
+      const hit = this.root.hitTest(col, row);
+      if (hit) {
+        let box: Box | null = hit;
+        while (box) {
+          if (box.scrollMaxY > 0) {
+            const prev = box.scrollY;
+            box.scrollY = Math.max(
+              0,
+              Math.min(box.scrollY + (wheelDelta > 0 ? 3 : -3), box.scrollMaxY),
+            );
+            if (box.scrollY !== prev) break;
+          }
+          if (box.scrollMaxX > 0) {
+            const prev = box.scrollX;
+            box.scrollX = Math.max(
+              0,
+              Math.min(box.scrollX + (wheelDelta > 0 ? 3 : -3), box.scrollMaxX),
+            );
+            if (box.scrollX !== prev) break;
+          }
+          box = box.parent;
+        }
+      }
+      return;
+    }
 
     if (action === "press" && button === 0) {
       // Check for splitter hit first (walk root)
       const splitter = this._findSplitter(this.root, col, row);
       if (splitter && splitter.isHandle(col, row)) {
         this._activeSplitter = splitter;
-        const coord =
-          splitter["_direction"] === "horizontal" ? col : row;
+        const coord = splitter["_direction"] === "horizontal" ? col : row;
         splitter.startDrag(coord);
         return;
       }
@@ -212,7 +286,12 @@ export class App {
     }
     if (box instanceof Splitter) {
       const r = box.rect;
-      if (col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height) {
+      if (
+        col >= r.x &&
+        col < r.x + r.width &&
+        row >= r.y &&
+        row < r.y + r.height
+      ) {
         return box;
       }
     }

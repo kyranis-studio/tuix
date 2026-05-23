@@ -110,6 +110,7 @@ export class CellBuffer {
   cols: number;
   rows: number;
   private cells: Cell[];
+  private clipStack: { x: number; y: number; w: number; h: number }[] = [];
 
   constructor(cols: number, rows: number) {
     this.cols = cols;
@@ -118,6 +119,23 @@ export class CellBuffer {
       { length: cols * rows },
       () => ({ ...EMPTY_CELL }),
     );
+  }
+
+  pushClip(x: number, y: number, w: number, h: number): void {
+    if (this.clipStack.length > 0) {
+      const cur = this.clipStack[this.clipStack.length - 1];
+      const ix = Math.max(cur.x, x);
+      const iy = Math.max(cur.y, y);
+      const nw = Math.min(cur.x + cur.w, x + w) - ix;
+      const nh = Math.min(cur.y + cur.h, y + h) - iy;
+      this.clipStack.push({ x: ix, y: iy, w: Math.max(0, nw), h: Math.max(0, nh) });
+    } else {
+      this.clipStack.push({ x, y, w: Math.max(0, w), h: Math.max(0, h) });
+    }
+  }
+
+  popClip(): void {
+    this.clipStack.pop();
   }
 
   get(col: number, row: number): Cell {
@@ -129,6 +147,10 @@ export class CellBuffer {
 
   set(col: number, row: number, cell: Partial<Cell>): void {
     if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
+    if (this.clipStack.length > 0) {
+      const clip = this.clipStack[this.clipStack.length - 1];
+      if (col < clip.x || col >= clip.x + clip.w || row < clip.y || row >= clip.y + clip.h) return;
+    }
     const idx = row * this.cols + col;
     this.cells[idx] = { ...this.cells[idx], ...cell };
   }

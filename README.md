@@ -11,12 +11,15 @@
    - Cross-axis alignment (`align: "start" | "center" | "end" | "stretch"`).
    - Main-axis justification (`justify: "start" | "center" | "end" | "space-between" | "space-around"`).
    - Multi-dimensional spacing: margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
+   - **Auto-scrolling containers**: when children overflow the viewport, a scrollbar appears automatically. Arrow keys / PageUp / PageDown scroll from any focused widget inside the container.
 
 2. **Stateful TUI Component Library**
-   - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings.
+   - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
+   - **`ButtonGroup`**: Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
    - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks.
+   - **`Dropdown`**: Combo-box style selector — shows current selection with `▼` indicator, opens scrollable list on activation, arrow-key navigation, Enter to select, Escape to close.
    - **`TextInput`**: Editable text input with `cursorPos`, arrow/Home/End navigation, character insertion at cursor, block cursor showing the character underneath, and placeholder shown when empty.
-   - **`TextArea`**: Multi-line text editor with `\n`-delimited value, vertical scrolling, arrow/Home/End navigation, Enter for newline, and mouse click to position cursor.
+   - **`TextArea`**: Multi-line text editor with `\n`-delimited value, `maxLines` scroll cap with visual ▲/▼ indicators, vertical scrolling, arrow/Home/End navigation, Enter for newline, and mouse click to position cursor.
    - **`ListBox`**: Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights.
    - **`ProgressBar`**: Stateful percentage loading bar utilizing character block levels (`█████░░░░░ 50%`).
    - **`Autocomplete`**: Dropdown and inline suggestion completion with keyboard/mouse filtering and selection, cursor position tracking with `cursorPos`.
@@ -49,7 +52,19 @@ tuix/
     app.ts              — Main application loop, event loop, mouse/keyboard dispatcher
     terminal.ts         — Double-buffered CellBuffer renderer, raw mode setups, ANSI sequences
     layout.ts           — Box structure, recursive layout engine, coordinate positioning
-    widgets.ts          — Button, Checkbox, TextInput, TextArea, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup
+    widgets/            — Individual widget files
+      mod.ts            — Widget barrel re-export
+      button.ts         — Clickable button (with disabled state)
+      button_group.ts   — Horizontal segmented control
+      checkbox.ts       — Toggle checkbox
+      dropdown.ts       — Combo-box selector with list
+      text_input.ts     — Single-line text input
+      textarea.ts       — Multi-line text editor with scroll
+      listbox.ts        — Scrollable list selector
+      progress_bar.ts   — Percentage progress bar
+      autocomplete.ts   — Dropdown/inline autocomplete
+      radio.ts          — RadioButton & RadioGroup
+      tabs.ts           — Multi-tab container
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
     events.ts           — Async keyboard and SGR mouse event parser
@@ -60,7 +75,7 @@ tuix/
     03_resizable.ts     — Vertical/horizontal nested splitters with mouse resizing
     04_spacing.ts       — Spacing visualizations (gutter, padding, margin)
     05_borders.ts       — Visual preview of all border types (single, double, rounded, bold, none)
-     06_showcase.ts      — 7-tab interactive showcase: Layout, Resizable, Shortcuts, Text (with TextArea), UI, Animation (spinners, metric bars, countdown)
+    06_showcase.ts      — 7-tab interactive showcase: Layout (scrollable column), Resizable, Shortcuts, Text (with TextArea), UI (Checkboxes, RadioGroup, Buttons (incl. disabled), Dropdown, ButtonGroup, ListBox), Animation (spinners, metric bars, countdown)
   deno.json             — Deno config and script tasks
 ```
 

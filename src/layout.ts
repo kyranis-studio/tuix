@@ -59,7 +59,12 @@ export { edgesZero, edgesAll, edgesXY };
 
 export type Direction = "row" | "column";
 export type Align = "start" | "center" | "end" | "stretch";
-export type Justify = "start" | "center" | "end" | "space-between" | "space-around";
+export type Justify =
+  | "start"
+  | "center"
+  | "end"
+  | "space-between"
+  | "space-around";
 
 export interface BoxStyle {
   direction: Direction;
@@ -67,7 +72,7 @@ export interface BoxStyle {
   gutter: number;
   padding: Edges;
   margin: Edges;
-  align: Align;    // cross-axis
+  align: Align; // cross-axis
   justify: Justify; // main-axis
   border: BorderStyle | "none";
   /** Override background color from theme */
@@ -114,7 +119,12 @@ export class Box {
   onPaint: ((buf: CellBuffer, rect: Rect, theme: Theme) => void) | null;
 
   /** Called on key events when this box is focused */
-  onKey: ((key: string, modifiers: { ctrl: boolean; alt: boolean; shift: boolean }) => void) | null;
+  onKey:
+    | ((
+        key: string,
+        modifiers: { ctrl: boolean; alt: boolean; shift: boolean },
+      ) => void)
+    | null;
 
   /** Called on mouse events */
   onMouse: ((col: number, row: number, action: string) => void) | null;
@@ -131,6 +141,12 @@ export class Box {
 
   // Computed geometry (set during layout pass)
   rect: Rect;
+
+  // Scrolling
+  scrollX = 0;
+  scrollY = 0;
+  scrollMaxX = 0;
+  scrollMaxY = 0;
 
   constructor(label = "") {
     this.id = _nextId++;
@@ -172,12 +188,22 @@ export class Box {
     const outerH = parentRect.height - m.top - m.bottom;
 
     // Apply fixed size if specified
-    const selfW = this.width.fixed !== undefined
-      ? clamp(this.width.fixed, this.width.min ?? 0, this.width.max ?? Infinity)
-      : clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
-    const selfH = this.height.fixed !== undefined
-      ? clamp(this.height.fixed, this.height.min ?? 0, this.height.max ?? Infinity)
-      : clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
+    const selfW =
+      this.width.fixed !== undefined
+        ? clamp(
+            this.width.fixed,
+            this.width.min ?? 0,
+            this.width.max ?? Infinity,
+          )
+        : clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
+    const selfH =
+      this.height.fixed !== undefined
+        ? clamp(
+            this.height.fixed,
+            this.height.min ?? 0,
+            this.height.max ?? Infinity,
+          )
+        : clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
 
     this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
 
@@ -192,7 +218,10 @@ export class Box {
     const contentX = this.rect.x + bOff + p.left;
     const contentY = this.rect.y + bOff + p.top;
     const contentW = Math.max(0, this.rect.width - bOff * 2 - p.left - p.right);
-    const contentH = Math.max(0, this.rect.height - bOff * 2 - p.top - p.bottom);
+    const contentH = Math.max(
+      0,
+      this.rect.height - bOff * 2 - p.top - p.bottom,
+    );
 
     const dir = this.style.direction;
     const isRow = dir === "row";
@@ -217,19 +246,28 @@ export class Box {
 
     switch (this.style.justify) {
       case "center":
-        mainOffsets = this._spreadOffsets(mainSizes, gutter, Math.floor(freeSpace / 2));
+        mainOffsets = this._spreadOffsets(
+          mainSizes,
+          gutter,
+          Math.floor(freeSpace / 2),
+        );
         break;
       case "end":
         mainOffsets = this._spreadOffsets(mainSizes, gutter, freeSpace);
         break;
       case "space-between": {
-        const gap = childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
+        const gap =
+          childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
         mainOffsets = this._spreadOffsets(mainSizes, gap);
         break;
       }
       case "space-around": {
         const gap = Math.floor(freeSpace / childCount);
-        mainOffsets = this._spreadOffsets(mainSizes, gap + gutter, Math.floor(gap / 2));
+        mainOffsets = this._spreadOffsets(
+          mainSizes,
+          gap + gutter,
+          Math.floor(gap / 2),
+        );
         break;
       }
       default: // "start"
@@ -250,7 +288,10 @@ export class Box {
         } else if (this.style.align === "stretch") {
           crossSize = crossAvailable;
         } else {
-          crossSize = Math.min(crossAvailable, child.height.max ?? crossAvailable);
+          crossSize = Math.min(
+            crossAvailable,
+            child.height.max ?? crossAvailable,
+          );
         }
       } else {
         if (child.width.fixed !== undefined) {
@@ -258,7 +299,10 @@ export class Box {
         } else if (this.style.align === "stretch") {
           crossSize = crossAvailable;
         } else {
-          crossSize = Math.min(crossAvailable, child.width.max ?? crossAvailable);
+          crossSize = Math.min(
+            crossAvailable,
+            child.width.max ?? crossAvailable,
+          );
         }
       }
       crossSize = Math.max(crossSize, 0);
@@ -282,20 +326,33 @@ export class Box {
 
       const childParentRect: Rect = isRow
         ? {
-            x: contentX + mainOff,
+            x: contentX + mainOff - this.scrollX,
             y: contentY + crossOff,
             width: mainSize,
             height: crossSize,
           }
         : {
             x: contentX + crossOff,
-            y: contentY + mainOff,
+            y: contentY + mainOff - this.scrollY,
             width: crossSize,
             height: mainSize,
           };
 
       child.layout(childParentRect);
     }
+
+    if (childCount > 0) {
+      const contentSize =
+        mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
+      const viewportSize = isRow ? contentW : contentH;
+      const maxScroll = Math.max(0, contentSize - viewportSize);
+      this.scrollMaxX = isRow ? maxScroll : 0;
+      this.scrollMaxY = isRow ? 0 : maxScroll;
+      this.scrollX = Math.max(0, Math.min(this.scrollX, this.scrollMaxX));
+      this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
+    }
+    // Note: leaf nodes (no children) that manage their own scroll (e.g. TextArea)
+    // set scrollMaxY themselves — we don't touch it here.
   }
 
   private _resolveMainAxis(available: number, gutter: number): number[] {
@@ -332,9 +389,8 @@ export class Box {
       const sc = isRow ? c.width : c.height;
       if (sc.fixed === undefined) {
         const growFactor = sc.grow ?? 1;
-        const share = totalGrow > 0
-          ? Math.floor((growFactor / totalGrow) * remaining)
-          : 0;
+        const share =
+          totalGrow > 0 ? Math.floor((growFactor / totalGrow) * remaining) : 0;
         sizes[i] = clamp(share, sc.min ?? 0, sc.max ?? Infinity);
       }
     }
@@ -386,7 +442,11 @@ export class Box {
         bg: borderBg,
       });
       for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
-        buf.set(col, r.y, { char: chars.horizontal, fg: borderColor, bg: borderBg });
+        buf.set(col, r.y, {
+          char: chars.horizontal,
+          fg: borderColor,
+          bg: borderBg,
+        });
       }
 
       // Bottom row
@@ -410,7 +470,11 @@ export class Box {
 
       // Left & right columns
       for (let row = r.y + 1; row < r.y + r.height - 1; row++) {
-        buf.set(r.x, row, { char: chars.vertical, fg: borderColor, bg: borderBg });
+        buf.set(r.x, row, {
+          char: chars.vertical,
+          fg: borderColor,
+          bg: borderBg,
+        });
         buf.set(r.x + r.width - 1, row, {
           char: chars.vertical,
           fg: borderColor,
@@ -422,7 +486,11 @@ export class Box {
       if (this.focused && this.label) {
         const labelText = ` ${this.label} `;
         const startCol = r.x + 2;
-        for (let i = 0; i < labelText.length && startCol + i < r.x + r.width - 1; i++) {
+        for (
+          let i = 0;
+          i < labelText.length && startCol + i < r.x + r.width - 1;
+          i++
+        ) {
           buf.set(startCol + i, r.y, {
             char: labelText[i],
             fg: theme.highlight,
@@ -433,7 +501,11 @@ export class Box {
       } else if (this.label) {
         const labelText = ` ${this.label} `;
         const startCol = r.x + 2;
-        for (let i = 0; i < labelText.length && startCol + i < r.x + r.width - 1; i++) {
+        for (
+          let i = 0;
+          i < labelText.length && startCol + i < r.x + r.width - 1;
+          i++
+        ) {
           buf.set(startCol + i, r.y, {
             char: labelText[i],
             fg: theme.muted,
@@ -458,9 +530,114 @@ export class Box {
       this.onPaint(buf, contentRect, theme);
     }
 
-    // Paint children
+    // Paint children with viewport clipping
+    const hasBorderForClip = this.style.border !== "none";
+    const hasChildren = this.children.length > 0;
+    const needsClip = hasChildren || this.scrollMaxY > 0 || this.scrollMaxX > 0;
+    if (needsClip) {
+      const bOff = hasBorderForClip ? 1 : 0;
+      const p = this.style.padding;
+      const clipX = r.x + bOff + p.left;
+      const clipY = r.y + bOff + p.top;
+      const clipW = Math.max(0, r.width - bOff * 2 - p.left - p.right);
+      const clipH = Math.max(0, r.height - bOff * 2 - p.top - p.bottom);
+      buf.pushClip(clipX, clipY, clipW, clipH);
+    }
+
     for (const child of this.children) {
       child.paint(buf, theme);
+    }
+
+    if (needsClip) {
+      buf.popClip();
+    }
+
+    // Always paint scrollbar track for bordered containers with children,
+    // or any box with explicit scrollMaxY/X (e.g. self-managed scroll widgets).
+    const wantsScrollbar =
+      (hasBorderForClip && hasChildren) ||
+      this.scrollMaxY > 0 ||
+      this.scrollMaxX > 0;
+    if (wantsScrollbar) {
+      this._paintScrollbar(buf, theme);
+    }
+  }
+
+  private _paintScrollbar(buf: CellBuffer, theme: Theme): void {
+    const r = this.rect;
+    const hasBorder = this.style.border !== "none";
+    const bOff = hasBorder ? 1 : 0;
+    const p = this.style.padding;
+    const contentX = r.x + bOff + p.left;
+    const contentY = r.y + bOff + p.top;
+    const contentW = Math.max(0, r.width - bOff * 2 - p.left - p.right);
+    const contentH = Math.max(0, r.height - bOff * 2 - p.top - p.bottom);
+    if (contentW < 3 || contentH < 3) return;
+
+    const isRow = this.style.direction === "row";
+
+    if (isRow) {
+      // Horizontal scrollbar — bottom row of content area
+      const maxScroll = this.scrollMaxX;
+      if (maxScroll <= 0) {
+        // Track with no thumb: dim line
+        for (let col = contentX; col < contentX + contentW; col++) {
+          buf.set(col, contentY + contentH - 1, {
+            char: "─",
+            fg: theme.muted,
+            bg: theme.panelBg,
+          });
+        }
+        return;
+      }
+      const totalContent = contentW + maxScroll;
+      const thumbW = Math.max(
+        1,
+        Math.floor((contentW / totalContent) * contentW),
+      );
+      const thumbX = Math.floor(
+        (this.scrollX / maxScroll) * (contentW - thumbW),
+      );
+      for (let col = contentX; col < contentX + contentW; col++) {
+        const off = col - contentX;
+        const isThumb = off >= thumbX && off < thumbX + thumbW;
+        buf.set(col, contentY + contentH - 1, {
+          char: isThumb ? "▄" : "─",
+          fg: isThumb ? theme.text : theme.muted,
+          bg: theme.panelBg,
+        });
+      }
+    } else {
+      // Vertical scrollbar — rightmost column of content area
+      const maxScroll = this.scrollMaxY;
+      if (maxScroll <= 0) {
+        // Track with no thumb: dim line
+        for (let row = contentY; row < contentY + contentH; row++) {
+          buf.set(contentX + contentW - 1, row, {
+            char: "│",
+            fg: theme.muted,
+            bg: theme.panelBg,
+          });
+        }
+        return;
+      }
+      const totalContent = contentH + maxScroll;
+      const thumbH = Math.max(
+        1,
+        Math.floor((contentH / totalContent) * contentH),
+      );
+      const thumbY = Math.floor(
+        (this.scrollY / maxScroll) * (contentH - thumbH),
+      );
+      for (let row = contentY; row < contentY + contentH; row++) {
+        const off = row - contentY;
+        const isThumb = off >= thumbY && off < thumbY + thumbH;
+        buf.set(contentX + contentW - 1, row, {
+          char: isThumb ? "▌" : "│",
+          fg: isThumb ? theme.text : theme.muted,
+          bg: theme.panelBg,
+        });
+      }
     }
   }
 
