@@ -24,3 +24,11 @@ export type { TabDefinition } from "./tabs.ts";
 export { Dropdown } from "./dropdown.ts";
 
 export { ButtonGroup } from "./button_group.ts";
+
+export { Dialog } from "./dialog.ts";
+export type { DialogButton } from "./dialog.ts";
+
+export { Notification } from "./notification.ts";
+export type { NotificationType } from "./notification.ts";
+
+export { FloatingWindow } from "./window.ts";

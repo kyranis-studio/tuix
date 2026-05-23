@@ -13,8 +13,8 @@ export type { SplitDirection } from "./splitter.ts";
 
 export { FocusManager } from "./focus.ts";
 
-export { Button, SmallButton, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup, TextArea, Dropdown, ButtonGroup } from "./widgets/mod.ts";
-export type { AutocompleteMode, TabDefinition, ListBoxItem } from "./widgets/mod.ts";
+export { Button, SmallButton, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup, TextArea, Dropdown, ButtonGroup, Dialog, Notification, FloatingWindow } from "./widgets/mod.ts";
+export type { AutocompleteMode, TabDefinition, ListBoxItem, DialogButton, NotificationType } from "./widgets/mod.ts";
 
 export {
   vscodeDarkTheme,

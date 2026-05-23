@@ -1,7 +1,7 @@
 import {
   App, Box, Splitter, Button, Checkbox, TextInput, ListBox,
   Autocomplete, Tabs, RadioGroup, TextArea, Dropdown, ButtonGroup,
-  ProgressBar,
+  ProgressBar, Dialog, Notification, FloatingWindow,
   paintCenteredText, paintText, edgesAll, defaultTheme,
 } from "../src/mod.ts";
 import { SmallButton } from "../src/mod.ts";
@@ -97,20 +97,6 @@ const r1c = colorBox("grow 2", { r: 50, g: 70, b: 60 }, { r: 180, g: 220, b: 200
 r1c.width = { grow: 2 };
 row1.add(r1a, r1b, r1c);
 
-// Column: fixed + grow + fixed
-const col1 = Box.col("col1");
-col1.style.border = "single";
-col1.style.gutter = 1;
-col1.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-col1.height = { grow: 1 };
-const c1a = colorBox("fixed 2", { r: 55, g: 60, b: 70 }, { r: 200, g: 210, b: 230 });
-c1a.height = { fixed: 2 };
-const c1b = colorBox("grow 1", { r: 65, g: 55, b: 60 }, { r: 230, g: 200, b: 210 });
-c1b.height = { grow: 1 };
-const c1c = colorBox("fixed 2", { r: 55, g: 65, b: 55 }, { r: 200, g: 230, b: 200 });
-c1c.height = { fixed: 2 };
-col1.add(c1a, c1b, c1c);
-
 // Row: grow + fixed + grow
 const row2 = Box.row("row2");
 row2.style.border = "single";
@@ -125,47 +111,175 @@ const r2c = colorBox("grow 1", { r: 60, g: 60, b: 70 }, { r: 210, g: 210, b: 230
 r2c.width = { grow: 1 };
 row2.add(r2a, r2b, r2c);
 
-responsiveTab.add(row1, col1, row2);
+// ─── Scroll demos ────────────────────────────────────────────────────────
+
+const palette = [
+  { r: 60, g: 60, b: 80 }, { r: 70, g: 55, b: 50 },
+  { r: 50, g: 70, b: 60 }, { r: 65, g: 50, b: 75 },
+  { r: 55, g: 65, b: 50 }, { r: 75, g: 55, b: 60 },
+  { r: 50, g: 60, b: 80 }, { r: 70, g: 65, b: 50 },
+  { r: 60, g: 50, b: 70 }, { r: 55, g: 70, b: 65 },
+  { r: 65, g: 60, b: 55 }, { r: 50, g: 65, b: 75 },
+  { r: 70, g: 55, b: 65 }, { r: 60, g: 70, b: 55 },
+  { r: 55, g: 55, b: 75 },
+];
+
+const scrollLabel = new Box("scroll-label");
+scrollLabel.height = { fixed: 1 };
+scrollLabel.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, "  ← Scroll demos: vertical (left) and horizontal (right) — Arrow keys to scroll:", 0, theme.muted);
+
+const scrollDemoRow = Box.row("scroll-demo-row");
+scrollDemoRow.style.gutter = 2;
+scrollDemoRow.height = { grow: 1 };
+
+// ─── Vertical scroll demo ────────────────────────────────────────────────
+
+const vScrollCol = Box.col("vscroll-col");
+vScrollCol.style.border = "single";
+vScrollCol.style.overflow = "scroll";
+vScrollCol.style.gutter = 1;
+vScrollCol.style.padding = edgesAll(1);
+vScrollCol.width = { grow: 1 };
+
+for (let i = 1; i <= 25; i++) {
+  const item = colorBox(`Item ${i}`, palette[i % palette.length], { r: 200, g: 200, b: 220 });
+  item.height = { fixed: 2 };
+  // Make first item focusable so users can Tab in and ArrowUp/Down to scroll
+  if (i === 1 || i === 2) {
+    item.focusable = true;
+    item.tabIndex = 10 + i;
+    const origBg = item.style.bg;
+    item.onPaint = (buf, rect, theme) => {
+      if (item.focused) {
+        for (let c = 0; c < rect.width; c++) {
+          buf.set(rect.x + c, rect.y, { char: "▀", fg: theme.highlight, bg: origBg });
+          buf.set(rect.x + c, rect.y + rect.height - 1, { char: "▄", fg: theme.highlight, bg: origBg });
+        }
+      }
+      paintCenteredText(buf, rect, item.label, { r: 200, g: 200, b: 220 }, null);
+    };
+  }
+  vScrollCol.add(item);
+}
+
+// ─── Horizontal scroll demo ──────────────────────────────────────────────
+
+const hScrollRow = Box.row("hscroll-row");
+hScrollRow.style.border = "single";
+hScrollRow.style.overflow = "scroll";
+hScrollRow.style.gutter = 1;
+hScrollRow.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+hScrollRow.width = { grow: 1 };
+
+for (let i = 0; i < palette.length; i++) {
+  const item = colorBox(`Item ${i}`, palette[i], { r: 200, g: 200, b: 220 });
+  item.width = { fixed: 12 };
+  // Make first item focusable so users can Tab in and ArrowLeft/Right to scroll
+  if (i === 0 || i === 1) {
+    item.focusable = true;
+    item.tabIndex = 30 + i;
+    const origBg = item.style.bg;
+    item.onPaint = (buf, rect, theme) => {
+      if (item.focused) {
+        for (let c = 0; c < rect.width; c++) {
+          buf.set(rect.x + c, rect.y, { char: "▀", fg: theme.highlight, bg: origBg });
+          buf.set(rect.x + c, rect.y + rect.height - 1, { char: "▄", fg: theme.highlight, bg: origBg });
+        }
+      }
+      paintCenteredText(buf, rect, item.label, { r: 200, g: 200, b: 220 }, null);
+    };
+  }
+  hScrollRow.add(item);
+}
+
+scrollDemoRow.add(vScrollCol, hScrollRow);
+
+// ─── Keyboard hint ───────────────────────────────────────────────────────
+
+const scrollHint = new Box("scroll-hint");
+scrollHint.height = { fixed: 1 };
+scrollHint.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, "  ↑/↓ vertical · ←/→ horizontal · Tab to focus demo items · PageUp/Down for fast scroll", 0, theme.muted);
+
+responsiveTab.add(row1, row2, scrollLabel, scrollDemoRow, scrollHint);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: Resizable — splitter panels
 // ═══════════════════════════════════════════════════════════════════════════
 
 function makeResizePanel(label: string, body: string[], tabIdx: number): Box {
-  const box = new Box(label);
-  box.style.border = "single";
-  box.style.padding = { top: 1, bottom: 1, left: 1, right: 1 };
-  box.style.bg = defaultTheme.panelBg;
-  box.focusable = true;
-  box.tabIndex = tabIdx;
-  box.onPaint = (buf, rect, theme) => {
-    const titleColor = box.focused ? theme.highlight : theme.muted;
-    paintText(buf, rect, label, 0, titleColor, box.focused);
-    if (box.focused) {
-      for (let c = rect.x; c < rect.x + label.length; c++)
-        buf.set(c, rect.y + 1, { char: "▔", fg: theme.highlight, bg: theme.panelBg });
-    }
-    for (let i = 0; i < body.length; i++)
-      paintText(buf, rect, body[i], 2 + i, theme.text);
-    paintText(buf, rect, `rect: ${box.rect.width}x${box.rect.height}`, rect.height - 1, theme.muted);
+  const container = new Box(label);
+  container.style.border = "single";
+  container.style.padding = { top: 0, bottom: 0, left: 0, right: 0 };
+  container.style.bg = defaultTheme.panelBg;
+  container.focusable = true;
+  container.tabIndex = tabIdx;
+
+  // Inner column with auto scroll when content overflows
+  const inner = Box.col(`${label}-inner`);
+  inner.style.overflow = "auto";
+  inner.style.gutter = 0;
+  inner.style.padding = { top: 1, bottom: 1, left: 1, right: 1 };
+
+  // Title line
+  const titleLine = new Box();
+  titleLine.height = { fixed: 1 };
+  titleLine.onPaint = (buf, rect, theme) => {
+    const tc = container.focused ? theme.highlight : theme.muted;
+    paintText(buf, rect, ` ${label.trim()} `, 0, tc, container.focused);
   };
-  return box;
+  inner.add(titleLine);
+
+  // Body lines
+  for (const line of body) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, theme) => paintText(buf, rect, line, 0, theme.text);
+    inner.add(lb);
+  }
+
+  // Bottom info
+  const infoLine = new Box();
+  infoLine.height = { fixed: 1 };
+  infoLine.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, ` rect: ${container.rect.width}x${container.rect.height}`, 0, theme.muted);
+  };
+  inner.add(infoLine);
+
+  container.add(inner);
+  return container;
 }
 
-const rTopLeft = makeResizePanel("  File Explorer", [
+// Generous content to ensure overflow into scrollbars
+const fileExplorerLines = [
   "  src/", "    mod.ts", "    layout.ts", "    theme.ts",
   "    events.ts", "    focus.ts", "    splitter.ts", "    app.ts",
-], 1);
-const rTopRight = makeResizePanel("  Editor", [
-  "  // Resizable panel demo", "  // Drag the  handle",
+  "    terminal.ts", "  examples/", "    06_showcase.ts",
+  "  docs/", "    PRD.md", "    DESIGN.md",
+  "  deno.json", "  deno.lock", "  README.md",
+];
+const editorLines = [
+  "  // Resizable panel demo", "  // Drag the ◈ handle",
   "  // to resize panels", "",
   '  const splitter = new', "    Splitter('horizontal',",
   "      panelA, panelB,", "      { initialSplit: 30 }", "    );",
-], 2);
-const rBottom = makeResizePanel("  Terminal Output", [
+  "", "  // Splitter supports:", "  //   - mouse drag resize",
+  "  //   - keyboard nudge", "  //   - min/max constraints",
+  "  //   - Tab to cycle focus",
+];
+const termLines = [
   "  $ deno run 06_showcase.ts", "  tuix v0.1.0 - resizable panels",
-  "  Drag the  handle to resize.", "  Tab to cycle panel focus.",
-], 3);
+  "  Opening tuix component showcase...",
+  "  ✓ Layout engine initialized", "  ✓ Focus manager ready",
+  "  ✓ Renderer started (30 fps)", "  ✓ Mouse enabled",
+  "", "  Tab between panels to focus", "  Drag the ◈ handle to resize",
+  "  Arrow keys to nudge splitter", "  Ctrl+C to quit",
+];
+
+const rTopLeft = makeResizePanel("  File Explorer", fileExplorerLines, 1);
+const rTopRight = makeResizePanel("  Editor", editorLines, 2);
+const rBottom = makeResizePanel("  Terminal Output", termLines, 3);
 
 const rHSplit = new Splitter("horizontal", rTopLeft, rTopRight, { initialSplit: 30, minA: 12, minB: 12 });
 const rVSplit = new Splitter("vertical", rHSplit, rBottom, { initialSplit: 12, minA: 8, minB: 5 });
@@ -388,7 +502,7 @@ smallBtnRow.add(label("SmallButtons:"), smallBtns);
 
 const dropdownRow = Box.col("dropdown-row");
 dropdownRow.style.gutter = 1;
-dropdownRow.height = { fixed: 5 };
+dropdownRow.height = { grow: 1 };
 dropdownRow.add(label("Dropdown:"), themeDropdown);
 
 const uiScroll = Box.col("ui-scroll");
@@ -491,25 +605,26 @@ countdownBox.height = { grow: 1 };
 const cdHeader = new Box("cd-hdr");
 cdHeader.height = { fixed: 1 };
 cdHeader.onPaint = (buf, rect, theme) => paintText(buf, rect, " Countdown", 0, theme.muted);
+// Large digit patterns for countdown (5 rows × 3 cols each)
+const CD_DIGITS: Record<string, string[]> = {
+  "0": ["███","█ █","█ █","█ █","███"],
+  "1": ["  █","  █","  █","  █","  █"],
+  "2": ["███","  █","███","█  ","███"],
+  "3": ["███","  █","███","  █","███"],
+  "4": ["█ █","█ █","███","  █","  █"],
+  "5": ["███","█  ","███","  █","███"],
+  "6": ["███","█  ","███","█ █","███"],
+  "7": ["███","  █","  █","  █","  █"],
+  "8": ["███","█ █","███","█ █","███"],
+  "9": ["███","█ █","███","  █","███"],
+  ":": ["   "," █ ","   "," █ ","   "],
+};
+
 const cdDisplay = new Box("cd-display");
 cdDisplay.onPaint = (buf, rect, theme) => {
   const m = Math.floor(countdownSec / 60);
   const s = countdownSec % 60;
   const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-
-  const DIGITS: Record<string, string[]> = {
-    "0": ["███","█ █","█ █","█ █","███"],
-    "1": ["  █","  █","  █","  █","  █"],
-    "2": ["███","  █","███","█  ","███"],
-    "3": ["███","  █","███","  █","███"],
-    "4": ["█ █","█ █","███","  █","  █"],
-    "5": ["███","█  ","███","  █","███"],
-    "6": ["███","█  ","███","█ █","███"],
-    "7": ["███","  █","  █","  █","  █"],
-    "8": ["███","█ █","███","█ █","███"],
-    "9": ["███","█ █","███","  █","███"],
-    ":": ["   "," █ ","   "," █ ","   "],
-  };
 
   // Total width: 5 chars × 3 cols + 4 gaps of 1 = 19
   const totalW = timeStr.length * 4 - 1;
@@ -520,16 +635,16 @@ cdDisplay.onPaint = (buf, rect, theme) => {
     return;
   }
 
-  // Flash when < 30 simulated seconds remain (countdownSec < 30)
+  // Flash red when < 30 simulated seconds remain
   const low = countdownSec < 30;
-  const flash = low && (Math.floor(countdownSec * 100) % 20 < 10);
-  const color = flash ? { r: 255, g: 50, b: 50 } : (low ? { r: 255, g: 180, b: 50 } : theme.highlight);
+  const flash = low && (Math.floor(Date.now() / 500) % 2 === 0);
+  const color = flash ? { r: 255, g: 40, b: 40 } : (low ? { r: 255, g: 180, b: 40 } : theme.highlight);
 
   const startY = rect.y + Math.floor((rect.height - 5) / 2);
   const startX = rect.x + Math.floor((rect.width - totalW) / 2);
 
   for (let di = 0; di < timeStr.length; di++) {
-    const pattern = DIGITS[timeStr[di]] ?? DIGITS["8"];
+    const pattern = CD_DIGITS[timeStr[di]] ?? CD_DIGITS["8"];
     const cx = startX + di * 4;
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 3; col++) {
@@ -616,6 +731,155 @@ animTab.add(animLabel, contentRow, animBtnRow);
 let progressDir = 1;
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TAB: Floating — dialog, notifications, draggable window
+// ═══════════════════════════════════════════════════════════════════════════
+
+const floatTab = Box.col("Floating");
+floatTab.style.gutter = 1;
+floatTab.style.bg = defaultTheme.bg;
+
+let notifCount = 0;
+
+const floatLabel = new Box("float-label");
+floatLabel.height = { fixed: 1 };
+floatLabel.onPaint = (_buf, rect, theme) =>
+  paintCenteredText(_buf, rect, "  Floating Widgets — Dialogs · Notifications · Draggable Window  ", theme.muted, theme.bg);
+
+// ─── Control panel ───────────────────────────────────────────────────────
+
+const floatCtl = Box.col("float-ctl");
+floatCtl.style.border = "single";
+floatCtl.style.gutter = 1;
+floatCtl.style.padding = edgesAll(1);
+floatCtl.height = { grow: 1 };
+
+const ctlLabel = new Box();
+ctlLabel.height = { fixed: 1 };
+ctlLabel.onPaint = (buf, rect, theme) => paintText(buf, rect, " Show overlay widgets (click or press Enter on buttons):", 0, theme.muted);
+
+const ctlRow = Box.row("ctl-row");
+ctlRow.style.gutter = 2;
+ctlRow.style.justify = "center";
+ctlRow.height = { fixed: 3 };
+
+// Dialog button
+const btnDialog = new Button("  Open Dialog  ", () => {
+  const onDialogDismiss = () => {
+    notifCount++;
+    const notif = new Notification("Dialog dismissed", "success", 2500);
+    app.showOverlay(notif, { modal: false });
+    notif.removeFn = () => app.removeOverlay(notif);
+    notif.show();
+  };
+  const dialog = new Dialog(" Confirm Action ", [
+    "This is a modal dialog demonstration.",
+    "",
+    "It has a title in the double border, body",
+    "text, and action buttons below.",
+    "",
+    "Press Tab to cycle buttons, Enter to",
+    "activate, or Escape to dismiss.",
+  ], [
+    { label: "Cancel", action: () => {} },
+    { label: "Confirm", action: () => {}, default: true },
+  ]);
+  dialog.appRef = app;
+  app.showOverlay(dialog, { modal: true, onClose: onDialogDismiss });
+});
+
+// Notification button
+const btnNotif = new Button("  Send Notification  ", () => {
+  notifCount++;
+  const types = ["info", "success", "warn", "error"] as const;
+  const msgs = [
+    "Build completed successfully",
+    "Server running on port 8080",
+    "Low disk space warning",
+    "Connection lost to database",
+  ];
+  const positions: Array<"top-right" | "top-left" | "bottom-right" | "bottom-left"> = [
+    "bottom-right", "bottom-left", "top-right", "top-left",
+  ];
+  const t = types[notifCount % types.length];
+  const m = msgs[notifCount % msgs.length];
+  const pos = positions[notifCount % positions.length];
+  const notif = new Notification(m, t, 3000, pos);
+  app.showOverlay(notif, { modal: false });
+  notif.removeFn = () => app.removeOverlay(notif);
+  notif.show();
+});
+
+// Window button
+const btnWindow = new Button("  Open Window  ", () => {
+  const win = new FloatingWindow("Draggable Window", {
+    width: 48,
+    height: 18,
+    onClose: () => {
+      notifCount++;
+      const notif = new Notification("Window closed", "info", 2000);
+      app.showOverlay(notif, { modal: false });
+      notif.removeFn = () => app.removeOverlay(notif);
+      notif.show();
+    },
+  });
+  win.appRef = app;
+  // Add content to the window
+  const content = [
+    "This window can be dragged by clicking",
+    "and holding the title bar.",
+    "",
+    "Drag the mouse to move the window",
+    "anywhere on screen.",
+    "",
+    "Click [×] or press Escape to close.",
+  ];
+  for (const line of content) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, theme) => paintCenteredText(buf, rect, line, theme.text, undefined);
+    win.contentBox.add(lb);
+  }
+  app.showOverlay(win, { modal: false });
+});
+
+ctlRow.add(btnDialog, btnNotif, btnWindow);
+
+// ─── Info panel ──────────────────────────────────────────────────────────
+
+const floatInfo = Box.row("float-info");
+floatInfo.style.gutter = 2;
+floatInfo.style.justify = "center";
+floatInfo.style.align = "stretch";
+floatInfo.height = { grow: 1 };
+
+function infoCard(title: string, lines: string[]): Box {
+  const card = Box.col(`card-${title}`);
+  card.style.border = "rounded";
+  card.style.padding = edgesAll(1);
+  card.style.bg = defaultTheme.panelBg;
+  card.width = { grow: 1 };
+  card.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, ` ${title}`, 0, theme.highlight, true);
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, th) => paintText(buf, rect, `  ${lines[i]}`, 0, th.muted);
+    card.add(lb);
+  }
+  return card;
+}
+
+floatInfo.add(
+  infoCard("Dialog", ["Modal dialog with", "double border, body","text, and action buttons.","","Esc or action to close."]),
+  infoCard("Notification", ["Auto-dismissing toast.","Info / Success / Warn /","Error — 4 types.","","Bottom-right by default.","Rotates through corners."]),
+  infoCard("Window", ["Draggable window with","title bar drag support.","Close [×] button.","","Move anywhere on screen."]),
+);
+
+floatCtl.add(ctlLabel, ctlRow, floatInfo);
+floatTab.add(floatLabel, floatCtl);
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Tabs
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -626,6 +890,7 @@ const tabs = new Tabs([
   { label: "Text", content: textTab },
   { label: "UI", content: uiTab },
   { label: "Animation", content: animTab },
+  { label: "Floating", content: floatTab },
 ], 0);
 tabs.height = { grow: 1 };
 
@@ -638,7 +903,7 @@ statusBar.height = { fixed: 1 };
 statusBar.style.bg = defaultTheme.bg;
 statusBar.onPaint = (_buf, rect, theme) => {
   _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
-  const hint = " Tab: focus  |  <- ->: tabs  |  up/down: scroll  |  Spc: toggle  |  Ctrl+C: quit";
+  const hint = " Tab: focus  |  <- ->: tabs  |  up/down: scroll  |  Ctrl+←/→: horiz scroll  |  Spc: toggle  |  Esc: close  |  Ctrl+C: quit";
   for (let i = 0; i < hint.length && i < rect.width; i++)
     _buf.set(rect.x + i, rect.y, { char: hint[i], fg: theme.muted, bg: theme.bg });
 };
