@@ -1,0 +1,13 @@
+{
+  "name": "tuix",
+  "version": "0.1.0",
+  "tasks": {
+    "example:01": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/01_center_text.ts",
+    "example:02": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/02_focus_zones.ts",
+    "example:03": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/03_resizable.ts",
+    "example:04": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/04_spacing.ts",
+    "example:05": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/05_borders.ts",
+    "example:06": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/06_showcase.ts"
+  },
+  "exports": "./src/mod.ts"
+}
