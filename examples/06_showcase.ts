@@ -570,10 +570,15 @@ textTab.add(
 const uiTab = Box.col("UI Controls");
 uiTab.style.gutter = 1;
 uiTab.style.bg = defaultTheme.bg;
-uiTab.onPaint = (_buf, rect, theme) => {
+
+// Header label as a real child so layout accounts for its height
+const uiHeader = new Box("ui-header");
+uiHeader.height = { fixed: 1 };
+uiHeader.style.bg = defaultTheme.bg;
+uiHeader.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
-    { x: rect.x, y: rect.y, width: rect.width, height: 1 },
+    rect,
     "Interactive Controls — Toggle, Select, Button, Dropdown, and Group",
     theme.muted,
     theme.bg,
@@ -696,7 +701,7 @@ const alignGroup = new ButtonGroup(
 );
 
 const uiStatus = new Box("ui-status");
-uiStatus.height = { fixed: 1 };
+uiStatus.height = { fixed: 3 };
 uiStatus.style.bg = defaultTheme.bg;
 uiStatus.onPaint = (_buf, rect, theme) => {
   const parts = [
@@ -734,7 +739,7 @@ uiScroll.add(
   profileList,
 );
 
-uiTab.add(uiScroll, uiStatus);
+uiTab.add(uiHeader, uiScroll, uiStatus);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: Animation Dashboard

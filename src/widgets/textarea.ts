@@ -32,17 +32,18 @@ export class TextArea extends Box {
     };
 
     // rect is already the content rect (border+padding stripped by layout engine).
-    // The layout engine paints a scrollbar in the rightmost column, so we write
-    // text only into columns [0, width-2] — leaving width-1 for the track.
+    // We own the rightmost column as a permanent scrollbar track.
     this.onPaint = (buf, rect, theme) => {
       const isFocused = this.focused;
       const showPlaceholder = !this.value;
       const bg = theme.panelBg;
       const ch = rect.height;
-      // Reserve last column for the scrollbar drawn by layout engine
+      const totalRows = this._rowCount();
+      // Reserve last column for the scrollbar track
+      const sbX = rect.x + rect.width - 1;
       const cw = Math.max(0, rect.width - 1);
 
-      // Clear content area
+      // Clear text area (not the scrollbar column — we'll draw that separately)
       for (let row = 0; row < ch; row++) {
         for (let col = 0; col < cw; col++) {
           buf.set(rect.x + col, rect.y + row, {
@@ -74,40 +75,63 @@ export class TextArea extends Box {
             bg: theme.highlight,
           });
         }
-        return;
+      } else {
+        const cursorRow = this._cursorRow();
+        const cursorCol = this._cursorCol();
+
+        // Scroll to keep cursor visible
+        if (cursorRow < this.scrollY) this.scrollY = cursorRow;
+        else if (cursorRow >= this.scrollY + ch)
+          this.scrollY = cursorRow - ch + 1;
+        this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
+
+        const lines = this._lines();
+        for (let row = 0; row < ch; row++) {
+          const lineIdx = this.scrollY + row;
+          if (lineIdx >= lines.length) break;
+          const line = lines[lineIdx];
+          for (let col = 0; col < cw; col++) {
+            if (col < line.length) {
+              const isCur =
+                isFocused && lineIdx === cursorRow && col === cursorCol;
+              buf.set(rect.x + col, rect.y + row, {
+                char: line[col],
+                fg: isCur ? bg : theme.text,
+                bg: isCur ? theme.text : bg,
+                bold: isCur,
+              });
+            } else if (
+              isFocused &&
+              lineIdx === cursorRow &&
+              col === cursorCol
+            ) {
+              buf.set(rect.x + col, rect.y + row, {
+                char: " ",
+                fg: bg,
+                bg: theme.highlight,
+              });
+            }
+          }
+        }
       }
 
-      const cursorRow = this._cursorRow();
-      const cursorCol = this._cursorCol();
-
-      // Scroll to keep cursor visible — update Box.scrollY directly
-      if (cursorRow < this.scrollY) this.scrollY = cursorRow;
-      else if (cursorRow >= this.scrollY + ch)
-        this.scrollY = cursorRow - ch + 1;
-      this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
-
-      const lines = this._lines();
-      for (let row = 0; row < ch; row++) {
-        const lineIdx = this.scrollY + row;
-        if (lineIdx >= lines.length) break;
-        const line = lines[lineIdx];
-        for (let col = 0; col < cw; col++) {
-          if (col < line.length) {
-            const isCur =
-              isFocused && lineIdx === cursorRow && col === cursorCol;
-            buf.set(rect.x + col, rect.y + row, {
-              char: line[col],
-              fg: isCur ? bg : theme.text,
-              bg: isCur ? theme.text : bg,
-              bold: isCur,
-            });
-          } else if (isFocused && lineIdx === cursorRow && col === cursorCol) {
-            buf.set(rect.x + col, rect.y + row, {
-              char: " ",
-              fg: bg,
-              bg: theme.highlight,
-            });
-          }
+      // ── Scrollbar — always draw, even when content fits ──────────────────────
+      const maxScroll = this.scrollMaxY; // kept in sync by _syncHeight
+      if (maxScroll <= 0) {
+        // No overflow: dim track only
+        for (let row = 0; row < ch; row++) {
+          buf.set(sbX, rect.y + row, { char: "│", fg: theme.muted, bg });
+        }
+      } else {
+        const thumbH = Math.max(1, Math.floor((ch / totalRows) * ch));
+        const thumbY = Math.floor((this.scrollY / maxScroll) * (ch - thumbH));
+        for (let row = 0; row < ch; row++) {
+          const isThumb = row >= thumbY && row < thumbY + thumbH;
+          buf.set(sbX, rect.y + row, {
+            char: isThumb ? "▌" : "│",
+            fg: isThumb ? theme.highlight : theme.muted,
+            bg,
+          });
         }
       }
     };
