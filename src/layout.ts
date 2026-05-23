@@ -66,6 +66,9 @@ export type Justify =
   | "space-between"
   | "space-around";
 
+/** Overflow behavior for content that exceeds the container bounds */
+export type Overflow = "auto" | "scroll" | "hidden" | "visible";
+
 export interface BoxStyle {
   direction: Direction;
   /** Spacing between children */
@@ -79,6 +82,8 @@ export interface BoxStyle {
   bg?: { r: number; g: number; b: number };
   /** Override foreground text color */
   fg?: { r: number; g: number; b: number };
+  /** Overflow handling for content exceeding bounds (default: "auto") */
+  overflow: Overflow;
 }
 
 function defaultStyle(): BoxStyle {
@@ -90,6 +95,7 @@ function defaultStyle(): BoxStyle {
     align: "stretch",
     justify: "start",
     border: "none",
+    overflow: "auto",
   };
 }
 
@@ -181,181 +187,180 @@ export class Box {
   layout(parentRect: Rect): void {
     const m = this.style.margin;
 
-    // Outer rect (after margin)
     const outerX = parentRect.x + m.left;
     const outerY = parentRect.y + m.top;
     const outerW = parentRect.width - m.left - m.right;
     const outerH = parentRect.height - m.top - m.bottom;
 
-    // Apply fixed size if specified
-    const selfW =
-      this.width.fixed !== undefined
-        ? clamp(
-            this.width.fixed,
-            this.width.min ?? 0,
-            this.width.max ?? Infinity,
-          )
-        : clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
-    const selfH =
-      this.height.fixed !== undefined
-        ? clamp(
-            this.height.fixed,
-            this.height.min ?? 0,
-            this.height.max ?? Infinity,
-          )
-        : clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
-
-    this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
-
-    if (this.children.length === 0) return;
-
-    // Border eats 1 cell on each side if enabled
     const hasBorder = this.style.border !== "none";
     const bOff = hasBorder ? 1 : 0;
-
-    // Content area (inside padding + border)
     const p = this.style.padding;
-    const contentX = this.rect.x + bOff + p.left;
-    const contentY = this.rect.y + bOff + p.top;
-    const contentW = Math.max(0, this.rect.width - bOff * 2 - p.left - p.right);
-    const contentH = Math.max(
-      0,
-      this.rect.height - bOff * 2 - p.top - p.bottom,
-    );
 
-    const dir = this.style.direction;
-    const isRow = dir === "row";
+    const isRow = this.style.direction === "row";
     const gutter = this.style.gutter;
     const childCount = this.children.length;
 
-    // Compute main-axis sizes
-    const mainSizes = this._resolveMainAxis(
-      isRow ? contentW : contentH,
-      gutter,
-    );
+    // Determine if auto-sized on main axis:
+    // - Container has no fixed or grow on main axis
+    // - No child has explicit grow (they'd need distributed space)
+    const hasGrowChild = childCount > 0 && this.children.some((c) => {
+      const sc = isRow ? c.width : c.height;
+      return sc.grow !== undefined;
+    });
+    // Only auto-size if the container has no explicit constraint on the main axis
+    // AND at least one child has a positive main-axis size (fixed or min > 0).
+    // This prevents shrink-wrapping to zero when children have no intrinsic size.
+    const hasContentChild = childCount > 0 && this.children.some((c) => {
+      const sc = isRow ? c.width : c.height;
+      return sc.fixed !== undefined || (sc.min !== undefined && sc.min > 0);
+    });
+    const autoSizeMain = !hasGrowChild && hasContentChild && childCount > 0 && (isRow
+      ? (this.width.fixed === undefined && this.width.grow === undefined)
+      : (this.height.fixed === undefined && this.height.grow === undefined));
 
-    // Cross-axis available size
-    const crossAvailable = isRow ? contentH : contentW;
+    // Base sizes from parent constraints
+    let selfW = this.width.fixed !== undefined
+      ? clamp(this.width.fixed, this.width.min ?? 0, this.width.max ?? Infinity)
+      : clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
+    let selfH = this.height.fixed !== undefined
+      ? clamp(this.height.fixed, this.height.min ?? 0, this.height.max ?? Infinity)
+      : clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
 
-    // Compute positions
-    let mainOffsets: number[];
-    const totalMain =
-      mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
-
-    const freeSpace = (isRow ? contentW : contentH) - totalMain;
-
-    switch (this.style.justify) {
-      case "center":
-        mainOffsets = this._spreadOffsets(
-          mainSizes,
-          gutter,
-          Math.floor(freeSpace / 2),
-        );
-        break;
-      case "end":
-        mainOffsets = this._spreadOffsets(mainSizes, gutter, freeSpace);
-        break;
-      case "space-between": {
-        const gap =
-          childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
-        mainOffsets = this._spreadOffsets(mainSizes, gap);
-        break;
-      }
-      case "space-around": {
-        const gap = Math.floor(freeSpace / childCount);
-        mainOffsets = this._spreadOffsets(
-          mainSizes,
-          gap + gutter,
-          Math.floor(gap / 2),
-        );
-        break;
-      }
-      default: // "start"
-        mainOffsets = this._spreadOffsets(mainSizes, gutter);
-    }
-
-    // Layout children
-    for (let i = 0; i < this.children.length; i++) {
-      const child = this.children[i];
-      const mainSize = mainSizes[i];
-      const mainOff = mainOffsets[i];
-
-      // Cross-axis size
-      let crossSize: number;
-      if (isRow) {
-        if (child.height.fixed !== undefined) {
-          crossSize = child.height.fixed;
-        } else if (this.style.align === "stretch") {
-          crossSize = crossAvailable;
-        } else {
-          crossSize = Math.min(
-            crossAvailable,
-            child.height.max ?? crossAvailable,
-          );
-        }
-      } else {
-        if (child.width.fixed !== undefined) {
-          crossSize = child.width.fixed;
-        } else if (this.style.align === "stretch") {
-          crossSize = crossAvailable;
-        } else {
-          crossSize = Math.min(
-            crossAvailable,
-            child.width.max ?? crossAvailable,
-          );
-        }
-      }
-      crossSize = Math.max(crossSize, 0);
-
-      // Cross-axis offset
-      let crossOff = 0;
-      const childCrossFixed = isRow
-        ? (child.height.fixed ?? crossSize)
-        : (child.width.fixed ?? crossSize);
-      const actualCross = Math.min(childCrossFixed, crossSize);
-      switch (this.style.align) {
-        case "center":
-          crossOff = Math.floor((crossAvailable - actualCross) / 2);
-          break;
-        case "end":
-          crossOff = crossAvailable - actualCross;
-          break;
-        default:
-          crossOff = 0;
-      }
-
-      const childParentRect: Rect = isRow
-        ? {
-            x: contentX + mainOff - this.scrollX,
-            y: contentY + crossOff,
-            width: mainSize,
-            height: crossSize,
-          }
-        : {
-            x: contentX + crossOff,
-            y: contentY + mainOff - this.scrollY,
-            width: crossSize,
-            height: mainSize,
-          };
-
-      child.layout(childParentRect);
-    }
+    // Working content area
+    let contentX = outerX + bOff + p.left;
+    let contentY = outerY + bOff + p.top;
+    let contentW = Math.max(0, selfW - bOff * 2 - p.left - p.right);
+    let contentH = Math.max(0, selfH - bOff * 2 - p.top - p.bottom);
 
     if (childCount > 0) {
-      const contentSize =
-        mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
+      // Resolve main-axis child sizes
+      const mainAvailable = isRow ? contentW : contentH;
+      const mainSizes = this._resolveMainAxis(mainAvailable, gutter, autoSizeMain);
+
+      // Compute total content size on main axis
+      const totalMain = mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
+
+      // Auto-size: shrink-wrap to content, clamped to available space
+      if (autoSizeMain) {
+        const contentExtent = totalMain + bOff * 2 +
+          (isRow ? p.left + p.right : p.top + p.bottom);
+        const maxExtent = isRow ? outerW : outerH;
+        const clamped = Math.min(contentExtent, maxExtent);
+
+        if (isRow) {
+          selfW = clamp(clamped, this.width.min ?? 0, this.width.max ?? Infinity);
+          contentW = Math.max(0, selfW - bOff * 2 - p.left - p.right);
+        } else {
+          selfH = clamp(clamped, this.height.min ?? 0, this.height.max ?? Infinity);
+          contentH = Math.max(0, selfH - bOff * 2 - p.top - p.bottom);
+        }
+      }
+
+      this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
+
+      // Cross-axis available size
+      const crossAvailable = isRow ? contentH : contentW;
+
+      // Compute main-axis positions
+      const freeSpace = (isRow ? contentW : contentH) - totalMain;
+      let mainOffsets: number[];
+      switch (this.style.justify) {
+        case "center":
+          mainOffsets = this._spreadOffsets(mainSizes, gutter, Math.floor(freeSpace / 2));
+          break;
+        case "end":
+          mainOffsets = this._spreadOffsets(mainSizes, gutter, freeSpace);
+          break;
+        case "space-between": {
+          const gap = childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
+          mainOffsets = this._spreadOffsets(mainSizes, gap);
+          break;
+        }
+        case "space-around": {
+          const gap = Math.floor(freeSpace / childCount);
+          mainOffsets = this._spreadOffsets(mainSizes, gap + gutter, Math.floor(gap / 2));
+          break;
+        }
+        default: // "start"
+          mainOffsets = this._spreadOffsets(mainSizes, gutter);
+      }
+
+      // Layout children with scroll offset
+      for (let i = 0; i < childCount; i++) {
+        const child = this.children[i];
+        const mainSize = mainSizes[i];
+        const mainOff = mainOffsets[i];
+
+        let crossSize: number;
+        if (isRow) {
+          if (child.height.fixed !== undefined) {
+            crossSize = child.height.fixed;
+          } else if (this.style.align === "stretch") {
+            crossSize = crossAvailable;
+          } else {
+            crossSize = Math.min(crossAvailable, child.height.max ?? crossAvailable);
+          }
+        } else {
+          if (child.width.fixed !== undefined) {
+            crossSize = child.width.fixed;
+          } else if (this.style.align === "stretch") {
+            crossSize = crossAvailable;
+          } else {
+            crossSize = Math.min(crossAvailable, child.width.max ?? crossAvailable);
+          }
+        }
+        crossSize = Math.max(crossSize, 0);
+
+        let crossOff = 0;
+        const childCrossFixed = isRow
+          ? (child.height.fixed ?? crossSize)
+          : (child.width.fixed ?? crossSize);
+        const actualCross = Math.min(childCrossFixed, crossSize);
+        switch (this.style.align) {
+          case "center":
+            crossOff = Math.floor((crossAvailable - actualCross) / 2);
+            break;
+          case "end":
+            crossOff = crossAvailable - actualCross;
+            break;
+          default:
+            crossOff = 0;
+        }
+
+        const childParentRect: Rect = isRow
+          ? { x: contentX + mainOff - this.scrollX, y: contentY + crossOff, width: mainSize, height: crossSize }
+          : { x: contentX + crossOff, y: contentY + mainOff - this.scrollY, width: crossSize, height: mainSize };
+
+        child.layout(childParentRect);
+      }
+
+      // Compute scroll max based on overflow mode
+      const contentSize = totalMain;
       const viewportSize = isRow ? contentW : contentH;
-      const maxScroll = Math.max(0, contentSize - viewportSize);
-      this.scrollMaxX = isRow ? maxScroll : 0;
-      this.scrollMaxY = isRow ? 0 : maxScroll;
-      this.scrollX = Math.max(0, Math.min(this.scrollX, this.scrollMaxX));
-      this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
+      const overflow = this.style.overflow;
+
+      if (overflow === "hidden" || overflow === "visible") {
+        this.scrollMaxX = 0;
+        this.scrollMaxY = 0;
+      } else {
+        const maxScroll = Math.max(0, contentSize - viewportSize);
+        this.scrollMaxX = isRow ? maxScroll : 0;
+        this.scrollMaxY = isRow ? 0 : maxScroll;
+      }
+
+      this.scrollX = clamp(this.scrollX, 0, this.scrollMaxX);
+      this.scrollY = clamp(this.scrollY, 0, this.scrollMaxY);
+    } else {
+      this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
+      // Leaf nodes (e.g. TextArea) manage their own scroll — don't reset
     }
-    // Note: leaf nodes (no children) that manage their own scroll (e.g. TextArea)
-    // set scrollMaxY themselves — we don't touch it here.
   }
 
-  private _resolveMainAxis(available: number, gutter: number): number[] {
+  private _resolveMainAxis(
+    available: number,
+    gutter: number,
+    autoSize: boolean,
+  ): number[] {
     const children = this.children;
     const n = children.length;
     if (n === 0) return [];
@@ -375,6 +380,8 @@ export class Box {
         const sz = clamp(sc.fixed, sc.min ?? 0, sc.max ?? sc.fixed);
         sizes[i] = sz;
         remaining -= sz;
+      } else if (autoSize) {
+        sizes[i] = sc.min ?? 0;
       } else {
         totalGrow += sc.grow ?? 1;
       }
@@ -383,15 +390,19 @@ export class Box {
     remaining = Math.max(0, remaining);
 
     // Distribute remaining space to grow children
-    for (let i = 0; i < n; i++) {
-      const c = children[i];
-      const isRow = this.style.direction === "row";
-      const sc = isRow ? c.width : c.height;
-      if (sc.fixed === undefined) {
-        const growFactor = sc.grow ?? 1;
-        const share =
-          totalGrow > 0 ? Math.floor((growFactor / totalGrow) * remaining) : 0;
-        sizes[i] = clamp(share, sc.min ?? 0, sc.max ?? Infinity);
+    if (!autoSize) {
+      for (let i = 0; i < n; i++) {
+        const c = children[i];
+        const isRow = this.style.direction === "row";
+        const sc = isRow ? c.width : c.height;
+        if (sc.fixed === undefined) {
+          const growFactor = sc.grow ?? 1;
+          const share =
+            totalGrow > 0
+              ? Math.floor((growFactor / totalGrow) * remaining)
+              : 0;
+          sizes[i] = clamp(share, sc.min ?? 0, sc.max ?? Infinity);
+        }
       }
     }
 
@@ -530,11 +541,15 @@ export class Box {
       this.onPaint(buf, contentRect, theme);
     }
 
-    // Paint children with viewport clipping
+    // Paint children with viewport clipping (unless overflow: visible)
     const hasBorderForClip = this.style.border !== "none";
     const hasChildren = this.children.length > 0;
-    const needsClip = hasChildren || this.scrollMaxY > 0 || this.scrollMaxX > 0;
-    if (needsClip) {
+    const isOverflowing = this.scrollMaxY > 0 || this.scrollMaxX > 0;
+    const overflow = this.style.overflow;
+
+    const shouldClip = overflow !== "visible" &&
+      (hasChildren || isOverflowing);
+    if (shouldClip) {
       const bOff = hasBorderForClip ? 1 : 0;
       const p = this.style.padding;
       const clipX = r.x + bOff + p.left;
@@ -548,16 +563,14 @@ export class Box {
       child.paint(buf, theme);
     }
 
-    if (needsClip) {
+    if (shouldClip) {
       buf.popClip();
     }
 
-    // Always paint scrollbar track for bordered containers with children,
-    // or any box with explicit scrollMaxY/X (e.g. self-managed scroll widgets).
+    // Paint scrollbar if overflow mode allows it and there's content to scroll
     const wantsScrollbar =
-      (hasBorderForClip && hasChildren) ||
-      this.scrollMaxY > 0 ||
-      this.scrollMaxX > 0;
+      (overflow === "scroll" || (overflow === "auto" && isOverflowing)) &&
+      hasChildren;
     if (wantsScrollbar) {
       this._paintScrollbar(buf, theme);
     }
