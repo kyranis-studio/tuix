@@ -318,3 +318,184 @@ export class ProgressBar extends Box {
   get progress(): number { return this._progress; }
   set progress(v: number) { this._progress = Math.max(0, Math.min(1, v)); }
 }
+
+// ─── Autocomplete Widget ──────────────────────────────────────────────────────
+
+export class Autocomplete extends Box {
+  suggestions: string[] = [];
+  filteredSuggestions: string[] = [];
+  selectedIndex = 0;
+  value = "";
+  placeholder = "";
+  dropdownOpen = false;
+  maxVisibleItems = 6;
+  onSelect: ((item: string) => void) | null = null;
+  onChange: ((val: string) => void) | null = null;
+  filterFn: ((val: string, suggestions: string[]) => string[]) | null = null;
+
+  private _inputHeight = 3;
+  private _lastDropdownHeight = 0;
+
+  constructor(
+    placeholder = "",
+    suggestions: string[] = [],
+    onSelect?: (item: string) => void,
+  ) {
+    super("Autocomplete");
+    this.focusable = true;
+    this.tabIndex = 0;
+    this.placeholder = placeholder;
+    this.suggestions = suggestions;
+    this.filteredSuggestions = [...suggestions];
+    this.onSelect = onSelect ?? null;
+
+    this.style.border = "single";
+    this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+    this.height = { fixed: this._inputHeight };
+
+    this.onPaint = (buf, rect, theme) => {
+      if (!this.focused) {
+        this.dropdownOpen = false;
+      }
+      this._syncHeight();
+
+      const isFocused = this.focused;
+      const textVal = this.value || this.placeholder;
+      const isPlaceholder = !this.value;
+      const fg = isPlaceholder ? theme.muted : theme.text;
+      const bg = theme.panelBg;
+
+      let col = rect.x;
+      for (let i = 0; i < textVal.length && i < rect.width; i++) {
+        buf.set(col, rect.y, { char: textVal[i], fg, bg });
+        col++;
+      }
+
+      if (isFocused && col < rect.x + rect.width) {
+        buf.set(col, rect.y, {
+          char: " ",
+          fg: theme.bg,
+          bg: theme.highlight,
+        });
+      }
+
+      if (this.dropdownOpen && this.filteredSuggestions.length > 0) {
+        const visibleCount = Math.min(
+          this.filteredSuggestions.length,
+          this.maxVisibleItems,
+        );
+        for (let i = 0; i < visibleCount; i++) {
+          const itemY = rect.y + 1 + i;
+          const item = this.filteredSuggestions[i];
+          const isSelected = i === this.selectedIndex;
+
+          for (let c = rect.x; c < rect.x + rect.width; c++) {
+            const charIndex = c - rect.x;
+            buf.set(c, itemY, {
+              char: charIndex < item.length ? item[charIndex] : " ",
+              fg: isSelected ? theme.bg : theme.text,
+              bg: isSelected ? theme.highlight : theme.panelBg,
+              bold: isSelected,
+            });
+          }
+        }
+      }
+    };
+
+    this.onKey = (key, modifiers) => {
+      if (this.dropdownOpen) {
+        if (key === "ArrowDown") {
+          if (this.selectedIndex < this.filteredSuggestions.length - 1) {
+            this.selectedIndex++;
+          }
+          return;
+        }
+        if (key === "ArrowUp") {
+          if (this.selectedIndex > 0) {
+            this.selectedIndex--;
+          }
+          return;
+        }
+        if (key === "Enter") {
+          if (this.filteredSuggestions.length > 0) {
+            this._select(this.filteredSuggestions[this.selectedIndex]);
+          }
+          return;
+        }
+        if (key === "Escape") {
+          this.dropdownOpen = false;
+          this._syncHeight();
+          return;
+        }
+      }
+
+      if (key === "Backspace") {
+        if (this.value.length > 0) {
+          this.value = this.value.slice(0, -1);
+          this._updateFilter();
+          if (this.onChange) this.onChange(this.value);
+        }
+      } else if (key.length === 1 && !modifiers.ctrl && !modifiers.alt) {
+        this.value += key;
+        this._updateFilter();
+        if (this.onChange) this.onChange(this.value);
+      }
+    };
+
+    this.onMouse = (_col, row, action) => {
+      if (action === "press") {
+        if (this.dropdownOpen && this.filteredSuggestions.length > 0) {
+          const visibleCount = Math.min(
+            this.filteredSuggestions.length,
+            this.maxVisibleItems,
+          );
+          const itemIndex = row - (this.rect.y + 1);
+          if (itemIndex >= 0 && itemIndex < visibleCount) {
+            this._select(this.filteredSuggestions[itemIndex]);
+          }
+        }
+      }
+    };
+  }
+
+  private _dropdownItemCount(): number {
+    if (!this.dropdownOpen) return 0;
+    const count = this.filteredSuggestions.length;
+    if (count === 0) return 0;
+    return Math.min(count, this.maxVisibleItems);
+  }
+
+  private _syncHeight(): void {
+    const dropCount = this._dropdownItemCount();
+    if (dropCount !== this._lastDropdownHeight) {
+      this._lastDropdownHeight = dropCount;
+      this.height = { fixed: this._inputHeight + dropCount };
+    }
+  }
+
+  private _updateFilter(): void {
+    if (this.filterFn) {
+      this.filteredSuggestions = this.filterFn(this.value, this.suggestions);
+    } else {
+      const lowerVal = this.value.toLowerCase();
+      this.filteredSuggestions = this.suggestions.filter(
+        (s) => s.toLowerCase().includes(lowerVal),
+      );
+    }
+    this.selectedIndex = 0;
+    this.dropdownOpen = this.value.length > 0;
+    this._syncHeight();
+  }
+
+  private _select(item: string): void {
+    this.value = item;
+    this.dropdownOpen = false;
+    this._syncHeight();
+    if (this.onSelect) this.onSelect(item);
+    if (this.onChange) this.onChange(item);
+  }
+
+  override hitTest(col: number, row: number): Box | null {
+    return super.hitTest(col, row);
+  }
+}

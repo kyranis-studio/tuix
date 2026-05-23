@@ -13,7 +13,7 @@ export type { SplitDirection } from "./splitter.ts";
 
 export { FocusManager } from "./focus.ts";
 
-export { Button, Checkbox, TextInput, ListBox, ProgressBar } from "./widgets.ts";
+export { Button, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete } from "./widgets.ts";
 
 export {
   vscodeDarkTheme,
