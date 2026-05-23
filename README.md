@@ -16,14 +16,14 @@
 2. **Stateful TUI Component Library**
    - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
    - **`ButtonGroup`**: Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
-   - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks.
+   - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks. Supports `disabled` state with dimmed appearance and no interaction.
    - **`Dropdown`**: Combo-box style selector — shows current selection with `▼` indicator, opens scrollable list on activation, arrow-key navigation, Enter to select, Escape to close.
    - **`TextInput`**: Editable text input with `cursorPos`, arrow/Home/End navigation, character insertion at cursor, block cursor showing the character underneath, and placeholder shown when empty.
    - **`TextArea`**: Multi-line text editor with `\n`-delimited value, `maxLines` scroll cap with visual ▲/▼ indicators, vertical scrolling, arrow/Home/End navigation, Enter for newline, and mouse click to position cursor.
-   - **`ListBox`**: Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights.
+   - **`ListBox`**: Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights. Supports per-item `disabled` via `ListBoxItem` objects (instead of plain strings) and full-widget `disabled` state.
    - **`ProgressBar`**: Stateful percentage loading bar utilizing character block levels (`█████░░░░░ 50%`).
    - **`Autocomplete`**: Dropdown and inline suggestion completion with keyboard/mouse filtering and selection, cursor position tracking with `cursorPos`.
-   - **`RadioButton`** / **`RadioGroup`**: Mutually exclusive radio selection with `(•)` / `(○)` indicators, keyboard and mouse support.
+   - **`RadioButton`** / **`RadioGroup`**: Mutually exclusive radio selection with `(•)` / `(○)` indicators, keyboard and mouse support. `RadioButton` supports `disabled` state with dimmed appearance and no interaction; `RadioGroup` accepts `RadioOption` objects with an optional `disabled` field for per-option disabling.
    - **`Tabs`**: Multi-tab container with keyboard (←/→) and mouse-driven tab switching.  
 
 3. **Resizable Panel Splitters**
@@ -56,14 +56,14 @@ tuix/
       mod.ts            — Widget barrel re-export
       button.ts         — Clickable button (with disabled state)
       button_group.ts   — Horizontal segmented control
-      checkbox.ts       — Toggle checkbox
+      checkbox.ts       — Toggle checkbox (with disabled state)
       dropdown.ts       — Combo-box selector with list
       text_input.ts     — Single-line text input
       textarea.ts       — Multi-line text editor with scroll
-      listbox.ts        — Scrollable list selector
+      listbox.ts        — Scrollable list selector (per-item disabled support via ListBoxItem)
       progress_bar.ts   — Percentage progress bar
       autocomplete.ts   — Dropdown/inline autocomplete
-      radio.ts          — RadioButton & RadioGroup
+      radio.ts          — RadioButton (disabled state) & RadioGroup (per-option disabled via RadioOption)
       tabs.ts           — Multi-tab container
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
@@ -75,7 +75,7 @@ tuix/
     03_resizable.ts     — Vertical/horizontal nested splitters with mouse resizing
     04_spacing.ts       — Spacing visualizations (gutter, padding, margin)
     05_borders.ts       — Visual preview of all border types (single, double, rounded, bold, none)
-    06_showcase.ts      — 7-tab interactive showcase: Layout (scrollable column), Resizable, Shortcuts, Text (with TextArea), UI (Checkboxes, RadioGroup, Buttons (incl. disabled), Dropdown, ButtonGroup, ListBox), Animation (spinners, metric bars, countdown)
+    06_showcase.ts      — 7-tab interactive showcase: Layout (scrollable column), Resizable, Shortcuts, Text (with TextArea), UI (Checkboxes, RadioGroup with disabled option, Buttons, Dropdown, ButtonGroup, ListBox with disabled items — includes disabled variants of checkbox, radio, listbox, and button), Animation (spinners, metric bars, countdown)
   deno.json             — Deno config and script tasks
 ```
 

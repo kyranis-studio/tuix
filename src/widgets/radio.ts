@@ -1,8 +1,15 @@
 import { Box } from "../layout.ts";
 
+export interface RadioOption {
+  label: string;
+  value: string;
+  disabled?: boolean;
+}
+
 export class RadioButton extends Box {
   value: string;
   selected = false;
+  disabled = false;
   onChange: ((value: string) => void) | null = null;
 
   constructor(label: string, value: string, selected = false) {
@@ -16,30 +23,41 @@ export class RadioButton extends Box {
     this.height = { fixed: 1 };
 
     this.onPaint = (buf, rect, theme) => {
+      const isDisabled = this.disabled;
+      const isFocused = this.focused && !isDisabled;
+
       const dot = this.selected ? "•" : "○";
-      const fg = this.focused ? theme.highlight : theme.text;
+      const fg = isDisabled ? theme.muted : (isFocused ? theme.highlight : theme.text);
+      const bg = isDisabled ? theme.disabled : theme.panelBg;
       const text = ` ${dot} ${this.label}`;
       for (let i = 0; i < text.length && i < rect.width; i++) {
         buf.set(rect.x + i, rect.y, {
           char: text[i],
-          fg: (i < 3 && this.focused) ? theme.highlight : fg,
-          bg: theme.panelBg,
-          bold: this.selected && this.focused,
+          fg: (i < 3 && isFocused) ? theme.highlight : fg,
+          bg,
+          bold: this.selected && isFocused,
         });
       }
     };
 
     this.onKey = (key) => {
+      if (this.disabled) return;
       if (key === "Enter" || key === " ") {
         this.select();
       }
     };
 
     this.onMouse = (_col, _row, action) => {
+      if (this.disabled) return;
       if (action === "press") {
         this.select();
       }
     };
+  }
+
+  setDisabled(v: boolean): void {
+    this.disabled = v;
+    this.focusable = !v;
   }
 
   select(): void {
@@ -57,7 +75,7 @@ export class RadioGroup extends Box {
 
   constructor(
     label: string,
-    options: { label: string; value: string }[],
+    options: RadioOption[],
     selectedValue?: string,
     onChange?: (value: string) => void,
   ) {
@@ -70,6 +88,7 @@ export class RadioGroup extends Box {
 
     for (const opt of options) {
       const rb = new RadioButton(opt.label, opt.value, opt.value === this.selectedValue);
+      if (opt.disabled) rb.setDisabled(true);
       rb.onChange = (val) => this._onChildChange(val);
       this._buttons.push(rb);
       this.add(rb);
@@ -83,6 +102,8 @@ export class RadioGroup extends Box {
   }
 
   private _onChildChange(value: string): void {
+    const target = this._buttons.find((b) => b.value === value);
+    if (target?.disabled) return;
     this.selectedValue = value;
     for (const rb of this._buttons) {
       rb.selected = rb.value === value;

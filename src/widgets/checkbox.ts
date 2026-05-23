@@ -2,6 +2,7 @@ import { Box } from "../layout.ts";
 
 export class Checkbox extends Box {
   checked = false;
+  disabled = false;
   onChange: ((checked: boolean) => void) | null = null;
 
   constructor(label: string, checked = false, onChange?: (checked: boolean) => void) {
@@ -15,10 +16,13 @@ export class Checkbox extends Box {
     this.height = { fixed: 1 };
 
     this.onPaint = (buf, rect, theme) => {
+      const isDisabled = this.disabled;
+      const isFocused = this.focused && !isDisabled;
+
       const boxChar = this.checked ? "☑" : "☐";
-      const boxColor = this.focused ? theme.highlight : theme.muted;
-      const textColor = theme.text;
-      const bg = theme.panelBg;
+      const boxColor = isDisabled ? theme.muted : (isFocused ? theme.highlight : theme.muted);
+      const textColor = isDisabled ? theme.muted : theme.text;
+      const bg = isDisabled ? theme.disabled : theme.panelBg;
 
       const indicator = `${boxChar} ${this.label}`;
 
@@ -27,7 +31,7 @@ export class Checkbox extends Box {
         let fg = textColor;
         if (i === 0) {
           fg = boxColor;
-        } else if (this.focused) {
+        } else if (isFocused) {
           fg = theme.highlight;
         }
 
@@ -35,22 +39,29 @@ export class Checkbox extends Box {
           char,
           fg,
           bg,
-          bold: this.focused,
+          bold: isFocused,
         });
       }
     };
 
     this.onKey = (key) => {
+      if (this.disabled) return;
       if (key === "Enter" || key === " ") {
         this.toggle();
       }
     };
 
     this.onMouse = (_col, _row, action) => {
+      if (this.disabled) return;
       if (action === "press") {
         this.toggle();
       }
     };
+  }
+
+  setDisabled(v: boolean): void {
+    this.disabled = v;
+    this.focusable = !v;
   }
 
   toggle(): void {

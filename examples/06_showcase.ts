@@ -42,6 +42,8 @@ import {
   edgesAll,
   defaultTheme,
 } from "../src/mod.ts";
+import { SmallButton } from "../src/mod.ts";
+import type { ListBoxItem } from "../src/mod.ts";
 
 // ─── Reactive State ──────────────────────────────────────────────────────────
 
@@ -50,7 +52,7 @@ let selectedCommand = "";
 let chkOptionA = false;
 let chkOptionB = true;
 let chkOptionC = false;
-let selectedProfile = "Profile Alpha";
+let selectedProfile: string = "Profile Alpha";
 let selectedOption = "option_a";
 let clickCount = 0;
 let selectedTheme = "VS Code Dark";
@@ -58,11 +60,12 @@ let selectedAlign = "Left";
 let progressValue = 0.35;
 let shortcutTarget = "";
 
-const profiles = [
+const profiles: ListBoxItem[] = [
   "Profile Alpha",
   "Profile Beta",
   "Profile Gamma",
   "Profile Delta",
+  { label: "Profile Locked", disabled: true },
 ];
 
 // ─── Header ──────────────────────────────────────────────────────────────────
@@ -579,7 +582,7 @@ uiHeader.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
     rect,
-    "Interactive Controls — Toggle, Select, Button, Dropdown, and Group",
+    "Checkboxes | Radio | ListBox — Actions — ButtonGroup — Dropdown",
     theme.muted,
     theme.bg,
   );
@@ -601,6 +604,8 @@ const chk2 = new Checkbox("Enable Feature B", chkOptionB, (v) => {
 const chk3 = new Checkbox("Enable Feature C", chkOptionC, (v) => {
   chkOptionC = v;
 });
+const chkDisabled = new Checkbox("Disabled Option", false);
+chkDisabled.setDisabled(true);
 
 const listLabel = new Box("list-label");
 listLabel.style.fg = defaultTheme.highlight;
@@ -613,7 +618,7 @@ const profileList = new ListBox(profiles, (item) => {
   selectedProfile = item;
 });
 profileList.selectedIndex = 0;
-profileList.height = { fixed: 6 };
+profileList.height = { fixed: 8 };
 
 const radioLabel = new Box("radio-label");
 radioLabel.style.fg = defaultTheme.highlight;
@@ -628,6 +633,7 @@ const radioGroup = new RadioGroup(
     { label: "Option Alpha", value: "option_a" },
     { label: "Option Beta", value: "option_b" },
     { label: "Option Gamma", value: "option_c" },
+    { label: "Option Locked", value: "option_locked", disabled: true },
   ],
   selectedOption,
   (val) => {
@@ -652,21 +658,41 @@ const btnReset = new Button("Reset All", () => {
   chkOptionC = false;
   selectedOption = "option_a";
   radioGroup.select("option_a");
-  selectedProfile = profiles[0];
+  selectedProfile = "Profile Alpha";
   profileList.selectedIndex = 0;
 });
 const btnToggle = new Button("Toggle Checkboxes", () => {
   chkOptionA = !chkOptionA;
   chkOptionB = !chkOptionB;
   chkOptionC = !chkOptionC;
-  btnToggle.toggled = chkOptionA || chkOptionB || chkOptionC;
+  btnToggle.toggled = !btnToggle.toggled;
 });
+btnToggle.flashOnClick = false;
 const btnCount = new Button("Click Count", () => {
   clickCount++;
 });
 const btnDisabled = new Button("Locked");
 btnDisabled.setDisabled(true);
 btnRow.add(btnReset, btnToggle, btnCount, btnDisabled);
+
+const smallBtnLabel = new Box("small-btn-label");
+smallBtnLabel.style.fg = defaultTheme.highlight;
+smallBtnLabel.height = { fixed: 1 };
+smallBtnLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "SmallButtons:", 0, theme.highlight);
+};
+
+const sbtnReset = new SmallButton("Reset", () => {
+  clickCount = 0;
+});
+const sbtnFlash = new SmallButton("Flash Me");
+const sbtnLocked = new SmallButton("Locked");
+sbtnLocked.setDisabled(true);
+
+const smallBtns = Box.row("small-btns");
+smallBtns.style.gutter = 1;
+smallBtns.height = { fixed: 1 };
+smallBtns.add(sbtnReset, sbtnFlash, sbtnLocked);
 
 const dropdownLabel = new Box("dropdown-label");
 dropdownLabel.style.fg = defaultTheme.highlight;
@@ -717,27 +743,57 @@ uiStatus.onPaint = (_buf, rect, theme) => {
   paintText(_buf, rect, `  ${parts.join("  │  ")}`, 0, theme.muted);
 };
 
-// Wrap all controls in a scrollable bordered column so the scrollbar is always visible
+// Row 1: 3 columns — checkboxes, radio group, listbox (all with disabled items)
+const chkCol = Box.col("chk-col");
+chkCol.style.gutter = 1;
+chkCol.height = { grow: 1 };
+chkCol.add(chkLabel, chk1, chk2, chk3, chkDisabled);
+
+const radioCol = Box.col("radio-col");
+radioCol.style.gutter = 1;
+radioCol.height = { grow: 1 };
+radioCol.add(radioLabel, radioGroup);
+
+const listCol = Box.col("list-col");
+listCol.style.gutter = 1;
+listCol.height = { grow: 1 };
+listCol.add(listLabel, profileList);
+
+const topRow = Box.row("top-row");
+topRow.style.gutter = 2;
+topRow.height = { grow: 1 };
+topRow.add(chkCol, radioCol, listCol);
+
+// Row 2: Actions
+const actionsRow = Box.col("actions-row");
+actionsRow.style.gutter = 1;
+actionsRow.height = { fixed: 5 };
+actionsRow.add(btnLabel, btnRow);
+
+// Row 3: ButtonGroup
+const groupRow = Box.col("group-row");
+groupRow.style.gutter = 1;
+groupRow.height = { fixed: 5 };
+groupRow.add(groupLabel, alignGroup);
+
+// Row 3b: SmallButtons
+const smallBtnRow = Box.col("small-btn-row");
+smallBtnRow.style.gutter = 1;
+smallBtnRow.height = { fixed: 3 };
+smallBtnRow.add(smallBtnLabel, smallBtns);
+
+// Row 4: Dropdown
+const dropdownRow = Box.col("dropdown-row");
+dropdownRow.style.gutter = 1;
+dropdownRow.height = { fixed: 5 };
+dropdownRow.add(dropdownLabel, themeDropdown);
+
+// Wrap all controls in a scrollable bordered column
 const uiScroll = Box.col("ui-scroll");
 uiScroll.style.border = "single";
 uiScroll.style.gutter = 1;
 uiScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-uiScroll.add(
-  chkLabel,
-  chk1,
-  chk2,
-  chk3,
-  radioLabel,
-  radioGroup,
-  btnLabel,
-  btnRow,
-  dropdownLabel,
-  themeDropdown,
-  groupLabel,
-  alignGroup,
-  listLabel,
-  profileList,
-);
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow);
 
 uiTab.add(uiHeader, uiScroll, uiStatus);
 
@@ -909,6 +965,7 @@ animBtnRow.style.gutter = 2;
 const autoAnimBtn = new Button("Auto-Animate (toggle)", () => {
   animEnabled = !animEnabled;
 });
+autoAnimBtn.flashOnClick = false;
 const resetBtn = new Button("Reset All", () => {
   cpuVal = 0.67;
   memVal = 0.45;

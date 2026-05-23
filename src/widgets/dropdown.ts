@@ -1,4 +1,5 @@
 import { Box } from "../layout.ts";
+import { getTermSize } from "../terminal.ts";
 
 export class Dropdown extends Box {
   options: string[] = [];
@@ -8,6 +9,7 @@ export class Dropdown extends Box {
   maxVisible = 6;
 
   private _cursorIndex = 0;
+  private _openUp = false;
 
   constructor(
     label = "",
@@ -31,27 +33,13 @@ export class Dropdown extends Box {
       const isFocused = this.focused;
       const bg = theme.panelBg;
 
-      const hasBorder = this.style.border !== "none";
-      const bOff = hasBorder ? 1 : 0;
-      const p = this.style.padding;
-      const cx = rect.x + bOff + p.left;
-      const cy = rect.y + bOff + p.top;
-      const cw = Math.max(1, rect.width - bOff * 2 - p.left - p.right);
-      const ch = Math.max(1, rect.height - bOff * 2 - p.top - p.bottom);
-
-      for (let row = 0; row < ch; row++) {
-        for (let col = 0; col < cw; col++) {
-          buf.set(cx + col, cy + row, { char: " ", fg: theme.text, bg });
-        }
-      }
-
       const selected = this.options[this.selectedIndex] ?? "";
-      const arrow = this.open ? "▲" : "▼";
+      const arrow = this._openUp ? "▲" : "▼";
       const text = `${selected} ${arrow}`;
       const textFg = isFocused ? theme.highlight : theme.text;
 
-      for (let col = 0; col < cw && col < text.length; col++) {
-        buf.set(cx + col, cy, {
+      for (let col = 0; col < rect.width && col < text.length; col++) {
+        buf.set(rect.x + col, rect.y, {
           char: text[col],
           fg: textFg,
           bg,
@@ -61,20 +49,20 @@ export class Dropdown extends Box {
 
       if (this.open && this.options.length > 0) {
         const visible = Math.min(this.options.length, this.maxVisible);
-        const listY = cy + ch;
-        const listH = visible;
+        const listBg = theme.toolbarBg;
+        const listY = this._openUp ? rect.y - visible : rect.y + 1;
 
-        for (let row = 0; row < listH; row++) {
+        for (let row = 0; row < visible; row++) {
           const itemIndex = row;
           const isCur = itemIndex === this._cursorIndex;
-          for (let col = 0; col < cw; col++) {
+          for (let col = 0; col < rect.width; col++) {
             const ch = col < this.options[itemIndex].length
               ? this.options[itemIndex][col]
               : " ";
-            buf.set(cx + col, listY + row, {
+            buf.set(rect.x + col, listY + row, {
               char: ch,
               fg: isCur ? theme.bg : theme.text,
-              bg: isCur ? theme.highlight : theme.panelBg,
+              bg: isCur ? theme.highlight : listBg,
               bold: isCur,
             });
           }
@@ -116,13 +104,15 @@ export class Dropdown extends Box {
     this.onMouse = (_col, row, action) => {
       if (action === "press") {
         if (this.open) {
-          const hasBorder = this.style.border !== "none";
-          const bOff = hasBorder ? 1 : 0;
-          const p = this.style.padding;
-          const cy = this.rect.y + bOff + p.top;
-          const ch = Math.max(1, this.rect.height - bOff * 2 - p.top - p.bottom);
-          const listY = cy + ch;
-          const index = row - listY;
+          const visible = Math.min(this.options.length, this.maxVisible);
+          let index = -1;
+          if (this._openUp) {
+            const listY = this.rect.y - visible;
+            index = row - listY;
+          } else {
+            const listY = this.rect.y + 2;
+            index = row - listY;
+          }
           if (index >= 0 && index < this.options.length) {
             this._select(index);
           } else {
@@ -147,33 +137,33 @@ export class Dropdown extends Box {
     if (this.options.length === 0) return;
     this.open = true;
     this._cursorIndex = this.selectedIndex;
-    this._syncListHeight();
+
+    const visible = Math.min(this.options.length, this.maxVisible);
+    const termSize = getTermSize();
+    const spaceBelow = termSize.rows - (this.rect.y + 3);
+    this._openUp = spaceBelow < visible && this.rect.y >= visible;
   }
 
   private _close(): void {
     this.open = false;
-    this._syncListHeight();
   }
 
   private _select(index: number): void {
     if (index < 0 || index >= this.options.length) return;
     this.selectedIndex = index;
     this.open = false;
-    this._syncListHeight();
     if (this.onChange) this.onChange(this.options[index], index);
-  }
-
-  private _syncListHeight(): void {
-    const visible = this.open
-      ? Math.min(this.options.length, this.maxVisible)
-      : 0;
-    this.height = { fixed: 3 + visible };
   }
 
   override hitTest(col: number, row: number): Box | null {
     const r = this.rect;
     if (col < r.x || col >= r.x + r.width) return null;
-    if (row < r.y || row >= r.y + r.height) return null;
-    return this;
+    if (row >= r.y && row < r.y + r.height) return this;
+    if (this.open) {
+      const visible = Math.min(this.options.length, this.maxVisible);
+      if (this._openUp && row >= r.y - visible && row < r.y) return this;
+      if (!this._openUp && row >= r.y + r.height && row < r.y + r.height + visible) return this;
+    }
+    return null;
   }
 }

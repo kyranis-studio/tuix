@@ -62,9 +62,9 @@ A Deno-native Terminal User Interface (TUI) library that simulates a desktop env
 | Component          | Description |
 |--------------------|-------------|
 | **Button**         | Clickable button with label, supports disabled state |
-| **Checkbox**       | Single checkbox with label |
+| **Checkbox**       | Single checkbox with label, supports disabled state |
 | **CheckboxList**   | Group of checkboxes with optional "select all" |
-| **Radio**          | Single radio option |
+| **Radio**          | Single radio option, supports disabled state |
 | **RadioList**      | Mutually exclusive radio group |
 | **Select**         | Dropdown selector with option list |
 | **Autocomplete**   | Text input with inline suggestions or dropdown |

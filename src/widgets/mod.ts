@@ -1,10 +1,12 @@
 export { Button } from "./button.ts";
+export { SmallButton } from "./small_button.ts";
 
 export { Checkbox } from "./checkbox.ts";
 
 export { TextInput } from "./text_input.ts";
 
 export { ListBox } from "./listbox.ts";
+export type { ListBoxItem } from "./listbox.ts";
 
 export { ProgressBar } from "./progress_bar.ts";
 
@@ -12,6 +14,7 @@ export { Autocomplete } from "./autocomplete.ts";
 export type { AutocompleteMode } from "./autocomplete.ts";
 
 export { RadioButton, RadioGroup } from "./radio.ts";
+export type { RadioOption } from "./radio.ts";
 
 export { TextArea } from "./textarea.ts";
 

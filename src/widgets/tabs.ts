@@ -58,6 +58,7 @@ export class Tabs extends Box {
     };
 
     this.onPaint = (buf, rect, theme) => {
+      buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", fg: null, bg: theme.toolbarBg });
       let x = rect.x;
       for (let i = 0; i < this.tabs.length; i++) {
         const label = ` ${this.tabs[i].label} `;
@@ -67,8 +68,8 @@ export class Tabs extends Box {
         for (let c = 0; c < len; c++) {
           buf.set(x + c, rect.y, {
             char: label[c],
-            fg: isActive ? theme.bg : theme.text,
-            bg: isActive ? theme.highlight : theme.panelBg,
+            fg: isActive ? theme.bg : theme.toolbarText,
+            bg: isActive ? theme.highlight : theme.toolbarBg,
             bold: isActive,
           });
         }
