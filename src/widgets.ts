@@ -321,6 +321,8 @@ export class ProgressBar extends Box {
 
 // ─── Autocomplete Widget ──────────────────────────────────────────────────────
 
+export type AutocompleteMode = "dropdown" | "inline";
+
 export class Autocomplete extends Box {
   suggestions: string[] = [];
   filteredSuggestions: string[] = [];
@@ -329,12 +331,14 @@ export class Autocomplete extends Box {
   placeholder = "";
   dropdownOpen = false;
   maxVisibleItems = 6;
+  mode: AutocompleteMode = "dropdown";
   onSelect: ((item: string) => void) | null = null;
   onChange: ((val: string) => void) | null = null;
   filterFn: ((val: string, suggestions: string[]) => string[]) | null = null;
 
   private _inputHeight = 3;
   private _lastDropdownHeight = 0;
+  private _completion = "";
 
   constructor(
     placeholder = "",
@@ -359,6 +363,10 @@ export class Autocomplete extends Box {
       }
       this._syncHeight();
 
+      if (this.mode === "inline" && this.value.length > 0 && !this._completion) {
+        this._completion = this._findCompletion();
+      }
+
       const isFocused = this.focused;
       const textVal = this.value || this.placeholder;
       const isPlaceholder = !this.value;
@@ -372,14 +380,36 @@ export class Autocomplete extends Box {
       }
 
       if (isFocused && col < rect.x + rect.width) {
-        buf.set(col, rect.y, {
-          char: " ",
-          fg: theme.bg,
-          bg: theme.highlight,
-        });
+        const completion = this._completion;
+        if (this.mode === "inline" && completion && this.value.length > 0) {
+          const ghostLen = Math.min(
+            completion.length - 1,
+            rect.x + rect.width - col - 1,
+          );
+          buf.set(col, rect.y, {
+            char: completion[0],
+            fg: theme.bg,
+            bg: theme.highlight,
+          });
+          for (let i = 0; i < ghostLen; i++) {
+            buf.set(col + 1 + i, rect.y, {
+              char: completion[i + 1],
+              fg: theme.muted,
+              bg,
+              dim: true,
+            });
+          }
+        } else {
+          buf.set(col, rect.y, {
+            char: " ",
+            fg: theme.bg,
+            bg: theme.highlight,
+          });
+        }
       }
 
-      if (this.dropdownOpen && this.filteredSuggestions.length > 0) {
+      if (this.mode === "dropdown" && this.dropdownOpen &&
+        this.filteredSuggestions.length > 0) {
         const visibleCount = Math.min(
           this.filteredSuggestions.length,
           this.maxVisibleItems,
@@ -403,7 +433,7 @@ export class Autocomplete extends Box {
     };
 
     this.onKey = (key, modifiers) => {
-      if (this.dropdownOpen) {
+      if (this.mode === "dropdown" && this.dropdownOpen) {
         if (key === "ArrowDown") {
           if (this.selectedIndex < this.filteredSuggestions.length - 1) {
             this.selectedIndex++;
@@ -444,7 +474,8 @@ export class Autocomplete extends Box {
 
     this.onMouse = (_col, row, action) => {
       if (action === "press") {
-        if (this.dropdownOpen && this.filteredSuggestions.length > 0) {
+        if (this.mode === "dropdown" && this.dropdownOpen &&
+          this.filteredSuggestions.length > 0) {
           const visibleCount = Math.min(
             this.filteredSuggestions.length,
             this.maxVisibleItems,
@@ -456,10 +487,21 @@ export class Autocomplete extends Box {
         }
       }
     };
+
+    this.handleTab = () => {
+      if (this.mode === "inline" && this._completion && this.value.length > 0) {
+        this.value += this._completion;
+        this._completion = "";
+        if (this.onSelect) this.onSelect(this.value);
+        if (this.onChange) this.onChange(this.value);
+        return true;
+      }
+      return false;
+    };
   }
 
   private _dropdownItemCount(): number {
-    if (!this.dropdownOpen) return 0;
+    if (this.mode !== "dropdown" || !this.dropdownOpen) return 0;
     const count = this.filteredSuggestions.length;
     if (count === 0) return 0;
     return Math.min(count, this.maxVisibleItems);
@@ -484,12 +526,30 @@ export class Autocomplete extends Box {
     }
     this.selectedIndex = 0;
     this.dropdownOpen = this.value.length > 0;
+
+    if (this.mode === "inline" && this.value.length > 0) {
+      this._completion = this._findCompletion();
+    } else {
+      this._completion = "";
+    }
+
     this._syncHeight();
+  }
+
+  private _findCompletion(): string {
+    const lower = this.value.toLowerCase();
+    for (const s of this.suggestions) {
+      if (s.toLowerCase().startsWith(lower) && s !== this.value) {
+        return s.slice(this.value.length);
+      }
+    }
+    return "";
   }
 
   private _select(item: string): void {
     this.value = item;
     this.dropdownOpen = false;
+    this._completion = "";
     this._syncHeight();
     if (this.onSelect) this.onSelect(item);
     if (this.onChange) this.onChange(item);

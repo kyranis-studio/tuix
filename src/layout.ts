@@ -119,6 +119,9 @@ export class Box {
   /** Called on mouse events */
   onMouse: ((col: number, row: number, action: string) => void) | null;
 
+  /** If set, called when Tab is pressed instead of navigating focus. Return true to consume Tab. */
+  handleTab: (() => boolean) | null;
+
   // Tree
   children: Box[];
   parent: Box | null;
@@ -139,6 +142,7 @@ export class Box {
     this.onPaint = null;
     this.onKey = null;
     this.onMouse = null;
+    this.handleTab = null;
     this.children = [];
     this.parent = null;
     this.rect = { x: 0, y: 0, width: 0, height: 0 };

@@ -147,6 +147,8 @@ export class App {
 
       // Tab / Shift+Tab — navigate focus
       if (key === "Tab" && !modifiers.shift && !modifiers.ctrl) {
+        const focused = this.focus.current();
+        if (focused?.handleTab?.()) return;
         this.focus.focusNext();
         return;
       }

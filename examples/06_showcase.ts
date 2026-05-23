@@ -7,17 +7,19 @@
  *   • Button widget with press action
  *   • Checkbox widgets with toggles
  *   • TextInput widget with text edits and block cursor
- *   • Autocomplete widget with filtered suggestion dropdown
+ *   • Autocomplete widget — dropdown mode (filtered suggestion list)
+ *   • Autocomplete widget — inline mode (ghost text, Tab to complete)
  *   • ListBox widget with Arrow/Vim key and scroll support
  *   • ProgressBar widget displaying real-time percentages
  *   • Live state monitor reflecting widget values dynamically
  *   • Fully resizable layout with mouse-draggable Splitter
  *
  * Controls:
- *   Tab / Shift+Tab   — cycle focus
- *   Space / Enter     — toggle checkbox / click button
+ *   Tab / Shift+Tab   — cycle focus / accept inline completion
+ *   Space / Enter     — toggle checkbox / click button / select dropdown
  *   ArrowUp/Down / j/k— navigate listbox items
- *   ArrowUp/Down      — navigate autocomplete suggestions
+ *   ArrowUp/Down      — navigate autocomplete dropdown
+ *   Escape            — close dropdown
  *   Type characters   — write in text input / filter autocomplete
  *   Backspace         — erase characters
  *   Mouse Drag        — resize sidebar and dashboard panes
@@ -39,6 +41,7 @@ let customColorEnabled = false;
 let clickCount = 0;
 let progressValue = 0.35;
 let selectedFramework = "";
+let selectedCommand = "";
 
 // ─── Header ──────────────────────────────────────────────────────────────────
 
@@ -76,23 +79,32 @@ const frameworkAutocomplete = new Autocomplete(
 frameworkAutocomplete.tabIndex = 2;
 frameworkAutocomplete.maxVisibleItems = 6;
 
+// 2b. Inline autocomplete (Tab to complete)
+const cmdAutocomplete = new Autocomplete(
+  "Type a command...",
+  ["deploy", "deploy:prod", "deploy:staging", "build", "build:watch", "test", "test:watch", "lint", "lint:fix", "clean", "format", "typecheck"],
+  (item) => { selectedCommand = item; },
+);
+cmdAutocomplete.tabIndex = 3;
+cmdAutocomplete.mode = "inline";
+
 // 3. Checkboxes
 const chkAnalytics = new Checkbox("Enable Telemetry", analyticsEnabled, (checked) => {
   analyticsEnabled = checked;
 });
-chkAnalytics.tabIndex = 3;
+chkAnalytics.tabIndex = 4;
 
 const chkAutoSave = new Checkbox("Auto-Save Config", autoSaveEnabled, (checked) => {
   autoSaveEnabled = checked;
 });
-chkAutoSave.tabIndex = 4;
+chkAutoSave.tabIndex = 5;
 
 const chkCustomColor = new Checkbox("Green Tint Accent", customColorEnabled, (checked) => {
   customColorEnabled = checked;
 });
-chkCustomColor.tabIndex = 5;
+chkCustomColor.tabIndex = 6;
 
-// 4. List Box
+// 5. List Box
 const optionsList = new ListBox(
   ["Option Alpha", "Option Beta", "Option Gamma", "System Diagnostics"],
   (item, _idx) => {
@@ -100,16 +112,16 @@ const optionsList = new ListBox(
   }
 );
 optionsList.selectedIndex = 0;
-optionsList.tabIndex = 6;
+optionsList.tabIndex = 7;
 optionsList.height = { fixed: 6 };
 
-// 5. Action Button
+// 6. Action Button
 const progressBtn = new Button("Advance Progress", () => {
   progressValue += 0.10;
   if (progressValue > 1.05) progressValue = 0.0;
   clickCount++;
 });
-progressBtn.tabIndex = 7;
+progressBtn.tabIndex = 8;
 function labelBox(text: string): Box {
   const b = new Box(text);
   b.style.fg = defaultTheme.highlight;
@@ -119,8 +131,10 @@ function labelBox(text: string): Box {
 sidebar.add(
   labelBox("Operator Information"),
   textInput,
-  labelBox("Preferred Framework"),
+  labelBox("Preferred Framework (dropdown)"),
   frameworkAutocomplete,
+  labelBox("Command (inline, Tab to complete)"),
+  cmdAutocomplete,
   labelBox("Global Configuration"),
   chkAnalytics,
   chkAutoSave,
@@ -165,6 +179,7 @@ monitorView.onPaint = (buf, rect, theme) => {
     `  Active Operator :  ${username}`,
     `  Active Profile  :  ${selectedOption}`,
     `  Framework       :  ${selectedFramework || "—"}`,
+    `  Command         :  ${selectedCommand || "—"}`,
     `  Telemetry Relay :  ${analyticsEnabled ? "ACTIVE (✓)" : "DISABLED (✗)"}`,
     `  Auto-Save Sync  :  ${autoSaveEnabled ? "SYNCHRONIZED (✓)" : "OFFLINE (✗)"}`,
     `  Color Theme Override :  ${customColorEnabled ? "ON (Green Theme)" : "OFF (VS Code Theme)"}`,
@@ -198,7 +213,7 @@ statusBar.height = { fixed: 1 };
 statusBar.style.bg = defaultTheme.bg;
 statusBar.onPaint = (buf, rect, theme) => {
   buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
-  const hint = " Tab: next focus  │  Space/Enter: click/toggle  │  Arrows/j/k: list navigate  │  ArrowUp/Down: suggest  │  Ctrl+C: quit";
+  const hint = " Tab: next focus / accept inline  │  Space/Enter: click/toggle  │  Arrows/j/k: list navigate  │  Escape: close dropdown  │  Ctrl+C: quit";
   for (let i = 0; i < hint.length && i < rect.width; i++) {
     buf.set(rect.x + i, rect.y, { char: hint[i], fg: theme.muted, bg: theme.bg });
   }
