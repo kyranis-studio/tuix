@@ -16,6 +16,7 @@
    - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings.
    - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks.
    - **`TextInput`**: Editable text input with `cursorPos`, arrow/Home/End navigation, character insertion at cursor, block cursor showing the character underneath, and placeholder shown when empty.
+   - **`TextArea`**: Multi-line text editor with `\n`-delimited value, vertical scrolling, arrow/Home/End navigation, Enter for newline, and mouse click to position cursor.
    - **`ListBox`**: Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights.
    - **`ProgressBar`**: Stateful percentage loading bar utilizing character block levels (`█████░░░░░ 50%`).
    - **`Autocomplete`**: Dropdown and inline suggestion completion with keyboard/mouse filtering and selection, cursor position tracking with `cursorPos`.
@@ -48,7 +49,7 @@ tuix/
     app.ts              — Main application loop, event loop, mouse/keyboard dispatcher
     terminal.ts         — Double-buffered CellBuffer renderer, raw mode setups, ANSI sequences
     layout.ts           — Box structure, recursive layout engine, coordinate positioning
-    widgets.ts          — Button, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup
+    widgets.ts          — Button, Checkbox, TextInput, TextArea, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
     events.ts           — Async keyboard and SGR mouse event parser
@@ -59,7 +60,7 @@ tuix/
     03_resizable.ts     — Vertical/horizontal nested splitters with mouse resizing
     04_spacing.ts       — Spacing visualizations (gutter, padding, margin)
     05_borders.ts       — Visual preview of all border types (single, double, rounded, bold, none)
-     06_showcase.ts      — 7-tab interactive showcase: Layout, Resizable, Shortcuts, Text, UI, Animation (spinners, metric bars, countdown)
+     06_showcase.ts      — 7-tab interactive showcase: Layout, Resizable, Shortcuts, Text (with TextArea), UI, Animation (spinners, metric bars, countdown)
   deno.json             — Deno config and script tasks
 ```
 

@@ -7,7 +7,7 @@
  *   Layout      — Flex grow/shrink layout adapting to space
  *   Resizable   — Mouse-draggable Splitter panels
  *   Shortcuts   — Direct-access key bindings
- *   Text        — TextInput and Autocomplete (dropdown + inline)
+ *   Text        — TextInput, Autocomplete, and TextArea (multi-line)
  *   UI          — Checkbox toggles and ListBox selection
  *   Animation   — Spinners, metric bars, countdown
  *
@@ -34,6 +34,7 @@ import {
   Autocomplete,
   Tabs,
   RadioGroup,
+  TextArea,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -49,6 +50,7 @@ let chkOptionB = true;
 let chkOptionC = false;
 let selectedProfile = "Profile Alpha";
 let selectedOption = "option_a";
+let clickCount = 0;
 let progressValue = 0.35;
 let shortcutTarget = "";
 
@@ -393,7 +395,7 @@ textTab.onPaint = (_buf, rect, theme) => {
   paintCenteredText(
     _buf,
     { x: rect.x, y: rect.y, width: rect.width, height: 1 },
-    "TextInput and Autocomplete — type to interact",
+    "TextInput, Autocomplete, and TextArea — type to interact",
     theme.muted,
     theme.bg,
   );
@@ -448,6 +450,15 @@ textStatus.onPaint = (_buf, rect, theme) => {
   paintText(_buf, rect, text, 0, theme.muted);
 };
 
+const textAreaLabel = new Box("textarea-label");
+textAreaLabel.style.fg = defaultTheme.highlight;
+textAreaLabel.height = { fixed: 1 };
+textAreaLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "TextArea (multi-line):", 0, theme.highlight);
+};
+
+const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
+
 textTab.add(
   textInputLabel,
   textInput,
@@ -455,6 +466,8 @@ textTab.add(
   autoDropdown,
   autoInlineLabel,
   autoInline,
+  textAreaLabel,
+  textArea,
   textStatus,
 );
 
@@ -517,6 +530,36 @@ const radioGroup = new RadioGroup(
   (val) => { selectedOption = val; },
 );
 
+const btnLabel = new Box("btn-label");
+btnLabel.style.fg = defaultTheme.highlight;
+btnLabel.height = { fixed: 1 };
+btnLabel.onPaint = (_buf, rect, theme) => {
+  paintText(_buf, rect, "Actions:", 0, theme.highlight);
+};
+
+const btnRow = Box.row("actions");
+btnRow.style.gutter = 1;
+btnRow.height = { fixed: 3 };
+
+const btnReset = new Button("Reset All", () => {
+  chkOptionA = false;
+  chkOptionB = false;
+  chkOptionC = false;
+  selectedOption = "option_a";
+  radioGroup.select("option_a");
+  selectedProfile = profiles[0];
+  profileList.selectedIndex = 0;
+});
+const btnToggle = new Button("Toggle Checkboxes", () => {
+  chkOptionA = !chkOptionA;
+  chkOptionB = !chkOptionB;
+  chkOptionC = !chkOptionC;
+});
+const btnCount = new Button("Click Count", () => {
+  clickCount++;
+});
+btnRow.add(btnReset, btnToggle, btnCount);
+
 const uiStatus = new Box("ui-status");
 uiStatus.height = { fixed: 1 };
 uiStatus.style.bg = defaultTheme.bg;
@@ -527,11 +570,12 @@ uiStatus.onPaint = (_buf, rect, theme) => {
     `C:${chkOptionC ? "✓" : "✗"}`,
     `Radio: ${selectedOption.replace("option_", "")}`,
     `Profile: ${selectedProfile}`,
+    `Clicks: ${clickCount}`,
   ];
   paintText(_buf, rect, `  ${parts.join("  │  ")}`, 0, theme.muted);
 };
 
-uiTab.add(chkLabel, chk1, chk2, chk3, radioLabel, radioGroup, listLabel, profileList, uiStatus);
+uiTab.add(chkLabel, chk1, chk2, chk3, radioLabel, radioGroup, btnLabel, btnRow, listLabel, profileList, uiStatus);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: Animation Dashboard
