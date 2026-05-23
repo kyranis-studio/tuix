@@ -132,8 +132,8 @@ export class Box {
       ) => void)
     | null;
 
-  /** Called on mouse events */
-  onMouse: ((col: number, row: number, action: string) => void) | null;
+  /** Called on mouse events (action: "press"|"release"|"move", button: 0=left,2=right) */
+  onMouse: ((col: number, row: number, action: string, button: number) => void) | null;
 
   /** If set, called when Tab is pressed instead of navigating focus. Return true to consume Tab. */
   handleTab: (() => boolean) | null;

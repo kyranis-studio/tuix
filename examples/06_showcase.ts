@@ -377,11 +377,24 @@ textStatus.onPaint = (_buf, rect, theme) => {
 
 const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
 
+// ─── Copy/paste demo ────────────────────────────────────────────────────
+
+const copyInput = new TextInput("", "Sample text — Alt+C to copy");
+const pasteInput = new TextInput("Paste here — focus and press Alt+V");
+
+const copyPasteHint = new Box("cp-hint");
+copyPasteHint.height = { fixed: 1 };
+copyPasteHint.onPaint = (_buf, rect, theme) =>
+  paintText(_buf, rect, "  Copy/paste: focus the sample → Alt+C to copy → Tab to next → Alt+V to paste", 0, theme.muted);
+
 textTab.add(
   label("TextInput:"), textInput,
   label("Autocomplete (dropdown mode):"), autoDropdown,
   label("Autocomplete (inline mode, Tab to complete):"), autoInline,
   label("TextArea (multi-line):"), textArea,
+  copyPasteHint,
+  label("Copy/Paste Demo — Copy (Alt+C) from here:"), copyInput,
+  label("Then paste (Alt+V) here:"), pasteInput,
   textStatus,
 );
 

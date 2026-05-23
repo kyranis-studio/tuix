@@ -59,6 +59,9 @@ export class App {
   private _dragOffX = 0;
   private _dragOffY = 0;
 
+  /** Mouse drag state for text selection */
+  private _mouseDragTarget: Box | null = null;
+
   /** Previous focus before showing an overlay */
   private _savedFocus: Box | null = null;
 
@@ -410,7 +413,7 @@ export class App {
         // (parent boxes like titleBar may have the handler, not the deepest child)
         let target: Box | null = overlayHit;
         while (target && !target.onMouse) target = target.parent;
-        target?.onMouse?.(col, row, "press");
+        target?.onMouse?.(col, row, "press", 0);
         return;
       }
 
@@ -426,15 +429,36 @@ export class App {
         return;
       }
 
-      // Click to focus
+      // Click to focus + start drag tracking for text selection
       const hit = this.root.hitTest(col, row);
       if (hit && hit.focusable) this.focus.focusBox(hit);
-      if (hit?.onMouse) hit.onMouse(col, row, "press");
+      if (hit?.onMouse) {
+        hit.onMouse(col, row, "press", 0);
+        this._mouseDragTarget = hit;
+      }
+      return;
+    }
+
+    // ── Right-click press — focus the widget (actual paste happens on release) ─
+    if (action === "press" && button === 2) {
+      const overlayHit = findOverlayHit();
+      if (overlayHit) {
+        if (overlayHit.focusable) this.focus.focusBox(overlayHit);
+        return;
+      }
+      if (this.hasModalOverlay) return;
+      const hit = this.root.hitTest(col, row);
+      if (hit && hit.focusable) this.focus.focusBox(hit);
       return;
     }
 
     // ── Move ─────────────────────────────────────────────────────────────
     if (action === "move") {
+      // Text selection drag takes priority
+      if (this._mouseDragTarget) {
+        this._mouseDragTarget.onMouse?.(col, row, "move", 0);
+        return;
+      }
       if (this._activeSplitter) {
         const sp = this._activeSplitter;
         const coord = sp["_direction"] === "horizontal" ? col : row;
@@ -446,16 +470,23 @@ export class App {
 
     // ── Release ──────────────────────────────────────────────────────────
     if (action === "release") {
+      // Text selection release takes priority
+      if (this._mouseDragTarget) {
+        this._mouseDragTarget.onMouse?.(col, row, "release", 0);
+        this._mouseDragTarget = null;
+        return;
+      }
+
       // Check overlays first
       const overlayHit = findOverlayHit();
       if (overlayHit) {
         // Walk up from hit to find nearest onMouse handler
         let target: Box | null = overlayHit;
         while (target && !target.onMouse) target = target.parent;
-        target?.onMouse?.(col, row, "release");
+        target?.onMouse?.(col, row, "release", button);
       } else if (!this.hasModalOverlay) {
         const hit = this.root.hitTest(col, row);
-        if (hit?.onMouse) hit.onMouse(col, row, "release");
+        if (hit?.onMouse) hit.onMouse(col, row, "release", button);
       }
       // Clear active splitter
       if (this._activeSplitter) {

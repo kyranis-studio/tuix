@@ -1,4 +1,5 @@
 import { Box } from "../layout.ts";
+import { copyToClipboard, pasteFromClipboard } from "../clipboard.ts";
 
 export class TextArea extends Box {
   value = "";
@@ -7,6 +8,10 @@ export class TextArea extends Box {
   minRows = 3;
   maxLines: number | null = null;
   onChange: ((val: string) => void) | null = null;
+
+  // Selection state for mouse drag-to-select
+  private _selStart = -1;
+  private _selEnd = -1;
 
   constructor(
     placeholder = "",
@@ -86,25 +91,49 @@ export class TextArea extends Box {
         this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
 
         const lines = this._lines();
+        const selActive = this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd;
+        const selMin = selActive ? Math.min(this._selStart, this._selEnd) : -1;
+        const selMax = selActive ? Math.max(this._selStart, this._selEnd) : -1;
+
         for (let row = 0; row < ch; row++) {
           const lineIdx = this.scrollY + row;
           if (lineIdx >= lines.length) break;
           const line = lines[lineIdx];
           for (let col = 0; col < cw; col++) {
+            const charIdx = this._lineStart(lineIdx) + col;
+            const inSel = selActive && charIdx >= selMin && charIdx < selMax;
+            const isCur =
+              isFocused && lineIdx === cursorRow && col === cursorCol;
+
             if (col < line.length) {
-              const isCur =
-                isFocused && lineIdx === cursorRow && col === cursorCol;
-              buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
-                fg: isCur ? bg : theme.text,
-                bg: isCur ? theme.text : bg,
-                bold: isCur,
-              });
-            } else if (
-              isFocused &&
-              lineIdx === cursorRow &&
-              col === cursorCol
-            ) {
+              if (inSel && isCur) {
+                buf.set(rect.x + col, rect.y + row, {
+                  char: line[col],
+                  fg: theme.highlight,
+                  bg: theme.text,
+                  bold: true,
+                });
+              } else if (inSel) {
+                buf.set(rect.x + col, rect.y + row, {
+                  char: line[col],
+                  fg: theme.bg,
+                  bg: theme.highlight,
+                });
+              } else if (isCur) {
+                buf.set(rect.x + col, rect.y + row, {
+                  char: line[col],
+                  fg: bg,
+                  bg: theme.text,
+                  bold: true,
+                });
+              } else {
+                buf.set(rect.x + col, rect.y + row, {
+                  char: line[col],
+                  fg: theme.text,
+                  bg,
+                });
+              }
+            } else if (isCur) {
               buf.set(rect.x + col, rect.y + row, {
                 char: " ",
                 fg: bg,
@@ -137,6 +166,32 @@ export class TextArea extends Box {
     };
 
     this.onKey = (key, modifiers) => {
+      // Any keyboard input clears the text selection
+      this._selStart = -1;
+      this._selEnd = -1;
+
+      // Alt+C: copy value to clipboard
+      if (key === "c" && modifiers.alt) {
+        copyToClipboard(this.value);
+        return;
+      }
+
+      // Alt+V: paste from clipboard at cursor
+      if (key === "v" && modifiers.alt) {
+        pasteFromClipboard().then((text) => {
+          if (text) {
+            this.value =
+              this.value.slice(0, this.cursorPos) +
+              text +
+              this.value.slice(this.cursorPos);
+            this.cursorPos += text.length;
+            this._syncHeight();
+            if (this.onChange) this.onChange(this.value);
+          }
+        });
+        return;
+      }
+
       if (key === "Backspace") {
         if (this.cursorPos > 0) {
           this.value =
@@ -199,26 +254,69 @@ export class TextArea extends Box {
       }
     };
 
-    this.onMouse = (col, row, action) => {
-      if (action === "press") {
-        const hasBorder = this.style.border !== "none";
-        const bOff = hasBorder ? 1 : 0;
-        const p = this.style.padding;
-        const contentX = this.rect.x + bOff + p.left;
-        const contentY = this.rect.y + bOff + p.top;
-        const relRow = row - contentY;
-        if (relRow >= 0) {
-          const lineIdx = this.scrollY + relRow;
-          const lines = this._lines();
-          if (lineIdx >= 0 && lineIdx < lines.length) {
-            const relCol = col - contentX;
-            const clamped = Math.max(
-              0,
-              Math.min(relCol, lines[lineIdx].length),
-            );
-            this.cursorPos = this._lineStart(lineIdx) + clamped;
+    this.onMouse = (col, row, action, button) => {
+      const hasBorder = this.style.border !== "none";
+      const bOff = hasBorder ? 1 : 0;
+      const p = this.style.padding;
+      const contentX = this.rect.x + bOff + p.left;
+      const contentY = this.rect.y + bOff + p.top;
+
+      // Right-click: paste from clipboard at cursor position
+      if (button === 2 && action === "release") {
+        pasteFromClipboard().then((text) => {
+          if (text) {
+            this.value =
+              this.value.slice(0, this.cursorPos) +
+              text +
+              this.value.slice(this.cursorPos);
+            this.cursorPos += text.length;
+            this._syncHeight();
+            if (this.onChange) this.onChange(this.value);
           }
+        });
+        return;
+      }
+
+      if (button !== 0) return;
+
+      const relRow = row - contentY;
+      if (relRow < 0) {
+        // Clicked above the text area – clamp to first line
+        if (action === "press") {
+          this.cursorPos = 0;
+          this._selStart = 0;
+          this._selEnd = 0;
         }
+        return;
+      }
+      const lineIdx = this.scrollY + relRow;
+      const lines = this._lines();
+      if (lineIdx >= 0 && lineIdx < lines.length) {
+        const relCol = col - contentX;
+        const clamped = Math.max(
+          0,
+          Math.min(relCol, lines[lineIdx].length),
+        );
+        this.cursorPos = this._lineStart(lineIdx) + clamped;
+      } else if (lineIdx >= lines.length) {
+        // Clicked below available lines – clamp to end of last line
+        this.cursorPos = this.value.length;
+      }
+
+      if (action === "press") {
+        this._selStart = this.cursorPos;
+        this._selEnd = this.cursorPos;
+      } else if (action === "move") {
+        this._selEnd = this.cursorPos;
+      } else if (action === "release") {
+        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
+          const start = Math.min(this._selStart, this._selEnd);
+          const end = Math.max(this._selStart, this._selEnd);
+          const selected = this.value.slice(start, end);
+          copyToClipboard(selected);
+        }
+        this._selStart = -1;
+        this._selEnd = -1;
       }
     };
   }
