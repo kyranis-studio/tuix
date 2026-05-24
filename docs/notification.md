@@ -3,7 +3,7 @@
 An auto-dismissing toast notification that floats at a terminal corner. Supports info, success, warn, and error types.
 
 ```typescript
-import { Notification } from "../src/mod.ts";
+import { Notification } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

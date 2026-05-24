@@ -11,5 +11,8 @@
     "example:06": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/06_showcase.ts",
     "example:07": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/07_autocomplete.ts"
   },
-  "exports": "./src/mod.ts"
+  "exports": {
+    ".": "./src/mod.ts",
+    "./examples/showcase": "./examples/01_showcase.ts"
+  }
 }

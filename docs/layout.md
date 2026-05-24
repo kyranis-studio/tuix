@@ -9,7 +9,7 @@ The layout engine is built around the **`Box`** class (`src/layout.ts`), which s
 Every element in a **tuix** UI is a `Box`. Boxes form a tree — each box can contain child boxes, and the layout engine recursively positions and sizes them.
 
 ```typescript
-import { Box } from "../src/mod.ts";
+import { Box } from "jsr:@kyranis-studio/tuix";
 
 const root = new Box("root");
 const left = new Box("left pane");
@@ -150,7 +150,7 @@ container.style.padding = { top: 1, right: 2, bottom: 1, left: 2 };
 Helper functions:
 
 ```typescript
-import { edgesZero, edgesAll, edgesXY } from "../src/mod.ts";
+import { edgesZero, edgesAll, edgesXY } from "jsr:@kyranis-studio/tuix";
 
 edgesZero();           // { top: 0, right: 0, bottom: 0, left: 0 }
 edgesAll(1);           // { top: 1, right: 1, bottom: 1, left: 1 }
@@ -180,7 +180,7 @@ box.style.border = "none";     // no border (default)
 Custom borders using `BorderChars`:
 
 ```typescript
-import { BORDERS, getBorderChars } from "../src/mod.ts";
+import { BORDERS, getBorderChars } from "jsr:@kyranis-studio/tuix";
 
 box.style.border = { topLeft: "╔", topRight: "╗", ... };
 ```
@@ -220,7 +220,7 @@ The scrollbar is painted as a track (`│`/`─`) with a draggable thumb (`▌`/
 `Splitter` (`src/splitter.ts`) creates resizable panel dividers:
 
 ```typescript
-import { Splitter } from "../src/mod.ts";
+import { Splitter } from "jsr:@kyranis-studio/tuix";
 
 const split = new Splitter("horizontal", leftPanel, rightPanel, {
   initialSplit: 40, // 40% for left panel
@@ -259,7 +259,7 @@ box.onPaint = (buf, rect, theme) => {
 ### Paint helpers
 
 ```typescript
-import { paintCenteredText, paintText } from "../src/mod.ts";
+import { paintCenteredText, paintText } from "jsr:@kyranis-studio/tuix";
 
 // Centered text
 paintCenteredText(buf, rect, "Hello", theme.text, theme.bg, true);

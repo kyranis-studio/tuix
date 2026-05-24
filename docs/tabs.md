@@ -3,7 +3,7 @@
 A multi-tab container with keyboard and mouse tab switching. Each tab has a label and a content box — only the active tab's content is visible.
 
 ```typescript
-import { Tabs } from "../src/mod.ts";
+import { Tabs } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

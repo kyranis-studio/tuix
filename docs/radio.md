@@ -3,7 +3,7 @@
 Mutually exclusive radio selection with `•`/`○` indicators.
 
 ```typescript
-import { RadioButton, RadioGroup } from "../src/mod.ts";
+import { RadioButton, RadioGroup } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

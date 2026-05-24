@@ -3,7 +3,7 @@
 A text input with suggestion completion — supports dropdown mode and inline completion mode.
 
 ```typescript
-import { Autocomplete } from "../src/mod.ts";
+import { Autocomplete } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

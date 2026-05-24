@@ -3,7 +3,7 @@
 A percentage progress bar using `█`/`░` block characters with a percentage label.
 
 ```typescript
-import { ProgressBar } from "../src/mod.ts";
+import { ProgressBar } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

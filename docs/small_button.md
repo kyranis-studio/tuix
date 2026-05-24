@@ -3,7 +3,7 @@
 A borderless single-row button — compact alternative to `Button`.
 
 ```typescript
-import { SmallButton } from "../src/mod.ts";
+import { SmallButton } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

@@ -3,7 +3,7 @@
 A toggle checkbox with `☑`/`☐` indicators, keyboard and mouse support.
 
 ```typescript
-import { Checkbox } from "../src/mod.ts";
+import { Checkbox } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

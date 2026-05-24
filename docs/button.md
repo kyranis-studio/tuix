@@ -3,7 +3,7 @@
 A clickable button with border, keyboard and mouse support, and multiple visual states.
 
 ```typescript
-import { Button } from "../src/mod.ts";
+import { Button } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

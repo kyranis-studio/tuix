@@ -3,7 +3,7 @@
 A horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and underline indicator.
 
 ```typescript
-import { ButtonGroup } from "../src/mod.ts";
+import { ButtonGroup } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

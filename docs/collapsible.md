@@ -3,7 +3,7 @@
 A collapsible section with a `▶`/`▼` header that shows or hides its content.
 
 ```typescript
-import { Collapsible } from "../src/mod.ts";
+import { Collapsible } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

@@ -3,7 +3,7 @@
 A draggable floating window with a title bar, close button, and content area.
 
 ```typescript
-import { FloatingWindow } from "../src/mod.ts";
+import { FloatingWindow } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

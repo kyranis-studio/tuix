@@ -7,7 +7,7 @@ The terminal module (`src/terminal.ts`) handles raw terminal I/O, the double-buf
 ## ANSI Helpers
 
 ```typescript
-import { ansi } from "../src/mod.ts";
+import { ansi } from "jsr:@kyranis-studio/tuix";
 
 ansi.reset;          // Reset all attributes
 ansi.bold;           // Bold on
@@ -30,7 +30,7 @@ ansi.bg(color);      // Set background color (24-bit)
 ## Terminal Size
 
 ```typescript
-import { getTermSize } from "../src/mod.ts";
+import { getTermSize } from "jsr:@kyranis-studio/tuix";
 
 const { cols, rows } = getTermSize();
 ```
@@ -42,7 +42,7 @@ Uses `Deno.consoleSize()`.
 ## Raw Mode
 
 ```typescript
-import { enableRawMode, disableRawMode } from "../src/mod.ts";
+import { enableRawMode, disableRawMode } from "jsr:@kyranis-studio/tuix";
 
 enableRawMode();   // Set stdin to raw mode (cbreak)
 disableRawMode();  // Restore cooked mode
@@ -114,7 +114,7 @@ The flush optimises by:
 Since `SIGWINCH` is not reliably available in Deno on all platforms, a poller checks terminal size at a regular interval:
 
 ```typescript
-import { startResizePoller, stopResizePoller, onResize } from "../src/mod.ts";
+import { startResizePoller, stopResizePoller, onResize } from "jsr:@kyranis-studio/tuix";
 
 const unsubscribe = onResize((size) => {
   console.log(`Terminal resized to ${size.cols}x${size.rows}`);

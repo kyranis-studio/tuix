@@ -7,7 +7,7 @@ You can create custom widgets by extending `Box` and overriding its hooks.
 ## Basic Pattern
 
 ```typescript
-import { Box } from "../src/mod.ts";
+import { Box } from "jsr:@kyranis-studio/tuix";
 import type { CellBuffer } from "../src/terminal.ts";
 import type { Theme } from "../src/theme.ts";
 
@@ -111,7 +111,7 @@ class MyWidget extends Box {
 ## Using Built-in Helpers
 
 ```typescript
-import { paintCenteredText, paintText } from "../src/mod.ts";
+import { paintCenteredText, paintText } from "jsr:@kyranis-studio/tuix";
 
 // Centered text
 paintCenteredText(buf, rect, "Hello", theme.text, theme.bg, true);

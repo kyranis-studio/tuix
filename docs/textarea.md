@@ -3,7 +3,7 @@
 A multi-line text editor with scrollbar, cursor navigation, line-based operations, and clipboard support.
 
 ```typescript
-import { TextArea } from "../src/mod.ts";
+import { TextArea } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

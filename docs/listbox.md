@@ -3,7 +3,7 @@
 A scrollable list selector with keyboard and mouse navigation, per-item disabled support, and selection callbacks.
 
 ```typescript
-import { ListBox } from "../src/mod.ts";
+import { ListBox } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

@@ -3,7 +3,7 @@
 A modal dialog widget with a title, body text, action buttons, and a dimmed backdrop.
 
 ```typescript
-import { Dialog } from "../src/mod.ts";
+import { Dialog } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

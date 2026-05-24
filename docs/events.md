@@ -42,7 +42,7 @@ interface MouseEvent {
 ## Reading Events
 
 ```typescript
-import { readEvents } from "../src/mod.ts";
+import { readEvents } from "jsr:@kyranis-studio/tuix";
 
 const abortController = new AbortController();
 for await (const ev of readEvents(abortController.signal)) {

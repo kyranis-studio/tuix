@@ -3,7 +3,7 @@
 A combo-box style selector — shows the current selection with a `▼` indicator and opens a scrollable floating list on activation.
 
 ```typescript
-import { Dropdown } from "../src/mod.ts";
+import { Dropdown } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

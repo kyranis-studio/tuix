@@ -3,7 +3,7 @@
 A single-line text input field with cursor, text selection, clipboard copy/paste, and placeholder support.
 
 ```typescript
-import { TextInput } from "../src/mod.ts";
+import { TextInput } from "jsr:@kyranis-studio/tuix";
 ```
 
 ---

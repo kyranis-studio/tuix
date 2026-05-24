@@ -35,7 +35,7 @@ interface Color { r: number; g: number; b: number; }
 ## Color Helpers
 
 ```typescript
-import { rgb, hex } from "../src/mod.ts";
+import { rgb, hex } from "jsr:@kyranis-studio/tuix";
 
 const red = rgb(255, 0, 0);
 const bg = hex("#1E1E1E");
@@ -56,7 +56,7 @@ const bg = hex("#1E1E1E");
 | Catppuccin | `catppuccinTheme` | Catppuccin Mocha with mauve/pink |
 
 ```typescript
-import { defaultTheme, vscodeDarkTheme, amberTheme, nordTheme } from "../src/mod.ts";
+import { defaultTheme, vscodeDarkTheme, amberTheme, nordTheme } from "jsr:@kyranis-studio/tuix";
 // defaultTheme === vscodeDarkTheme
 ```
 
@@ -67,7 +67,7 @@ import { defaultTheme, vscodeDarkTheme, amberTheme, nordTheme } from "../src/mod
 Named theme registry for global access:
 
 ```typescript
-import { ThemeRegistry } from "../src/mod.ts";
+import { ThemeRegistry } from "jsr:@kyranis-studio/tuix";
 
 // Register a custom theme
 ThemeRegistry.register("my-theme", { ... });
@@ -99,7 +99,7 @@ Five built-in border styles:
 | `"bold"` | `┏━┓┃┗━┛` |
 
 ```typescript
-import { BORDERS, getBorderChars, BorderStyle } from "../src/mod.ts";
+import { BORDERS, getBorderChars, BorderStyle } from "jsr:@kyranis-studio/tuix";
 
 // Get characters for a style
 const chars = getBorderChars("rounded");
@@ -117,7 +117,7 @@ BORDERS.single, BORDERS.double, BORDERS.rounded, BORDERS.bold, BORDERS.none
 ## Creating a Custom Theme
 
 ```typescript
-import { Theme, hex } from "../src/mod.ts";
+import { Theme, hex } from "jsr:@kyranis-studio/tuix";
 
 const myTheme: Theme = {
   bg:          hex("#000000"),

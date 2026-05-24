@@ -92,28 +92,13 @@ tuix/
 Execute the comprehensive, interactive showcase dashboard featuring all stateful widgets in real time:
 
 ```bash
-deno task example:06
+deno run -A jsr:@kyranis-studio/tuix@0.1.0/examples/showcase
 ```
 
-### Running Other Examples
-
-Check out individual component demos by invoking Deno tasks:
+Or from a local checkout:
 
 ```bash
-# Example 01: Centered reactive layout
-deno task example:01
-
-# Example 02: Keyboard focus cycles & shortcuts
-deno task example:02
-
-# Example 03: Mouse draggable splitter panels
-deno task example:03
-
-# Example 04: Gutter, padding, and margin spacing
-deno task example:04
-
-# Example 05: Visual border styles side-by-side
-deno task example:05
+deno run -A examples/01_showcase.ts
 ```
 
 ---
@@ -123,7 +108,7 @@ deno task example:05
 Below is a brief demonstration of how to instantiate a column box, add stateful components, and run a **tuix** application:
 
 ```typescript
-import { App, Box, Button, TextInput, Checkbox, RadioGroup, defaultTheme } from "./src/mod.ts";
+import { App, Box, Button, TextInput, Checkbox, RadioGroup, defaultTheme } from "jsr:@kyranis-studio/tuix";
 
 // 1. Create a column layout container
 const container = Box.col("Main Layout");

@@ -7,7 +7,7 @@ The `App` class (`src/app.ts`) is the main entry point for every **tuix** applic
 ## Quick Start
 
 ```typescript
-import { App, Box, Button, defaultTheme } from "../src/mod.ts";
+import { App, Box, Button, defaultTheme } from "jsr:@kyranis-studio/tuix";
 
 const root = Box.col("root");
 root.add(new Button("Hello", () => console.log("clicked")));
