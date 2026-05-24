@@ -1,6 +1,23 @@
 /**
  * layout.ts — Flex-like layout engine with fixed/grow sizing,
  * padding, margin, gutter, border, and alignment.
+ *
+ * SIZING DEFAULTS
+ * ───────────────
+ * new Box() initialises width = { grow: 1 } and height = { grow: 1 } so every
+ * box fills the available space by default.
+ *
+ * SHRINK-WRAP (hug content)
+ * ─────────────────────────
+ * Set width = {} or height = {} (no keys) to hug content on that axis.
+ *   • Main-axis hug: the container shrinks to exactly fit its children.
+ *   • Cross-axis hug: the container matches the largest child on that axis.
+ *
+ * AUTO SCROLL
+ * ───────────
+ * overflow: "auto" (the default) enables scrolling automatically whenever
+ * children overflow the viewport — both horizontally and vertically.
+ * The engine computes scrollMaxX / scrollMaxY for both axes.
  */
 
 import { CellBuffer } from "./terminal.ts";
@@ -24,12 +41,17 @@ function clamp(v: number, min: number, max: number): number {
 export interface SizeConstraint {
   /** Fixed character count — overrides grow/shrink */
   fixed?: number;
-  /** Flex-grow factor (default 1 when no fixed) */
+  /** Flex-grow factor. Set to a number to participate in flex distribution. */
   grow?: number;
   /** Minimum characters */
   min?: number;
   /** Maximum characters */
   max?: number;
+}
+
+/** Returns true when the constraint means "hug / shrink-wrap". */
+function isHug(sc: SizeConstraint): boolean {
+  return sc.fixed === undefined && sc.grow === undefined;
 }
 
 // ─── Spacing ──────────────────────────────────────────────────────────────────
@@ -82,7 +104,13 @@ export interface BoxStyle {
   bg?: { r: number; g: number; b: number };
   /** Override foreground text color */
   fg?: { r: number; g: number; b: number };
-  /** Overflow handling for content exceeding bounds (default: "auto") */
+  /**
+   * Overflow handling for content exceeding bounds (default: "auto").
+   * "auto"    — scroll appears automatically when content overflows.
+   * "scroll"  — scrollbar always shown (even when not overflowing).
+   * "hidden"  — overflow is clipped, no scrollbar.
+   * "visible" — overflow is not clipped (no scrollbar, no clip).
+   */
   overflow: Overflow;
 }
 
@@ -108,6 +136,9 @@ export class Box {
   label: string;
 
   // Sizing constraints
+  // Default: { grow: 1 } — fills available space on both axes.
+  // Use {}              — to hug / shrink-wrap on that axis.
+  // Use { fixed: N }    — for a fixed size.
   width: SizeConstraint;
   height: SizeConstraint;
 
@@ -133,7 +164,9 @@ export class Box {
     | null;
 
   /** Called on mouse events (action: "press"|"release"|"move", button: 0=left,2=right) */
-  onMouse: ((col: number, row: number, action: string, button: number) => void) | null;
+  onMouse:
+    | ((col: number, row: number, action: string, button: number) => void)
+    | null;
 
   /** If set, called when Tab is pressed instead of navigating focus. Return true to consume Tab. */
   handleTab: (() => boolean) | null;
@@ -157,8 +190,9 @@ export class Box {
   constructor(label = "") {
     this.id = _nextId++;
     this.label = label;
-    this.width = {};
-    this.height = {};
+    // Default: grow to fill available space on both axes.
+    this.width = { grow: 1 };
+    this.height = { grow: 1 };
     this.style = defaultStyle();
     this.focusable = false;
     this.tabIndex = 0;
@@ -200,122 +234,166 @@ export class Box {
     const gutter = this.style.gutter;
     const childCount = this.children.length;
 
-    // Determine if auto-sized on main axis:
-    // - Container has no fixed or grow on main axis
-    // - No child has explicit grow (they'd need distributed space)
-    const hasGrowChild = childCount > 0 && this.children.some((c) => {
-      const sc = isRow ? c.width : c.height;
-      return sc.grow !== undefined;
-    });
-    // Only auto-size if the container has no explicit constraint on the main axis
-    // AND at least one child has a positive main-axis size (fixed or min > 0).
-    // This prevents shrink-wrapping to zero when children have no intrinsic size.
-    const hasContentChild = childCount > 0 && this.children.some((c) => {
-      const sc = isRow ? c.width : c.height;
-      return sc.fixed !== undefined || (sc.min !== undefined && sc.min > 0);
-    });
-    const autoSizeMain = !hasGrowChild && hasContentChild && childCount > 0 && (isRow
-      ? (this.width.fixed === undefined && this.width.grow === undefined)
-      : (this.height.fixed === undefined && this.height.grow === undefined));
+    // ── Determine sizing mode ────────────────────────────────────────────────
+    //
+    // Main axis:
+    //   fixed → exactly N chars
+    //   grow  → flex-fill available space
+    //   hug   → shrink-wrap to children
+    //
+    // Cross axis:
+    //   fixed → exactly N chars
+    //   grow  → fill available cross space
+    //   hug   → match the tallest/widest child
 
-    // Base sizes from parent constraints
-    let selfW = this.width.fixed !== undefined
-      ? clamp(this.width.fixed, this.width.min ?? 0, this.width.max ?? Infinity)
-      : clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
-    let selfH = this.height.fixed !== undefined
-      ? clamp(this.height.fixed, this.height.min ?? 0, this.height.max ?? Infinity)
-      : clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
+    const mainSC = isRow ? this.width : this.height;
+    const crossSC = isRow ? this.height : this.width;
 
-    // Working content area
-    let contentX = outerX + bOff + p.left;
-    let contentY = outerY + bOff + p.top;
+    const mainHug = isHug(mainSC) && childCount > 0;
+    const crossHug = isHug(crossSC) && childCount > 0;
+
+    // Base own sizes derived from constraints / parent available space
+    let selfW: number;
+    let selfH: number;
+
+    if (this.width.fixed !== undefined) {
+      selfW = clamp(
+        this.width.fixed,
+        this.width.min ?? 0,
+        this.width.max ?? Infinity,
+      );
+    } else if (isHug(this.width) && !isRow) {
+      // column container, cross=width, hug — will be resolved after children
+      selfW = clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
+    } else {
+      selfW = clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
+    }
+
+    if (this.height.fixed !== undefined) {
+      selfH = clamp(
+        this.height.fixed,
+        this.height.min ?? 0,
+        this.height.max ?? Infinity,
+      );
+    } else if (isHug(this.height) && isRow) {
+      // row container, cross=height, hug — will be resolved after children
+      selfH = clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
+    } else {
+      selfH = clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
+    }
+
     let contentW = Math.max(0, selfW - bOff * 2 - p.left - p.right);
     let contentH = Math.max(0, selfH - bOff * 2 - p.top - p.bottom);
+    const contentX = outerX + bOff + p.left;
+    const contentY = outerY + bOff + p.top;
 
     if (childCount > 0) {
-      // Resolve main-axis child sizes
+      // ── Resolve main-axis child sizes ──────────────────────────────────────
       const mainAvailable = isRow ? contentW : contentH;
-      const mainSizes = this._resolveMainAxis(mainAvailable, gutter, autoSizeMain);
+      const mainSizes = this._resolveMainAxis(mainAvailable, gutter, mainHug);
 
-      // Compute total content size on main axis
-      const totalMain = mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
+      // Total content extent along the main axis
+      const totalMain =
+        mainSizes.reduce((a, b) => a + b, 0) + gutter * (childCount - 1);
 
-      // Auto-size: shrink-wrap to content, clamped to available space
-      if (autoSizeMain) {
-        const contentExtent = totalMain + bOff * 2 +
-          (isRow ? p.left + p.right : p.top + p.bottom);
+      // ── Shrink-wrap main axis ──────────────────────────────────────────────
+      if (mainHug) {
+        const contentExtent =
+          totalMain + bOff * 2 + (isRow ? p.left + p.right : p.top + p.bottom);
         const maxExtent = isRow ? outerW : outerH;
         const clamped = Math.min(contentExtent, maxExtent);
-
         if (isRow) {
-          selfW = clamp(clamped, this.width.min ?? 0, this.width.max ?? Infinity);
+          selfW = clamp(
+            clamped,
+            this.width.min ?? 0,
+            this.width.max ?? Infinity,
+          );
           contentW = Math.max(0, selfW - bOff * 2 - p.left - p.right);
         } else {
-          selfH = clamp(clamped, this.height.min ?? 0, this.height.max ?? Infinity);
+          selfH = clamp(
+            clamped,
+            this.height.min ?? 0,
+            this.height.max ?? Infinity,
+          );
           contentH = Math.max(0, selfH - bOff * 2 - p.top - p.bottom);
         }
       }
 
-      this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
-
-      // Cross-axis available size
+      // ── Cross-axis available ───────────────────────────────────────────────
       const crossAvailable = isRow ? contentH : contentW;
 
-      // Compute main-axis positions
+      // ── Compute main-axis positions ────────────────────────────────────────
       const freeSpace = (isRow ? contentW : contentH) - totalMain;
       let mainOffsets: number[];
       switch (this.style.justify) {
         case "center":
-          mainOffsets = this._spreadOffsets(mainSizes, gutter, Math.floor(freeSpace / 2));
+          mainOffsets = this._spreadOffsets(
+            mainSizes,
+            gutter,
+            Math.floor(freeSpace / 2),
+          );
           break;
         case "end":
           mainOffsets = this._spreadOffsets(mainSizes, gutter, freeSpace);
           break;
         case "space-between": {
-          const gap = childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
+          const gap =
+            childCount > 1 ? Math.floor(freeSpace / (childCount - 1)) : 0;
           mainOffsets = this._spreadOffsets(mainSizes, gap);
           break;
         }
         case "space-around": {
           const gap = Math.floor(freeSpace / childCount);
-          mainOffsets = this._spreadOffsets(mainSizes, gap + gutter, Math.floor(gap / 2));
+          mainOffsets = this._spreadOffsets(
+            mainSizes,
+            gap + gutter,
+            Math.floor(gap / 2),
+          );
           break;
         }
         default: // "start"
           mainOffsets = this._spreadOffsets(mainSizes, gutter);
       }
 
-      // Layout children with scroll offset
+      // ── First pass: lay out children to measure cross-axis for hug ────────
+      // We need to know the max cross size before we can finalise selfH/selfW
+      // when crossHug is active.
+
+      // Determine per-child cross size
+      const childCrossSizes: number[] = [];
+      for (let i = 0; i < childCount; i++) {
+        const child = this.children[i];
+        const childMainSC = isRow ? child.width : child.height;
+        const childCrossSC = isRow ? child.height : child.width;
+        let crossSize: number;
+        if (childCrossSC.fixed !== undefined) {
+          crossSize = childCrossSC.fixed;
+        } else if (crossHug) {
+          // We don't know the cross extent yet — give children max available,
+          // then we'll measure after layout
+          crossSize = crossAvailable;
+        } else if (this.style.align === "stretch") {
+          crossSize = crossAvailable;
+        } else {
+          crossSize = Math.min(
+            crossAvailable,
+            childCrossSC.max ?? crossAvailable,
+          );
+        }
+        childCrossSizes.push(Math.max(0, crossSize));
+      }
+
+      // Layout children
       for (let i = 0; i < childCount; i++) {
         const child = this.children[i];
         const mainSize = mainSizes[i];
         const mainOff = mainOffsets[i];
-
-        let crossSize: number;
-        if (isRow) {
-          if (child.height.fixed !== undefined) {
-            crossSize = child.height.fixed;
-          } else if (this.style.align === "stretch") {
-            crossSize = crossAvailable;
-          } else {
-            crossSize = Math.min(crossAvailable, child.height.max ?? crossAvailable);
-          }
-        } else {
-          if (child.width.fixed !== undefined) {
-            crossSize = child.width.fixed;
-          } else if (this.style.align === "stretch") {
-            crossSize = crossAvailable;
-          } else {
-            crossSize = Math.min(crossAvailable, child.width.max ?? crossAvailable);
-          }
-        }
-        crossSize = Math.max(crossSize, 0);
+        let crossSize = childCrossSizes[i];
 
         let crossOff = 0;
-        const childCrossFixed = isRow
-          ? (child.height.fixed ?? crossSize)
-          : (child.width.fixed ?? crossSize);
-        const actualCross = Math.min(childCrossFixed, crossSize);
+        const childCrossSC = isRow ? child.height : child.width;
+        const actualCross =
+          childCrossSC.fixed !== undefined ? childCrossSC.fixed : crossSize;
         switch (this.style.align) {
           case "center":
             crossOff = Math.floor((crossAvailable - actualCross) / 2);
@@ -328,38 +406,91 @@ export class Box {
         }
 
         const childParentRect: Rect = isRow
-          ? { x: contentX + mainOff - this.scrollX, y: contentY + crossOff, width: mainSize, height: crossSize }
-          : { x: contentX + crossOff, y: contentY + mainOff - this.scrollY, width: crossSize, height: mainSize };
+          ? {
+              x: contentX + mainOff - this.scrollX,
+              y: contentY + crossOff,
+              width: mainSize,
+              height: crossSize,
+            }
+          : {
+              x: contentX + crossOff,
+              y: contentY + mainOff - this.scrollY,
+              width: crossSize,
+              height: mainSize,
+            };
 
         child.layout(childParentRect);
       }
 
-      // Compute scroll max based on overflow mode
-      const contentSize = totalMain;
-      const viewportSize = isRow ? contentW : contentH;
-      const overflow = this.style.overflow;
+      // ── Cross-axis hug: shrink-wrap self to tallest/widest child ──────────
+      if (crossHug) {
+        let maxCross = 0;
+        for (const child of this.children) {
+          const childCross = isRow ? child.rect.height : child.rect.width;
+          maxCross = Math.max(maxCross, childCross);
+        }
+        // Add border + padding on the cross axis
+        const crossExtent =
+          maxCross + bOff * 2 + (isRow ? p.top + p.bottom : p.left + p.right);
+        const maxCrossExtent = isRow ? outerH : outerW;
+        const clamped = Math.min(crossExtent, maxCrossExtent);
+        if (isRow) {
+          selfH = clamp(
+            clamped,
+            this.height.min ?? 0,
+            this.height.max ?? Infinity,
+          );
+        } else {
+          selfW = clamp(
+            clamped,
+            this.width.min ?? 0,
+            this.width.max ?? Infinity,
+          );
+        }
+      }
 
+      this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
+
+      // ── Compute scroll max (both axes for "auto" / "scroll") ──────────────
+      const overflow = this.style.overflow;
       if (overflow === "hidden" || overflow === "visible") {
         this.scrollMaxX = 0;
         this.scrollMaxY = 0;
       } else {
-        const maxScroll = Math.max(0, contentSize - viewportSize);
-        this.scrollMaxX = isRow ? maxScroll : 0;
-        this.scrollMaxY = isRow ? 0 : maxScroll;
+        // Main-axis scroll
+        const mainViewport = isRow ? contentW : contentH;
+        const mainOverflow = Math.max(0, totalMain - mainViewport);
+        if (isRow) {
+          this.scrollMaxX = mainOverflow;
+          // Cross-axis scroll for row: tallest child vs contentH
+          const maxChildH = Math.max(
+            0,
+            ...this.children.map((c) => c.rect.height),
+          );
+          this.scrollMaxY = Math.max(0, maxChildH - contentH);
+        } else {
+          this.scrollMaxY = mainOverflow;
+          // Cross-axis scroll for column: widest child vs contentW
+          const maxChildW = Math.max(
+            0,
+            ...this.children.map((c) => c.rect.width),
+          );
+          this.scrollMaxX = Math.max(0, maxChildW - contentW);
+        }
       }
 
       this.scrollX = clamp(this.scrollX, 0, this.scrollMaxX);
       this.scrollY = clamp(this.scrollY, 0, this.scrollMaxY);
     } else {
+      // Leaf node — set rect; leaf widgets manage their own scroll
       this.rect = { x: outerX, y: outerY, width: selfW, height: selfH };
-      // Leaf nodes (e.g. TextArea) manage their own scroll — don't reset
     }
   }
 
   private _resolveMainAxis(
     available: number,
     gutter: number,
-    autoSize: boolean,
+    hugMode: boolean,
   ): number[] {
     const children = this.children;
     const n = children.length;
@@ -380,7 +511,12 @@ export class Box {
         const sz = clamp(sc.fixed, sc.min ?? 0, sc.max ?? sc.fixed);
         sizes[i] = sz;
         remaining -= sz;
-      } else if (autoSize) {
+      } else if (hugMode) {
+        // In hug mode the container will shrink-wrap; give each child its min
+        sizes[i] = sc.min ?? 0;
+      } else if (isHug(sc)) {
+        // Child wants to hug — treat as min size for now; parent distributes
+        // leftover space to grow children, hug children just take what they need.
         sizes[i] = sc.min ?? 0;
       } else {
         totalGrow += sc.grow ?? 1;
@@ -390,12 +526,12 @@ export class Box {
     remaining = Math.max(0, remaining);
 
     // Distribute remaining space to grow children
-    if (!autoSize) {
+    if (!hugMode) {
       for (let i = 0; i < n; i++) {
         const c = children[i];
         const isRow = this.style.direction === "row";
         const sc = isRow ? c.width : c.height;
-        if (sc.fixed === undefined) {
+        if (sc.fixed === undefined && !isHug(sc)) {
           const growFactor = sc.grow ?? 1;
           const share =
             totalGrow > 0
@@ -429,7 +565,7 @@ export class Box {
     const r = this.rect;
     if (r.width <= 0 || r.height <= 0) return;
 
-    const bg = this.style.bg ?? (this.focused ? theme.panelBg : theme.panelBg);
+    const bg = this.style.bg ?? theme.panelBg;
     const fg = this.style.fg ?? theme.text;
 
     // Fill background
@@ -442,11 +578,7 @@ export class Box {
       const borderBg = bg;
 
       // Top row
-      buf.set(r.x, r.y, {
-        char: chars.topLeft,
-        fg: borderColor,
-        bg: borderBg,
-      });
+      buf.set(r.x, r.y, { char: chars.topLeft, fg: borderColor, bg: borderBg });
       buf.set(r.x + r.width - 1, r.y, {
         char: chars.topRight,
         fg: borderColor,
@@ -493,10 +625,11 @@ export class Box {
         });
       }
 
-      // If focused, draw a label indicator on the top border
-      if (this.focused && this.label) {
-        const labelText = ` ${this.label} `;
+      // Label in top border
+      const labelText = this.label ? ` ${this.label} ` : null;
+      if (labelText) {
         const startCol = r.x + 2;
+        const labelFg = this.focused ? theme.highlight : theme.muted;
         for (
           let i = 0;
           i < labelText.length && startCol + i < r.x + r.width - 1;
@@ -504,23 +637,9 @@ export class Box {
         ) {
           buf.set(startCol + i, r.y, {
             char: labelText[i],
-            fg: theme.highlight,
+            fg: labelFg,
             bg: borderBg,
-            bold: true,
-          });
-        }
-      } else if (this.label) {
-        const labelText = ` ${this.label} `;
-        const startCol = r.x + 2;
-        for (
-          let i = 0;
-          i < labelText.length && startCol + i < r.x + r.width - 1;
-          i++
-        ) {
-          buf.set(startCol + i, r.y, {
-            char: labelText[i],
-            fg: theme.muted,
-            bg: borderBg,
+            bold: this.focused,
           });
         }
       }
@@ -528,7 +647,6 @@ export class Box {
 
     // Custom paint hook
     if (this.onPaint) {
-      // Content rect (inside border+padding)
       const hasBorder = this.style.border !== "none";
       const bOff = hasBorder ? 1 : 0;
       const p = this.style.padding;
@@ -541,14 +659,13 @@ export class Box {
       this.onPaint(buf, contentRect, theme);
     }
 
-    // Paint children with viewport clipping (unless overflow: visible)
+    // Paint children with viewport clipping
     const hasBorderForClip = this.style.border !== "none";
     const hasChildren = this.children.length > 0;
     const isOverflowing = this.scrollMaxY > 0 || this.scrollMaxX > 0;
     const overflow = this.style.overflow;
 
-    const shouldClip = overflow !== "visible" &&
-      (hasChildren || isOverflowing);
+    const shouldClip = overflow !== "visible" && (hasChildren || isOverflowing);
     if (shouldClip) {
       const bOff = hasBorderForClip ? 1 : 0;
       const p = this.style.padding;
@@ -567,7 +684,7 @@ export class Box {
       buf.popClip();
     }
 
-    // Paint scrollbar if overflow mode allows it and there's content to scroll
+    // Scrollbar
     const wantsScrollbar =
       (overflow === "scroll" || (overflow === "auto" && isOverflowing)) &&
       hasChildren;
@@ -589,42 +706,10 @@ export class Box {
 
     const isRow = this.style.direction === "row";
 
-    if (isRow) {
-      // Horizontal scrollbar — bottom row of content area
-      const maxScroll = this.scrollMaxX;
-      if (maxScroll <= 0) {
-        // Track with no thumb: dim line
-        for (let col = contentX; col < contentX + contentW; col++) {
-          buf.set(col, contentY + contentH - 1, {
-            char: "─",
-            fg: theme.muted,
-            bg: theme.panelBg,
-          });
-        }
-        return;
-      }
-      const totalContent = contentW + maxScroll;
-      const thumbW = Math.max(
-        1,
-        Math.floor((contentW / totalContent) * contentW),
-      );
-      const thumbX = Math.floor(
-        (this.scrollX / maxScroll) * (contentW - thumbW),
-      );
-      for (let col = contentX; col < contentX + contentW; col++) {
-        const off = col - contentX;
-        const isThumb = off >= thumbX && off < thumbX + thumbW;
-        buf.set(col, contentY + contentH - 1, {
-          char: isThumb ? "▄" : "─",
-          fg: isThumb ? theme.text : theme.muted,
-          bg: theme.panelBg,
-        });
-      }
-    } else {
-      // Vertical scrollbar — rightmost column of content area
+    // ── Vertical scrollbar (right edge of content) ─────────────────────────
+    if (this.scrollMaxY > 0 || (!isRow && this.style.overflow === "scroll")) {
       const maxScroll = this.scrollMaxY;
       if (maxScroll <= 0) {
-        // Track with no thumb: dim line
         for (let row = contentY; row < contentY + contentH; row++) {
           buf.set(contentX + contentW - 1, row, {
             char: "│",
@@ -632,24 +717,56 @@ export class Box {
             bg: theme.panelBg,
           });
         }
-        return;
+      } else {
+        const totalContent = contentH + maxScroll;
+        const thumbH = Math.max(
+          1,
+          Math.floor((contentH / totalContent) * contentH),
+        );
+        const thumbY = Math.floor(
+          (this.scrollY / maxScroll) * (contentH - thumbH),
+        );
+        for (let row = contentY; row < contentY + contentH; row++) {
+          const off = row - contentY;
+          const isThumb = off >= thumbY && off < thumbY + thumbH;
+          buf.set(contentX + contentW - 1, row, {
+            char: isThumb ? "▌" : "│",
+            fg: isThumb ? theme.text : theme.muted,
+            bg: theme.panelBg,
+          });
+        }
       }
-      const totalContent = contentH + maxScroll;
-      const thumbH = Math.max(
-        1,
-        Math.floor((contentH / totalContent) * contentH),
-      );
-      const thumbY = Math.floor(
-        (this.scrollY / maxScroll) * (contentH - thumbH),
-      );
-      for (let row = contentY; row < contentY + contentH; row++) {
-        const off = row - contentY;
-        const isThumb = off >= thumbY && off < thumbY + thumbH;
-        buf.set(contentX + contentW - 1, row, {
-          char: isThumb ? "▌" : "│",
-          fg: isThumb ? theme.text : theme.muted,
-          bg: theme.panelBg,
-        });
+    }
+
+    // ── Horizontal scrollbar (bottom edge of content) ──────────────────────
+    if (this.scrollMaxX > 0 || (isRow && this.style.overflow === "scroll")) {
+      const maxScroll = this.scrollMaxX;
+      if (maxScroll <= 0) {
+        for (let col = contentX; col < contentX + contentW; col++) {
+          buf.set(col, contentY + contentH - 1, {
+            char: "─",
+            fg: theme.muted,
+            bg: theme.panelBg,
+          });
+        }
+      } else {
+        const totalContent = contentW + maxScroll;
+        const thumbW = Math.max(
+          1,
+          Math.floor((contentW / totalContent) * contentW),
+        );
+        const thumbX = Math.floor(
+          (this.scrollX / maxScroll) * (contentW - thumbW),
+        );
+        for (let col = contentX; col < contentX + contentW; col++) {
+          const off = col - contentX;
+          const isThumb = off >= thumbX && off < thumbX + thumbW;
+          buf.set(col, contentY + contentH - 1, {
+            char: isThumb ? "▄" : "─",
+            fg: isThumb ? theme.text : theme.muted,
+            bg: theme.panelBg,
+          });
+        }
       }
     }
   }
@@ -660,7 +777,6 @@ export class Box {
     const r = this.rect;
     if (col < r.x || col >= r.x + r.width) return null;
     if (row < r.y || row >= r.y + r.height) return null;
-    // Check children first (front-to-back)
     for (let i = this.children.length - 1; i >= 0; i--) {
       const hit = this.children[i].hitTest(col, row);
       if (hit) return hit;
@@ -683,11 +799,8 @@ export class Box {
   }
 }
 
-// ─── Text helper ─────────────────────────────────────────────────────────────
+// ─── Text helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Paints centered text within the given content rect.
- */
 export function paintCenteredText(
   buf: CellBuffer,
   rect: Rect,
@@ -714,9 +827,6 @@ export function paintCenteredText(
   }
 }
 
-/**
- * Paints left-aligned text at a given row within rect.
- */
 export function paintText(
   buf: CellBuffer,
   rect: Rect,

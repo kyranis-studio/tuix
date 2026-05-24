@@ -1,0 +1,1260 @@
+/**
+ * 01_showcase.ts — tuix component showcase
+ *
+ * Uses the new layout defaults:
+ *   • width  = { grow: 1 }  — every Box fills available width by default
+ *   • height = { grow: 1 }  — every Box fills available height by default
+ *   • height = {}           — hug: shrink-wrap to tallest child
+ *   • overflow: "auto"      — scrollbars appear automatically when needed
+ *
+ * Because grow:1 is now the default, most explicit { grow: 1 } assignments
+ * are removed.  Only fixed-size items, hugging containers, and non-default
+ * grow ratios need explicit constraints.
+ */
+
+import {
+  App,
+  Box,
+  Splitter,
+  Button,
+  Checkbox,
+  TextInput,
+  ListBox,
+  Autocomplete,
+  Tabs,
+  RadioGroup,
+  TextArea,
+  Dropdown,
+  ButtonGroup,
+  ProgressBar,
+  Dialog,
+  Notification,
+  FloatingWindow,
+  SmallButton,
+  paintCenteredText,
+  paintText,
+  edgesAll,
+  defaultTheme,
+} from "../src/mod.ts";
+import type { ListBoxItem } from "../src/mod.ts";
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let selectedFramework = "";
+let selectedCommand = "";
+let chkOptionA = false;
+let chkOptionB = true;
+let chkOptionC = false;
+let selectedProfile = "Profile Alpha";
+let selectedOption = "option_a";
+let clickCount = 0;
+let selectedTheme = "VS Code Dark";
+let selectedAlign = "Left";
+let shortcutTarget = "";
+
+const profiles: ListBoxItem[] = [
+  "Profile Alpha",
+  "Profile Beta",
+  "Profile Gamma",
+  "Profile Delta",
+  { label: "Profile Locked", disabled: true },
+];
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+
+const header = new Box("hdr");
+header.height = { fixed: 3 };
+header.style.bg = defaultTheme.toolbarBg;
+header.onPaint = (buf, rect, theme) => {
+  buf.fill(rect.x, rect.y, rect.width, rect.height, {
+    char: " ",
+    bg: theme.toolbarBg,
+  });
+  paintCenteredText(
+    buf,
+    rect,
+    "✦  tuix Component Showcase  ✦",
+    theme.toolbarText,
+    theme.toolbarBg,
+    true,
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Layout — scroll demos
+// ═══════════════════════════════════════════════════════════════════════════
+
+const layoutTab = Box.col("Layout");
+layoutTab.style.gutter = 1;
+layoutTab.style.bg = defaultTheme.bg;
+
+// ─── Row 1: fixed + grow layout demo ────────────────────────────────────────
+
+function colorBox(
+  lbl: string,
+  color: { r: number; g: number; b: number },
+  textColor: { r: number; g: number; b: number },
+): Box {
+  const b = new Box(lbl);
+  b.style.bg = color;
+  b.onPaint = (buf, rect) => paintCenteredText(buf, rect, lbl, textColor, null);
+  return b;
+}
+
+const fixedGrowRow = Box.row("fixed-grow-row");
+fixedGrowRow.style.border = "single";
+fixedGrowRow.style.gutter = 1;
+fixedGrowRow.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+fixedGrowRow.height = { fixed: 5 };
+
+const fg1a = colorBox(
+  "fixed 10",
+  { r: 60, g: 60, b: 80 },
+  { r: 200, g: 200, b: 220 },
+);
+fg1a.width = { fixed: 10 };
+const fg1b = colorBox(
+  "grow 1",
+  { r: 70, g: 55, b: 50 },
+  { r: 220, g: 200, b: 180 },
+);
+fg1b.width = { grow: 1 };
+const fg1c = colorBox(
+  "grow 2",
+  { r: 50, g: 70, b: 60 },
+  { r: 180, g: 220, b: 200 },
+);
+fg1c.width = { grow: 2 };
+fixedGrowRow.add(fg1a, fg1b, fg1c);
+
+const fixedGrowRow2 = Box.row("fixed-grow-row2");
+fixedGrowRow2.style.border = "single";
+fixedGrowRow2.style.gutter = 1;
+fixedGrowRow2.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+fixedGrowRow2.height = { fixed: 5 };
+
+const fg2a = colorBox(
+  "grow 1",
+  { r: 60, g: 70, b: 80 },
+  { r: 200, g: 210, b: 230 },
+);
+fg2a.width = { grow: 1 };
+const fg2b = colorBox(
+  "fixed 12",
+  { r: 70, g: 70, b: 60 },
+  { r: 230, g: 230, b: 200 },
+);
+fg2b.width = { fixed: 12 };
+const fg2c = colorBox(
+  "grow 1",
+  { r: 60, g: 60, b: 70 },
+  { r: 210, g: 210, b: 230 },
+);
+fg2c.width = { grow: 1 };
+fixedGrowRow2.add(fg2a, fg2b, fg2c);
+
+// ─── Scroll demo row ──────────────────────────────────────────────────────────
+
+const palette = [
+  { r: 60, g: 60, b: 80 },
+  { r: 70, g: 55, b: 50 },
+  { r: 50, g: 70, b: 60 },
+  { r: 65, g: 50, b: 75 },
+  { r: 55, g: 65, b: 50 },
+  { r: 75, g: 55, b: 60 },
+  { r: 50, g: 60, b: 80 },
+  { r: 70, g: 65, b: 50 },
+  { r: 60, g: 50, b: 70 },
+  { r: 55, g: 70, b: 65 },
+  { r: 65, g: 60, b: 55 },
+  { r: 50, g: 65, b: 75 },
+  { r: 70, g: 55, b: 65 },
+  { r: 60, g: 70, b: 55 },
+  { r: 55, g: 55, b: 75 },
+];
+
+const scrollHint = new Box("scroll-hint");
+scrollHint.height = { fixed: 1 };
+scrollHint.onPaint = (buf, rect, theme) =>
+  paintText(
+    buf,
+    rect,
+    "  ↑/↓ vertical · ←/→ horizontal · Tab to focus · PageUp/Down fast scroll",
+    0,
+    theme.muted,
+  );
+
+const scrollDemoRow = Box.row("scroll-demo-row");
+scrollDemoRow.style.gutter = 2;
+// height defaults to grow:1 — fills remaining tab space
+
+// Vertical scroll
+const vScrollCol = Box.col("vscroll-col");
+vScrollCol.style.border = "single";
+vScrollCol.style.overflow = "scroll";
+vScrollCol.style.gutter = 1;
+vScrollCol.style.padding = edgesAll(1);
+// width/height default to grow:1
+
+for (let i = 1; i <= 25; i++) {
+  const item = colorBox(`Item ${i}`, palette[i % palette.length], {
+    r: 200,
+    g: 200,
+    b: 220,
+  });
+  item.height = { fixed: 2 };
+  if (i === 1 || i === 2) {
+    item.focusable = true;
+    item.tabIndex = 10 + i;
+    const origBg = item.style.bg!;
+    item.onPaint = (buf, rect, theme) => {
+      if (item.focused) {
+        for (let c = 0; c < rect.width; c++) {
+          buf.set(rect.x + c, rect.y, {
+            char: "▀",
+            fg: theme.highlight,
+            bg: origBg,
+          });
+          buf.set(rect.x + c, rect.y + rect.height - 1, {
+            char: "▄",
+            fg: theme.highlight,
+            bg: origBg,
+          });
+        }
+      }
+      paintCenteredText(
+        buf,
+        rect,
+        item.label,
+        { r: 200, g: 200, b: 220 },
+        null,
+      );
+    };
+  }
+  vScrollCol.add(item);
+}
+
+// Horizontal scroll
+const hScrollRow = Box.row("hscroll-row");
+hScrollRow.style.border = "single";
+hScrollRow.style.overflow = "scroll";
+hScrollRow.style.gutter = 1;
+hScrollRow.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+// width/height default to grow:1
+
+for (let i = 0; i < palette.length; i++) {
+  const item = colorBox(`Item ${i}`, palette[i], { r: 200, g: 200, b: 220 });
+  item.width = { fixed: 12 };
+  if (i === 0 || i === 1) {
+    item.focusable = true;
+    item.tabIndex = 30 + i;
+    const origBg = item.style.bg!;
+    item.onPaint = (buf, rect, theme) => {
+      if (item.focused) {
+        for (let c = 0; c < rect.width; c++) {
+          buf.set(rect.x + c, rect.y, {
+            char: "▀",
+            fg: theme.highlight,
+            bg: origBg,
+          });
+          buf.set(rect.x + c, rect.y + rect.height - 1, {
+            char: "▄",
+            fg: theme.highlight,
+            bg: origBg,
+          });
+        }
+      }
+      paintCenteredText(
+        buf,
+        rect,
+        item.label,
+        { r: 200, g: 200, b: 220 },
+        null,
+      );
+    };
+  }
+  hScrollRow.add(item);
+}
+
+scrollDemoRow.add(vScrollCol, hScrollRow);
+layoutTab.add(fixedGrowRow, fixedGrowRow2, scrollHint, scrollDemoRow);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Resizable — splitter panels
+// ═══════════════════════════════════════════════════════════════════════════
+
+function makeResizePanel(
+  panelLabel: string,
+  body: string[],
+  tabIdx: number,
+): Box {
+  const container = new Box(panelLabel);
+  container.style.border = "single";
+  container.style.bg = defaultTheme.panelBg;
+  container.focusable = true;
+  container.tabIndex = tabIdx;
+  // width/height default to grow:1 — fills splitter allocation
+
+  const inner = Box.col(`${panelLabel}-inner`);
+  inner.style.overflow = "auto";
+  inner.style.gutter = 0;
+  inner.style.padding = { top: 1, bottom: 1, left: 1, right: 1 };
+
+  const titleLine = new Box();
+  titleLine.height = { fixed: 1 };
+  titleLine.onPaint = (buf, rect, theme) => {
+    const tc = container.focused ? theme.highlight : theme.muted;
+    paintText(buf, rect, ` ${panelLabel.trim()} `, 0, tc, container.focused);
+  };
+  inner.add(titleLine);
+
+  for (const line of body) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, theme) =>
+      paintText(buf, rect, line, 0, theme.text);
+    inner.add(lb);
+  }
+
+  const infoLine = new Box();
+  infoLine.height = { fixed: 1 };
+  infoLine.onPaint = (buf, rect, theme) => {
+    paintText(
+      buf,
+      rect,
+      ` rect: ${container.rect.width}x${container.rect.height}`,
+      0,
+      theme.muted,
+    );
+  };
+  inner.add(infoLine);
+  container.add(inner);
+  return container;
+}
+
+const fileExplorerLines = [
+  "  src/",
+  "    mod.ts",
+  "    layout.ts",
+  "    theme.ts",
+  "    events.ts",
+  "    focus.ts",
+  "    splitter.ts",
+  "    app.ts",
+  "    terminal.ts",
+  "  examples/",
+  "    01_showcase.ts",
+  "  docs/",
+  "    PRD.md",
+  "    DESIGN.md",
+  "  deno.json",
+  "  deno.lock",
+  "  README.md",
+];
+const editorLines = [
+  "  // Resizable panel demo",
+  "  // Drag the ◈ handle",
+  "  // to resize panels",
+  "",
+  "  const splitter = new",
+  "    Splitter('horizontal',",
+  "      panelA, panelB,",
+  "      { initialSplit: 30 }",
+  "    );",
+  "",
+  "  // Splitter supports:",
+  "  //   - mouse drag resize",
+  "  //   - keyboard nudge",
+  "  //   - min/max constraints",
+];
+const termLines = [
+  "  $ deno run 01_showcase.ts",
+  "  tuix v0.2.0 - resizable panels",
+  "  ✓ Layout engine initialized",
+  "  ✓ Focus manager ready",
+  "  ✓ Renderer started (30 fps)",
+  "  ✓ Mouse enabled",
+  "",
+  "  Tab between panels to focus",
+  "  Drag the ◈ handle to resize",
+];
+
+const rTopLeft = makeResizePanel("  File Explorer", fileExplorerLines, 1);
+const rTopRight = makeResizePanel("  Editor", editorLines, 2);
+const rBottom = makeResizePanel("  Terminal Output", termLines, 3);
+
+const rHSplit = new Splitter("horizontal", rTopLeft, rTopRight, {
+  initialSplit: 30,
+  minA: 12,
+  minB: 12,
+});
+const rVSplit = new Splitter("vertical", rHSplit, rBottom, {
+  initialSplit: 12,
+  minA: 8,
+  minB: 5,
+});
+
+const resizableContent = Box.col("resize-content");
+resizableContent.style.bg = defaultTheme.bg;
+resizableContent.add(rVSplit);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Shortcuts
+// ═══════════════════════════════════════════════════════════════════════════
+
+const shortcutTab = Box.col("Shortcuts");
+shortcutTab.style.gutter = 1;
+shortcutTab.style.bg = defaultTheme.bg;
+
+function makeZone(zoneLabel: string, key: string, tabIdx: number): Box {
+  const z = new Box(zoneLabel);
+  z.style.border = "single";
+  z.focusable = true;
+  z.tabIndex = tabIdx;
+  z.shortcut = key;
+  // width defaults to grow:1
+  z.onPaint = (buf, rect, theme) =>
+    paintCenteredText(
+      buf,
+      rect,
+      `${zoneLabel}  [key: ${key}]`,
+      theme.highlight,
+      theme.panelBg,
+    );
+  return z;
+}
+
+const zone1 = makeZone("Zone 1", "1", 1);
+const zone2 = makeZone("Zone 2", "2", 2);
+const zone3 = makeZone("Zone 3", "3", 3);
+
+const zonesRow = Box.row("zones");
+// height defaults to grow:1
+zonesRow.style.gutter = 2;
+zonesRow.style.padding = edgesAll(1);
+zonesRow.add(zone1, zone2, zone3);
+
+const shortcutStatus = new Box("shortcut-status");
+shortcutStatus.height = { fixed: 3 };
+shortcutStatus.style.border = "single";
+shortcutStatus.style.bg = defaultTheme.bg;
+shortcutStatus.onPaint = (_buf, rect, theme) => {
+  const text = shortcutTarget
+    ? `  Last jump: ${shortcutTarget}`
+    : "  Press 1, 2, or 3 to jump to a zone";
+  paintCenteredText(_buf, rect, text, theme.text, theme.bg);
+};
+shortcutTab.add(zonesRow, shortcutStatus);
+
+function onShortcutJump(box: Box): void {
+  shortcutTarget = box.label;
+}
+const appShortcuts = new Map<string, Box>();
+const reg = (k: string, b: Box) => appShortcuts.set(k, b);
+reg("1", zone1);
+reg("2", zone2);
+reg("3", zone3);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Text — input widgets
+// ═══════════════════════════════════════════════════════════════════════════
+
+const textTab = Box.col("Text Input");
+textTab.style.gutter = 1;
+textTab.style.bg = defaultTheme.bg;
+// Wrap in a scrollable column so contents don't get clipped
+const textScroll = Box.col("text-scroll");
+textScroll.style.overflow = "auto";
+textScroll.style.gutter = 1;
+textScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+textScroll.style.border = "single";
+// height defaults to grow:1
+
+function lbl(text: string): Box {
+  const b = new Box();
+  b.height = { fixed: 1 };
+  b.onPaint = (_buf, rect, theme) =>
+    paintText(_buf, rect, text, 0, theme.highlight);
+  return b;
+}
+
+const textInput = new TextInput("Type anything...");
+const autoDropdown = new Autocomplete(
+  "Search framework...",
+  [
+    "React",
+    "Vue",
+    "Angular",
+    "Svelte",
+    "Solid",
+    "Deno",
+    "Node.js",
+    "Express",
+    "Next.js",
+    "Nuxt",
+    "Remix",
+    "Astro",
+  ],
+  (item) => {
+    selectedFramework = item;
+  },
+);
+autoDropdown.maxVisibleItems = 5;
+
+const autoInline = new Autocomplete(
+  "Type a command...",
+  [
+    "deploy",
+    "deploy:prod",
+    "deploy:staging",
+    "build",
+    "build:watch",
+    "test",
+    "test:watch",
+    "lint",
+    "lint:fix",
+    "clean",
+    "format",
+    "typecheck",
+  ],
+  (item) => {
+    selectedCommand = item;
+  },
+);
+autoInline.mode = "inline";
+
+const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
+
+const copyInput = new TextInput("", "Sample text — Alt+C to copy");
+const pasteInput = new TextInput("Paste here — focus and press Alt+V");
+
+const cpHint = new Box("cp-hint");
+cpHint.height = { fixed: 1 };
+cpHint.onPaint = (_buf, rect, theme) =>
+  paintText(
+    _buf,
+    rect,
+    "  Alt+C to copy · Tab to next · Alt+V to paste · right-click to paste",
+    0,
+    theme.muted,
+  );
+
+const textStatus = new Box("text-status");
+textStatus.height = { fixed: 1 };
+textStatus.onPaint = (_buf, rect, theme) => {
+  const parts: string[] = [];
+  if (textInput.value) parts.push(`Input: "${textInput.value}"`);
+  if (selectedFramework) parts.push(`Framework: ${selectedFramework}`);
+  if (selectedCommand) parts.push(`Command: ${selectedCommand}`);
+  const text =
+    parts.length > 0
+      ? `  ${parts.join("  |  ")}`
+      : "  Start typing to see results here";
+  paintText(_buf, rect, text, 0, theme.muted);
+};
+
+textScroll.add(
+  lbl("TextInput:"),
+  textInput,
+  lbl("Autocomplete (dropdown mode):"),
+  autoDropdown,
+  lbl("Autocomplete (inline mode, Tab to complete):"),
+  autoInline,
+  lbl("TextArea (multi-line):"),
+  textArea,
+  cpHint,
+  lbl("Copy/Paste — copy (Alt+C) from here:"),
+  copyInput,
+  lbl("Then paste (Alt+V) here:"),
+  pasteInput,
+  textStatus,
+);
+textTab.add(textScroll);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: UI Controls
+// ═══════════════════════════════════════════════════════════════════════════
+
+const uiTab = Box.col("UI Controls");
+uiTab.style.gutter = 1;
+uiTab.style.bg = defaultTheme.bg;
+
+const uiHeader = new Box("ui-header");
+uiHeader.height = { fixed: 1 };
+uiHeader.onPaint = (_buf, rect, theme) =>
+  paintCenteredText(
+    _buf,
+    rect,
+    "Checkboxes | Radio | ListBox — Actions — ButtonGroup — Dropdown",
+    theme.muted,
+    theme.bg,
+  );
+
+const chk1 = new Checkbox("Enable Feature A", chkOptionA, (v) => {
+  chkOptionA = v;
+});
+const chk2 = new Checkbox("Enable Feature B", chkOptionB, (v) => {
+  chkOptionB = v;
+});
+const chk3 = new Checkbox("Enable Feature C", chkOptionC, (v) => {
+  chkOptionC = v;
+});
+const chkDisabled = new Checkbox("Disabled Option", false);
+chkDisabled.setDisabled(true);
+
+const profileList = new ListBox(profiles, (item) => {
+  selectedProfile = item;
+});
+profileList.selectedIndex = 0;
+profileList.height = { fixed: 8 };
+
+const radioGroup = new RadioGroup(
+  "options",
+  [
+    { label: "Option Alpha", value: "option_a" },
+    { label: "Option Beta", value: "option_b" },
+    { label: "Option Gamma", value: "option_c" },
+    { label: "Option Locked", value: "option_locked", disabled: true },
+  ],
+  selectedOption,
+  (val) => {
+    selectedOption = val;
+  },
+);
+
+const btnRow = Box.row("actions");
+btnRow.style.gutter = 1;
+btnRow.height = { fixed: 3 };
+const btnReset = new Button("Reset All", () => {
+  chkOptionA = false;
+  chkOptionB = false;
+  chkOptionC = false;
+  selectedOption = "option_a";
+  radioGroup.select("option_a");
+  selectedProfile = "Profile Alpha";
+  profileList.selectedIndex = 0;
+});
+const btnToggle = new Button("Toggle Checkboxes", () => {
+  chkOptionA = !chkOptionA;
+  chkOptionB = !chkOptionB;
+  chkOptionC = !chkOptionC;
+  btnToggle.toggled = !btnToggle.toggled;
+});
+btnToggle.flashOnClick = false;
+const btnCount = new Button("Click Count", () => {
+  clickCount++;
+});
+const btnDisabled = new Button("Locked");
+btnDisabled.setDisabled(true);
+btnRow.add(btnReset, btnToggle, btnCount, btnDisabled);
+
+const sbtnReset = new SmallButton("Reset", () => {
+  clickCount = 0;
+});
+const sbtnFlash = new SmallButton("Flash Me");
+const sbtnLocked = new SmallButton("Locked");
+sbtnLocked.setDisabled(true);
+const smallBtns = Box.row("small-btns");
+smallBtns.style.gutter = 1;
+smallBtns.height = { fixed: 1 };
+smallBtns.add(sbtnReset, sbtnFlash, sbtnLocked);
+
+const themeDropdown = new Dropdown(
+  "Theme",
+  ["VS Code Dark", "Amber", "Monokai", "Solarized", "Nord"],
+  0,
+  (val) => {
+    selectedTheme = val;
+  },
+);
+
+const alignGroup = new ButtonGroup(
+  "Align",
+  ["Left", "Center", "Right", "Justify"],
+  0,
+  (val) => {
+    selectedAlign = val;
+  },
+);
+
+const uiStatus = new Box("ui-status");
+uiStatus.height = { fixed: 3 };
+uiStatus.style.bg = defaultTheme.bg;
+uiStatus.onPaint = (_buf, rect, theme) => {
+  const parts = [
+    `A:${chkOptionA ? "Y" : "N"}`,
+    `B:${chkOptionB ? "Y" : "N"}`,
+    `C:${chkOptionC ? "Y" : "N"}`,
+    `Radio: ${selectedOption.replace("option_", "")}`,
+    `Profile: ${selectedProfile}`,
+    `Clicks: ${clickCount}`,
+    `Theme: ${selectedTheme}`,
+    `Align: ${selectedAlign}`,
+  ];
+  paintText(_buf, rect, `  ${parts.join("  |  ")}`, 0, theme.muted);
+};
+
+// Three-column top row — each column defaults to grow:1
+const chkCol = Box.col("chk-col");
+chkCol.style.gutter = 1;
+chkCol.add(lbl("Checkboxes:"), chk1, chk2, chk3, chkDisabled);
+
+const radioCol = Box.col("radio-col");
+radioCol.style.gutter = 1;
+radioCol.add(lbl("RadioGroup:"), radioGroup);
+
+const listCol = Box.col("list-col");
+listCol.style.gutter = 1;
+listCol.add(lbl("Profiles ListBox:"), profileList);
+
+const topRow = Box.row("top-row");
+topRow.style.gutter = 2;
+// height defaults to grow:1
+topRow.add(chkCol, radioCol, listCol);
+
+// Fixed-height control rows (hug height via fixed)
+const actionsRow = Box.col("actions-row");
+actionsRow.style.gutter = 1;
+actionsRow.height = { fixed: 5 };
+actionsRow.add(lbl("Actions:"), btnRow);
+
+const groupRow = Box.col("group-row");
+groupRow.style.gutter = 1;
+groupRow.height = { fixed: 5 };
+groupRow.add(lbl("ButtonGroup (Align):"), alignGroup);
+
+const smallBtnRow = Box.col("small-btn-row");
+smallBtnRow.style.gutter = 1;
+smallBtnRow.height = { fixed: 3 };
+smallBtnRow.add(lbl("SmallButtons:"), smallBtns);
+
+const dropdownRow = Box.col("dropdown-row");
+dropdownRow.style.gutter = 1;
+dropdownRow.height = { fixed: 5 };
+dropdownRow.add(lbl("Dropdown:"), themeDropdown);
+
+// Scrollable container for UI controls
+const uiScroll = Box.col("ui-scroll");
+uiScroll.style.border = "single";
+uiScroll.style.gutter = 1;
+uiScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+// height defaults to grow:1
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow);
+
+uiTab.add(uiHeader, uiScroll, uiStatus);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Animation
+// ═══════════════════════════════════════════════════════════════════════════
+
+let animEnabled = true;
+const SPINNER_SETS = [
+  ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  ["─", "╲", "│", "╱"],
+  ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙"],
+  ["⣀", "⣄", "⣤", "⣦", "⣶", "⣷", "⣿", "⣾", "⣴"],
+];
+let spinnerTicks = [0, 0, 0, 0];
+let cpuVal = 0.67,
+  memVal = 0.45,
+  dskVal = 0.92,
+  netVal = 0.18;
+let countdownSec = 300;
+
+class SpinnerBox extends Box {
+  private _frames: string[];
+  private _idx: number;
+  constructor(spinLabel: string, frames: string[], idx: number) {
+    super(spinLabel);
+    this._frames = frames;
+    this._idx = idx;
+    this.height = { fixed: 1 };
+    this.onPaint = (buf, rect, theme) => {
+      const ch = this._frames[spinnerTicks[this._idx] % this._frames.length];
+      const text = ` ${ch}  ${spinLabel}`;
+      for (let i = 0; i < text.length && i < rect.width; i++)
+        buf.set(rect.x + i, rect.y, {
+          char: text[i],
+          fg: theme.highlight,
+          bg: defaultTheme.panelBg,
+        });
+    };
+  }
+}
+
+function makeMetricBar(
+  metricLabel: string,
+  color: { r: number; g: number; b: number },
+  getVal: () => number,
+): Box {
+  const row = Box.row(`${metricLabel}-row`);
+  row.height = { fixed: 1 };
+  row.style.gutter = 1;
+  const ml = new Box(`${metricLabel}-lbl`);
+  ml.width = { fixed: 5 };
+  ml.onPaint = (buf, rect) =>
+    paintText(buf, rect, ` ${metricLabel} `, 0, defaultTheme.text);
+  const bar = new Box(`${metricLabel}-bar`);
+  // width defaults to grow:1
+  bar.onPaint = (buf, rect, theme) => {
+    const val = getVal();
+    const filled = Math.floor(val * rect.width);
+    for (let i = 0; i < rect.width; i++)
+      buf.set(rect.x + i, rect.y, {
+        char: i < filled ? "█" : "░",
+        fg: i < filled ? color : theme.muted,
+        bg: defaultTheme.panelBg,
+      });
+  };
+  const pct = new Box(`${metricLabel}-pct`);
+  pct.width = { fixed: 5 };
+  pct.onPaint = (buf, rect, theme) =>
+    paintText(
+      buf,
+      rect,
+      `${(getVal() * 100).toFixed(0).padStart(3)}%`,
+      0,
+      theme.highlight,
+      true,
+    );
+  row.add(ml, bar, pct);
+  return row;
+}
+
+const animLabel = new Box("anim-label");
+animLabel.height = { fixed: 1 };
+animLabel.onPaint = (_buf, rect, theme) =>
+  paintCenteredText(
+    _buf,
+    rect,
+    "  Animation Dashboard — spinners · metrics · progress · countdown",
+    theme.muted,
+    theme.bg,
+  );
+
+// ─── Left column ──────────────────────────────────────────────────────────────
+
+const spinnerBox = Box.col("spinner-col");
+spinnerBox.style.border = "single";
+spinnerBox.style.gutter = 1;
+spinnerBox.style.padding = edgesAll(1);
+// height defaults to grow:1
+
+const spinnerHdr = new Box("spinner-hdr");
+spinnerHdr.height = { fixed: 1 };
+spinnerHdr.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, " Spinners", 0, theme.muted);
+
+const spinnerRow2 = Box.row("spinner-row");
+spinnerRow2.height = { fixed: 1 };
+spinnerRow2.style.gutter = 3;
+spinnerRow2.add(
+  new SpinnerBox("Loading", SPINNER_SETS[0], 0),
+  new SpinnerBox("Processing", SPINNER_SETS[1], 1),
+  new SpinnerBox("Syncing", SPINNER_SETS[2], 2),
+  new SpinnerBox("Saving", SPINNER_SETS[3], 3),
+);
+spinnerBox.add(spinnerHdr, spinnerRow2);
+
+// Countdown
+const CD_DIGITS: Record<string, string[]> = {
+  "0": ["███", "█ █", "█ █", "█ █", "███"],
+  "1": ["  █", "  █", "  █", "  █", "  █"],
+  "2": ["███", "  █", "███", "█  ", "███"],
+  "3": ["███", "  █", "███", "  █", "███"],
+  "4": ["█ █", "█ █", "███", "  █", "  █"],
+  "5": ["███", "█  ", "███", "  █", "███"],
+  "6": ["███", "█  ", "███", "█ █", "███"],
+  "7": ["███", "  █", "  █", "  █", "  █"],
+  "8": ["███", "█ █", "███", "█ █", "███"],
+  "9": ["███", "█ █", "███", "  █", "███"],
+  ":": ["   ", " █ ", "   ", " █ ", "   "],
+};
+
+const countdownBox = Box.col("countdown-col");
+countdownBox.style.border = "single";
+countdownBox.style.padding = edgesAll(1);
+// height defaults to grow:1
+
+const cdHeader = new Box("cd-hdr");
+cdHeader.height = { fixed: 1 };
+cdHeader.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, " Countdown", 0, theme.muted);
+
+const cdDisplay = new Box("cd-display");
+// width/height default to grow:1
+cdDisplay.onPaint = (buf, rect, theme) => {
+  const m = Math.floor(countdownSec / 60);
+  const s = countdownSec % 60;
+  const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const totalW = timeStr.length * 4 - 1;
+  if (timeStr === "00:00") {
+    paintCenteredText(
+      buf,
+      rect,
+      "  🎉 TIME'S UP! 🎉  ",
+      theme.highlight,
+      null,
+      true,
+    );
+    return;
+  }
+  const low = countdownSec < 30;
+  const flash = low && Math.floor(Date.now() / 500) % 2 === 0;
+  const color = flash
+    ? { r: 255, g: 40, b: 40 }
+    : low
+      ? { r: 255, g: 180, b: 40 }
+      : theme.highlight;
+  const startY = rect.y + Math.floor((rect.height - 5) / 2);
+  const startX = rect.x + Math.floor((rect.width - totalW) / 2);
+  for (let di = 0; di < timeStr.length; di++) {
+    const pattern = CD_DIGITS[timeStr[di]] ?? CD_DIGITS["8"];
+    const cx = startX + di * 4;
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        const px = cx + col,
+          py = startY + row;
+        if (
+          px >= rect.x &&
+          px < rect.x + rect.width &&
+          py >= rect.y &&
+          py < rect.y + rect.height
+        ) {
+          const ch = pattern[row][col];
+          buf.set(px, py, {
+            char: ch === " " ? " " : "█",
+            fg: ch !== " " ? color : theme.panelBg,
+            bg: theme.panelBg,
+            bold: true,
+          });
+        }
+      }
+    }
+  }
+};
+countdownBox.add(cdHeader, cdDisplay);
+
+// ─── Right column ─────────────────────────────────────────────────────────────
+
+const progressBar = new ProgressBar("Task Progress", 0.35);
+
+const metricsBox = Box.col("metrics-col");
+metricsBox.style.border = "single";
+metricsBox.style.gutter = 1;
+metricsBox.style.padding = edgesAll(1);
+// height defaults to grow:1
+
+const metricsHdr = new Box("metrics-hdr");
+metricsHdr.height = { fixed: 1 };
+metricsHdr.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, " System Metrics", 0, theme.muted);
+metricsBox.add(
+  metricsHdr,
+  makeMetricBar("CPU", { r: 100, g: 180, b: 255 }, () => cpuVal),
+  makeMetricBar("MEM", { r: 100, g: 220, b: 140 }, () => memVal),
+  makeMetricBar("DSK", { r: 255, g: 200, b: 100 }, () => dskVal),
+  makeMetricBar("NET", { r: 255, g: 130, b: 130 }, () => netVal),
+  progressBar,
+);
+
+// Content row — each column defaults to grow:1
+const contentRow = Box.row("anim-content");
+contentRow.style.gutter = 2;
+// height defaults to grow:1
+
+const leftCol = Box.col("anim-left");
+leftCol.style.gutter = 1;
+leftCol.add(spinnerBox, countdownBox);
+
+const rightCol = Box.col("anim-right");
+rightCol.style.gutter = 1;
+rightCol.add(metricsBox);
+
+contentRow.add(leftCol, rightCol);
+
+const animBtnRow = Box.row("anim-btns");
+animBtnRow.height = { fixed: 3 };
+animBtnRow.style.gutter = 2;
+const autoAnimBtn = new Button("Auto-Animate (toggle)", () => {
+  animEnabled = !animEnabled;
+});
+autoAnimBtn.flashOnClick = false;
+const resetAnimBtn = new Button("Reset All", () => {
+  cpuVal = 0.67;
+  memVal = 0.45;
+  dskVal = 0.92;
+  netVal = 0.18;
+  countdownSec = 300;
+});
+const jumpBtn = new Button("Jump :30", () => {
+  countdownSec = Math.max(0, countdownSec - 30);
+});
+animBtnRow.add(autoAnimBtn, resetAnimBtn, jumpBtn);
+
+const animTab = Box.col("Animation");
+animTab.style.gutter = 1;
+animTab.style.bg = defaultTheme.bg;
+animTab.add(animLabel, contentRow, animBtnRow);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: Floating
+// ═══════════════════════════════════════════════════════════════════════════
+
+const floatTab = Box.col("Floating");
+floatTab.style.gutter = 1;
+floatTab.style.bg = defaultTheme.bg;
+
+let notifCount = 0;
+
+const floatLabel = new Box("float-label");
+floatLabel.height = { fixed: 1 };
+floatLabel.onPaint = (_buf, rect, theme) =>
+  paintCenteredText(
+    _buf,
+    rect,
+    "  Floating Widgets — Dialogs · Notifications · Draggable Window  ",
+    theme.muted,
+    theme.bg,
+  );
+
+const floatCtl = Box.col("float-ctl");
+floatCtl.style.border = "single";
+floatCtl.style.gutter = 1;
+floatCtl.style.padding = edgesAll(1);
+// height defaults to grow:1
+
+const ctlLabel = new Box();
+ctlLabel.height = { fixed: 1 };
+ctlLabel.onPaint = (buf, rect, theme) =>
+  paintText(
+    buf,
+    rect,
+    " Show overlay widgets (click or press Enter on buttons):",
+    0,
+    theme.muted,
+  );
+
+const ctlRow = Box.row("ctl-row");
+ctlRow.style.gutter = 2;
+ctlRow.style.justify = "center";
+ctlRow.height = { fixed: 3 };
+
+const btnDialog = new Button("  Open Dialog  ", () => {
+  const dialog = new Dialog(
+    " Confirm Action ",
+    [
+      "This is a modal dialog demonstration.",
+      "",
+      "It has a title in the double border, body",
+      "text, and action buttons below.",
+      "",
+      "Press Tab to cycle buttons, Enter to",
+      "activate, or Escape to dismiss.",
+    ],
+    [
+      { label: "Cancel", action: () => {} },
+      { label: "Confirm", action: () => {}, default: true },
+    ],
+  );
+  dialog.appRef = app;
+  app.showOverlay(dialog, {
+    modal: true,
+    onClose: () => {
+      notifCount++;
+      const notif = new Notification("Dialog dismissed", "success", 2500);
+      app.showOverlay(notif, { modal: false });
+      notif.removeFn = () => app.removeOverlay(notif);
+      notif.show();
+    },
+  });
+});
+
+const btnNotif = new Button("  Send Notification  ", () => {
+  notifCount++;
+  const types = ["info", "success", "warn", "error"] as const;
+  const msgs = [
+    "Build completed successfully",
+    "Server running on port 8080",
+    "Low disk space warning",
+    "Connection lost to database",
+  ];
+  const positions: Array<
+    "top-right" | "top-left" | "bottom-right" | "bottom-left"
+  > = ["bottom-right", "bottom-left", "top-right", "top-left"];
+  const t = types[notifCount % types.length];
+  const m = msgs[notifCount % msgs.length];
+  const pos = positions[notifCount % positions.length];
+  const notif = new Notification(m, t, 3000, pos);
+  app.showOverlay(notif, { modal: false });
+  notif.removeFn = () => app.removeOverlay(notif);
+  notif.show();
+});
+
+const btnWindow = new Button("  Open Window  ", () => {
+  const win = new FloatingWindow("Draggable Window", {
+    width: 48,
+    height: 18,
+    onClose: () => {
+      const notif = new Notification("Window closed", "info", 2000);
+      app.showOverlay(notif, { modal: false });
+      notif.removeFn = () => app.removeOverlay(notif);
+      notif.show();
+    },
+  });
+  win.appRef = app;
+  for (const line of [
+    "This window can be dragged by clicking",
+    "and holding the title bar.",
+    "",
+    "Drag the mouse to move the window",
+    "anywhere on screen.",
+    "",
+    "Click [×] or press Escape to close.",
+  ]) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, theme) =>
+      paintCenteredText(buf, rect, line, theme.text, undefined);
+    win.contentBox.add(lb);
+  }
+  app.showOverlay(win, { modal: false });
+});
+
+ctlRow.add(btnDialog, btnNotif, btnWindow);
+
+function infoCard(title: string, lines: string[]): Box {
+  const card = Box.col(`card-${title}`);
+  card.style.border = "rounded";
+  card.style.padding = edgesAll(1);
+  card.style.bg = defaultTheme.panelBg;
+  // width defaults to grow:1
+  card.onPaint = (buf, rect, theme) =>
+    paintText(buf, rect, ` ${title}`, 0, theme.highlight, true);
+  for (const line of lines) {
+    const lb = new Box();
+    lb.height = { fixed: 1 };
+    lb.onPaint = (buf, rect, th) =>
+      paintText(buf, rect, `  ${line}`, 0, th.muted);
+    card.add(lb);
+  }
+  return card;
+}
+
+const floatInfo = Box.row("float-info");
+floatInfo.style.gutter = 2;
+floatInfo.style.justify = "center";
+floatInfo.style.align = "stretch";
+// height defaults to grow:1
+floatInfo.add(
+  infoCard("Dialog", [
+    "Modal dialog with",
+    "double border, body",
+    "text, and action buttons.",
+    "",
+    "Esc or action to close.",
+  ]),
+  infoCard("Notification", [
+    "Auto-dismissing toast.",
+    "Info / Success / Warn /",
+    "Error — 4 types.",
+    "",
+    "Rotates through corners.",
+  ]),
+  infoCard("Window", [
+    "Draggable window with",
+    "title bar drag support.",
+    "Close [×] button.",
+    "",
+    "Move anywhere on screen.",
+  ]),
+);
+
+floatCtl.add(ctlLabel, ctlRow, floatInfo);
+floatTab.add(floatLabel, floatCtl);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tabs
+// ═══════════════════════════════════════════════════════════════════════════
+
+const tabs = new Tabs(
+  [
+    { label: "Layout", content: layoutTab },
+    { label: "Resizable", content: resizableContent },
+    { label: "Shortcuts", content: shortcutTab },
+    { label: "Text", content: textTab },
+    { label: "UI", content: uiTab },
+    { label: "Animation", content: animTab },
+    { label: "Floating", content: floatTab },
+  ],
+  0,
+);
+// height defaults to grow:1
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Status bar
+// ═══════════════════════════════════════════════════════════════════════════
+
+const statusBar = new Box("status");
+statusBar.height = { fixed: 1 };
+statusBar.style.bg = defaultTheme.bg;
+statusBar.onPaint = (_buf, rect, theme) => {
+  _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
+  const hint =
+    " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Spc: toggle  |  Esc: close  |  Ctrl+C: quit";
+  for (let i = 0; i < hint.length && i < rect.width; i++)
+    _buf.set(rect.x + i, rect.y, {
+      char: hint[i],
+      fg: theme.muted,
+      bg: theme.bg,
+    });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Root
+// ═══════════════════════════════════════════════════════════════════════════
+
+const root = Box.col("root");
+// height/width default to grow:1
+root.style.bg = defaultTheme.bg;
+root.add(header, tabs, statusBar);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// App
+// ═══════════════════════════════════════════════════════════════════════════
+
+const app = new App(root, { theme: defaultTheme, fps: 30, mouse: true });
+
+for (const [key, box] of appShortcuts) {
+  app.shortcut(key, box);
+  box.onKey = () => {
+    onShortcutJump(box);
+  };
+}
+
+// Animation ticker
+let progressDir = 1;
+setInterval(() => {
+  if (!animEnabled) return;
+  for (let i = 0; i < spinnerTicks.length; i++) spinnerTicks[i]++;
+  cpuVal = Math.max(0.1, Math.min(0.95, cpuVal + (Math.random() - 0.5) * 0.04));
+  memVal = Math.max(0.1, Math.min(0.95, memVal + (Math.random() - 0.5) * 0.03));
+  dskVal = Math.max(0.1, Math.min(0.95, dskVal + (Math.random() - 0.5) * 0.02));
+  netVal = Math.max(
+    0.05,
+    Math.min(0.95, netVal + (Math.random() - 0.5) * 0.06),
+  );
+  if (countdownSec > 0) countdownSec--;
+  const step = 0.005 * progressDir;
+  let next = progressBar.progress + step;
+  if (next >= 1) {
+    next = 1;
+    progressDir = -1;
+  } else if (next <= 0) {
+    next = 0;
+    progressDir = 1;
+  }
+  progressBar.progress = next;
+}, 120);
+
+await app.run();
