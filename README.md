@@ -3,7 +3,7 @@
 > **Status: Beta** — This is an AI-generated project. Expect breaking changes as the API stabilizes.
 
 ```bash
-deno run -A jsr:@kyranis-studio/tuix@0.1.2/examples/showcase
+deno run -A jsr:@kyranis-studio/tuix/examples/showcase
 ```
 
 **tuix** is a reactive terminal UI (TUI) layout engine and stateful component framework built for Deno and TypeScript. Drawing inspiration from modern web layout specs (like CSS Flexbox) and developer workspace styling (such as VS Code's Dark+ palette), **tuix** makes it simple to construct highly responsive, mouse-supported, and aesthetically striking terminal dashboard applications.
@@ -93,7 +93,7 @@ tuix/
 Execute the comprehensive, interactive showcase dashboard featuring all stateful widgets in real time:
 
 ```bash
-deno run -A jsr:@kyranis-studio/tuix@0.1.2/examples/showcase
+deno run -A jsr:@kyranis-studio/tuix/examples/showcase
 ```
 
 Or from a local checkout:
