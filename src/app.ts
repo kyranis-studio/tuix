@@ -254,7 +254,9 @@ export class App {
         return;
       }
 
-      // Block plain Ctrl+C (without shift) — consumed but does nothing
+      // Block plain Ctrl+C (without shift) — consumed but does nothing.
+      // Terminals with Kitty keyboard protocol send Ctrl+Shift+C with shift=true
+      // so we preserve that distinction for users whose terminal supports it.
       if (key === "c" && modifiers.ctrl && !modifiers.shift) {
         return;
       }

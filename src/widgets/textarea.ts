@@ -180,19 +180,22 @@ export class TextArea extends Box {
     };
 
     this.onKey = (key, modifiers) => {
-      // Save selection before clearing (copy handler needs it)
-      const selStart = this._selStart;
-      const selEnd = this._selEnd;
-
       // Any keyboard input clears the text selection
       this._selStart = -1;
       this._selEnd = -1;
 
-      // Ctrl+Shift+C: copy selected text (or whole value) to clipboard
+      // ── Copy/Paste ───────────────────────────────────────────────────
+      // Mouse selection auto-copies on release. Right-click pastes.
+      // Keyboard alternatives (Alt+C / Alt+V) — these don't conflict with
+      // terminal emulators which typically intercept Ctrl+Shift+C/V.
+      // Ctrl+Shift+C/V are also kept for terminals with Kitty keyboard
+      // protocol (which can distinguish shift from non-shift on Ctrl keys).
+
+      // Ctrl+Shift+C: copy (terminals with Kitty protocol)
       if (key === "c" && modifiers.ctrl && modifiers.shift) {
-        if (selStart >= 0 && selEnd >= 0 && selStart !== selEnd) {
-          const start = Math.min(selStart, selEnd);
-          const end = Math.max(selStart, selEnd);
+        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
+          const start = Math.min(this._selStart, this._selEnd);
+          const end = Math.max(this._selStart, this._selEnd);
           copyToClipboard(this.value.slice(start, end));
         } else {
           copyToClipboard(this.value);
@@ -200,8 +203,36 @@ export class TextArea extends Box {
         return;
       }
 
-      // Ctrl+Shift+V: paste from clipboard at cursor
+      // Ctrl+Shift+V: paste (terminals with Kitty protocol)
       if (key === "v" && modifiers.ctrl && modifiers.shift) {
+        pasteFromClipboard().then((text) => {
+          if (text) {
+            this.value =
+              this.value.slice(0, this.cursorPos) +
+              text +
+              this.value.slice(this.cursorPos);
+            this.cursorPos += text.length;
+            this._syncHeight();
+            if (this.onChange) this.onChange(this.value);
+          }
+        });
+        return;
+      }
+
+      // Alt+C: copy (works on all terminal emulators)
+      if (key === "c" && modifiers.alt) {
+        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
+          const start = Math.min(this._selStart, this._selEnd);
+          const end = Math.max(this._selStart, this._selEnd);
+          copyToClipboard(this.value.slice(start, end));
+        } else {
+          copyToClipboard(this.value);
+        }
+        return;
+      }
+
+      // Alt+V: paste (works on all terminal emulators)
+      if (key === "v" && modifiers.alt) {
         pasteFromClipboard().then((text) => {
           if (text) {
             this.value =
@@ -333,7 +364,7 @@ export class TextArea extends Box {
       } else if (action === "move") {
         this._selEnd = this.cursorPos;
       } else if (action === "release") {
-        if (this.copyOnSelect && this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
+        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
           const start = Math.min(this._selStart, this._selEnd);
           const end = Math.max(this._selStart, this._selEnd);
           const selected = this.value.slice(start, end);

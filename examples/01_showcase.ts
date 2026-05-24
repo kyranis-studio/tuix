@@ -526,10 +526,10 @@ autoInline.mode = "inline";
 
 const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
 
-const copyInput = new TextInput("", "Sample text — Ctrl+Shift+C to copy");
-const pasteInput = new TextInput("Paste here — focus and press Ctrl+Shift+V");
+const copyInput = new TextInput("", "Select text with mouse — auto-copies to clipboard");
+const pasteInput = new TextInput("Right-click here to paste from clipboard");
 
-const copyOnSelectInput = new TextInput("", "Select me with mouse — auto-copies", undefined, true, true, "✧ Copied!");
+const copyOnSelectInput = new TextInput("", "Select me — auto-copies ✓", undefined, true, true, "✧ Copied!");
 
 const cpHint = new Box("cp-hint");
 cpHint.height = { fixed: 2 };
@@ -537,14 +537,14 @@ cpHint.onPaint = (_buf, rect, theme) => {
   paintText(
     _buf,
     rect,
-    "  Ctrl+Shift+C to copy · Tab to next · Ctrl+Shift+V to paste · right-click to paste",
+    "  Select text with mouse → auto-copies · Right-click to paste · Alt+C to copy · Alt+V to paste",
     0,
     theme.muted,
   );
   paintText(
     _buf,
     rect,
-    "  TextInput(..., true, true, \"✧ Copied!\") for copyOnSelect+notifyOnCopy — select text to auto-copy & notify",
+    "  Tip: If terminal captures Ctrl+Shift+C/V, use Alt instead. Or select text & it auto-copies.",
     1,
     theme.muted,
   );
@@ -574,11 +574,11 @@ textScroll.add(
   lbl("TextArea (multi-line):"),
   textArea,
   cpHint,
-  lbl("Copy/Paste — copy (Ctrl+Shift+C) from here:"),
+  lbl("Copy/Paste — select text with mouse (auto-copied) from here:"),
   copyInput,
-  lbl("Then paste (Ctrl+Shift+V) here:"),
+  lbl("Then paste (right-click) here:"),
   pasteInput,
-  lbl("Copy-on-select (TextInput with copyOnSelect=true):"),
+  lbl("Copy-on-select (TextInput with notifyOnCopy=true):"),
   copyOnSelectInput,
   textStatus,
 );
@@ -1226,7 +1226,7 @@ statusBar.style.bg = defaultTheme.bg;
 statusBar.onPaint = (_buf, rect, theme) => {
   _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
   const hint =
-    " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Spc: toggle  |  Esc: close  |  Ctrl+C: quit";
+    " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Spc: toggle  |  Esc: close  |  Ctrl+C: quit  |  Mouse select: copy";
   for (let i = 0; i < hint.length && i < rect.width; i++)
     _buf.set(rect.x + i, rect.y, {
       char: hint[i],
