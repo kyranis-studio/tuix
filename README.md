@@ -76,12 +76,7 @@ tuix/
     events.ts           — Async keyboard and SGR mouse event parser
     theme.ts            — Theme interfaces, registries, and default VS Code styling
   examples/
-    01_center_text.ts   — Fixed-size box centering, text alignment, and window resize reflow
-    02_focus_zones.ts   — Tab focus cycles, tab-indices, and keyboard shortcuts (1/2/3)
-    03_resizable.ts     — Vertical/horizontal nested splitters with mouse resizing
-    04_spacing.ts       — Spacing visualizations (gutter, padding, margin)
-    05_borders.ts       — Visual preview of all border types (single, double, rounded, bold, none)
-    06_showcase.ts      — 7-tab interactive showcase: Layout (scrollable column), Resizable, Shortcuts, Text (with TextArea), UI (Checkboxes, RadioGroup with disabled option, Buttons, Dropdown, ButtonGroup, ListBox with disabled items — includes disabled variants of checkbox, radio, listbox, and button), Animation (spinners, metric bars, countdown)
+    01_showcase.ts      — 1-tab interactive showcase: Layout (scrollable column), Resizable, Shortcuts, Text (with TextArea), UI (Checkboxes, RadioGroup with disabled option, Buttons, Dropdown, ButtonGroup, ListBox with disabled items — includes disabled variants of checkbox, radio, listbox, and button), Animation (spinners, metric bars, countdown)
   deno.json             — Deno config and script tasks
 ```
 
