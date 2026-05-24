@@ -31,6 +31,7 @@ import {
   Notification,
   FloatingWindow,
   SmallButton,
+  Collapsible,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -525,8 +526,8 @@ autoInline.mode = "inline";
 
 const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
 
-const copyInput = new TextInput("", "Sample text — Alt+C to copy");
-const pasteInput = new TextInput("Paste here — focus and press Alt+V");
+const copyInput = new TextInput("", "Sample text — Shift+C to copy");
+const pasteInput = new TextInput("Paste here — focus and press Shift+V");
 
 const cpHint = new Box("cp-hint");
 cpHint.height = { fixed: 1 };
@@ -534,7 +535,7 @@ cpHint.onPaint = (_buf, rect, theme) =>
   paintText(
     _buf,
     rect,
-    "  Alt+C to copy · Tab to next · Alt+V to paste · right-click to paste",
+    "  Shift+C to copy · Tab to next · Shift+V to paste · right-click to paste",
     0,
     theme.muted,
   );
@@ -563,9 +564,9 @@ textScroll.add(
   lbl("TextArea (multi-line):"),
   textArea,
   cpHint,
-  lbl("Copy/Paste — copy (Alt+C) from here:"),
+  lbl("Copy/Paste — copy (Shift+C) from here:"),
   copyInput,
-  lbl("Then paste (Alt+V) here:"),
+  lbl("Then paste (Shift+V) here:"),
   pasteInput,
   textStatus,
 );
@@ -741,7 +742,17 @@ uiScroll.style.border = "single";
 uiScroll.style.gutter = 1;
 uiScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
 // height defaults to grow:1
-uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow);
+// ─── Collapsible demo ────────────────────────────────────────────────────
+const collapsibleDemo = new Collapsible("Advanced Options", true, (_collapsed) => {
+  // state change handled internally
+});
+
+const extraChk1 = new Checkbox("Verbose Logging", false);
+const extraChk2 = new Checkbox("Auto-save", true);
+const extraChk3 = new Checkbox("Dark Mode", true);
+collapsibleDemo.add(extraChk1, extraChk2, extraChk3);
+
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo);
 
 uiTab.add(uiHeader, uiScroll, uiStatus);
 
@@ -884,7 +895,7 @@ cdHeader.onPaint = (buf, rect, theme) =>
   paintText(buf, rect, " Countdown", 0, theme.muted);
 
 const cdDisplay = new Box("cd-display");
-// width/height default to grow:1
+cdDisplay.height = { fixed: 5 }; // digits render 5 rows tall
 cdDisplay.onPaint = (buf, rect, theme) => {
   const m = Math.floor(countdownSec / 60);
   const s = countdownSec % 60;
@@ -963,7 +974,7 @@ metricsBox.add(
 // Content row — each column defaults to grow:1
 const contentRow = Box.row("anim-content");
 contentRow.style.gutter = 2;
-// height defaults to grow:1
+contentRow.height = {}; // hug — shrink-wrap to tallest column
 
 const leftCol = Box.col("anim-left");
 leftCol.style.gutter = 1;

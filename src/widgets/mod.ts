@@ -32,3 +32,5 @@ export { Notification } from "./notification.ts";
 export type { NotificationType } from "./notification.ts";
 
 export { FloatingWindow } from "./window.ts";
+
+export { Collapsible } from "./collapsible.ts";

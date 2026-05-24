@@ -170,14 +170,14 @@ export class TextArea extends Box {
       this._selStart = -1;
       this._selEnd = -1;
 
-      // Alt+C: copy value to clipboard
-      if (key === "c" && modifiers.alt) {
+      // Shift+C: copy value to clipboard
+      if (key === "c" && modifiers.shift) {
         copyToClipboard(this.value);
         return;
       }
 
-      // Alt+V: paste from clipboard at cursor
-      if (key === "v" && modifiers.alt) {
+      // Shift+V: paste from clipboard at cursor
+      if (key === "v" && modifiers.shift) {
         pasteFromClipboard().then((text) => {
           if (text) {
             this.value =
