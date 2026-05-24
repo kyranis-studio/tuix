@@ -1252,6 +1252,9 @@ const app = new App(root, { theme: defaultTheme, fps: 30, mouse: true });
 
 // Wire up appRef for widgets that show overlay notifications
 copyOnSelectInput.appRef = app;
+themeDropdown.appRef = app;
+autoDropdown.appRef = app;
+autoInline.appRef = app;
 
 for (const [key, box] of appShortcuts) {
   app.shortcut(key, box);

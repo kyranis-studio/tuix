@@ -1,4 +1,5 @@
 import { Box } from "../layout.ts";
+import { FloatingListBox } from "./floating_list.ts";
 
 export type AutocompleteMode = "dropdown" | "inline";
 
@@ -17,8 +18,12 @@ export class Autocomplete extends Box {
   filterFn: ((val: string, suggestions: string[]) => string[]) | null = null;
 
   private _inputHeight = 3;
-  private _lastDropdownHeight = 0;
   private _completion = "";
+  private _listOverlay: FloatingListBox | null = null;
+  private _appRef: {
+    showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+    removeOverlay: (box: Box) => void;
+  } | null = null;
 
   constructor(
     placeholder = "",
@@ -38,14 +43,20 @@ export class Autocomplete extends Box {
     this.height = { fixed: this._inputHeight };
 
     this.onFocus = () => {
-      this.cursorPos = 0;
+      // Place cursor at end of existing value when gaining focus.
+      // Don't reset to 0 — that would break typing because
+      // _closeDropdown() → removeOverlay() restores focus and
+      // triggers onFocus on every keystroke.
+      this.cursorPos = this.value.length;
     };
 
     this.onPaint = (buf, rect, theme) => {
+      // Close dropdown when autocomplete loses focus
+      // (keyboard goes to autocomplete, not the overlay, so
+      //  !this.focused means the user genuinely moved focus away)
       if (!this.focused) {
-        this.dropdownOpen = false;
+        this._closeDropdown();
       }
-      this._syncHeight();
 
       if (this.mode === "inline" && this.value.length > 0 && !this._completion) {
         this._completion = this._findCompletion();
@@ -77,6 +88,7 @@ export class Autocomplete extends Box {
         }
       }
 
+      // Inline completion ghost text
       if (isFocused && this.mode === "inline" && this._completion && this.value.length > 0) {
         const ghostStart = rect.x + this.value.length;
         const ghostLen = Math.min(
@@ -99,42 +111,28 @@ export class Autocomplete extends Box {
           }
         }
       }
-
-      if (this.mode === "dropdown" && this.dropdownOpen &&
-        this.filteredSuggestions.length > 0) {
-        const visibleCount = Math.min(
-          this.filteredSuggestions.length,
-          this.maxVisibleItems,
-        );
-        for (let i = 0; i < visibleCount; i++) {
-          const itemY = rect.y + 1 + i;
-          const item = this.filteredSuggestions[i];
-          const isSelected = i === this.selectedIndex;
-
-          for (let c = rect.x; c < rect.x + rect.width; c++) {
-            const charIndex = c - rect.x;
-            buf.set(c, itemY, {
-              char: charIndex < item.length ? item[charIndex] : " ",
-              fg: isSelected ? theme.bg : theme.text,
-              bg: isSelected ? theme.highlight : theme.panelBg,
-              bold: isSelected,
-            });
-          }
-        }
-      }
     };
 
     this.onKey = (key, modifiers) => {
+      // ── Dropdown navigation ──────────────────────────────────────────
       if (this.mode === "dropdown" && this.dropdownOpen) {
         if (key === "ArrowDown") {
           if (this.selectedIndex < this.filteredSuggestions.length - 1) {
             this.selectedIndex++;
+            if (this._listOverlay) {
+              this._listOverlay.selectedIndex = this.selectedIndex;
+              this._listOverlay.clampScroll();
+            }
           }
           return;
         }
         if (key === "ArrowUp") {
           if (this.selectedIndex > 0) {
             this.selectedIndex--;
+            if (this._listOverlay) {
+              this._listOverlay.selectedIndex = this.selectedIndex;
+              this._listOverlay.clampScroll();
+            }
           }
           return;
         }
@@ -145,12 +143,12 @@ export class Autocomplete extends Box {
           return;
         }
         if (key === "Escape") {
-          this.dropdownOpen = false;
-          this._syncHeight();
+          this._closeDropdown();
           return;
         }
       }
 
+      // ── Text input handling ─────────────────────────────────────────
       if (key === "Backspace") {
         if (this.cursorPos > 0) {
           this.value = this.value.slice(0, this.cursorPos - 1) + this.value.slice(this.cursorPos);
@@ -174,23 +172,15 @@ export class Autocomplete extends Box {
       }
     };
 
-    this.onMouse = (_col, row, action) => {
-      if (action === "press") {
-        if (this.mode === "dropdown" && this.dropdownOpen &&
-          this.filteredSuggestions.length > 0) {
-          const visibleCount = Math.min(
-            this.filteredSuggestions.length,
-            this.maxVisibleItems,
-          );
-          const itemIndex = row - (this.rect.y + 1);
-          if (itemIndex >= 0 && itemIndex < visibleCount) {
-            this._select(this.filteredSuggestions[itemIndex]);
-          }
-        }
-      }
+    this.onMouse = () => {
+      // Mouse clicks on list items are handled by the overlay
     };
 
     this.handleTab = () => {
+      if (this.mode === "dropdown" && this.dropdownOpen) {
+        this._closeDropdown();
+        return true;
+      }
       if (this.mode === "inline" && this._completion && this.value.length > 0) {
         this.value += this._completion;
         this.cursorPos = this.value.length;
@@ -203,20 +193,17 @@ export class Autocomplete extends Box {
     };
   }
 
-  private _dropdownItemCount(): number {
-    if (this.mode !== "dropdown" || !this.dropdownOpen) return 0;
-    const count = this.filteredSuggestions.length;
-    if (count === 0) return 0;
-    return Math.min(count, this.maxVisibleItems);
+  /** Reference to the App for showing/removing overlay lists. */
+  set appRef(
+    ref: {
+      showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+      removeOverlay: (box: Box) => void;
+    } | null,
+  ) {
+    this._appRef = ref;
   }
 
-  private _syncHeight(): void {
-    const dropCount = this._dropdownItemCount();
-    if (dropCount !== this._lastDropdownHeight) {
-      this._lastDropdownHeight = dropCount;
-      this.height = { fixed: this._inputHeight + dropCount };
-    }
-  }
+  // ── Internal helpers ──────────────────────────────────────────────────
 
   private _updateFilter(): void {
     if (this.filterFn) {
@@ -228,15 +215,18 @@ export class Autocomplete extends Box {
       );
     }
     this.selectedIndex = 0;
-    this.dropdownOpen = this.value.length > 0;
+
+    if (this.mode === "dropdown" && this.value.length > 0 && this.filteredSuggestions.length > 0) {
+      this._showDropdown();
+    } else {
+      this._closeDropdown();
+    }
 
     if (this.mode === "inline" && this.value.length > 0) {
       this._completion = this._findCompletion();
     } else {
       this._completion = "";
     }
-
-    this._syncHeight();
   }
 
   private _findCompletion(): string {
@@ -249,16 +239,56 @@ export class Autocomplete extends Box {
     return "";
   }
 
-  private _select(item: string): void {
-    this.value = item;
-    this.dropdownOpen = false;
-    this._completion = "";
-    this._syncHeight();
-    if (this.onSelect) this.onSelect(item);
-    if (this.onChange) this.onChange(item);
+  private _showDropdown(): void {
+    if (!this._appRef) return;
+
+    // Close existing overlay first
+    this._closeDropdown();
+
+    // Re-open state after _closeDropdown() cleared it
+    this.dropdownOpen = true;
+
+    const list = new FloatingListBox(this.filteredSuggestions.slice(), this.selectedIndex);
+    list.maxVisible = this.maxVisibleItems;
+
+    // Non-focusable overlay — the autocomplete retains keyboard focus
+    // and handles all key events itself, syncing state to the overlay.
+    list.focusable = false;
+
+    list.onItemSelect = (item, _index) => {
+      this._select(item);
+    };
+    list.removeFn = () => {
+      this._listOverlay = null;
+      this.dropdownOpen = false;
+    };
+
+    // Size the list
+    const maxItemWidth = Math.max(...this.filteredSuggestions.map(s => s.length));
+    const listWidth = Math.max(maxItemWidth + 4, this.rect.width);
+    const itemCount = Math.min(this.filteredSuggestions.length, this.maxVisibleItems);
+    list.width = { fixed: listWidth };
+    list.height = { fixed: itemCount + 2 };
+
+    this._appRef.showOverlay(list, { modal: false });
+    list.positionRelativeTo(this.rect);
+    this._listOverlay = list;
   }
 
-  override hitTest(col: number, row: number): Box | null {
-    return super.hitTest(col, row);
+  private _closeDropdown(): void {
+    if (this._listOverlay) {
+      this._appRef?.removeOverlay(this._listOverlay);
+      this._listOverlay = null;
+    }
+    this.dropdownOpen = false;
+  }
+
+  private _select(item: string): void {
+    this.value = item;
+    this.cursorPos = item.length;
+    this._closeDropdown();
+    this._completion = "";
+    if (this.onSelect) this.onSelect(item);
+    if (this.onChange) this.onChange(item);
   }
 }
