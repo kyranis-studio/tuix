@@ -709,7 +709,9 @@ listCol.add(lbl("Profiles ListBox:"), profileList);
 
 const topRow = Box.row("top-row");
 topRow.style.gutter = 2;
-// height defaults to grow:1
+topRow.height = {}; // hug — shrink-wrap to tallest child
+// When there's not enough height, the row will hug to its tallest column
+// content instead of collapsing to 0.
 topRow.add(chkCol, radioCol, listCol);
 
 // Fixed-height control rows (hug height via fixed)

@@ -256,31 +256,21 @@ export class Box {
     let selfW: number;
     let selfH: number;
 
-    if (this.width.fixed !== undefined) {
-      selfW = clamp(
-        this.width.fixed,
-        this.width.min ?? 0,
-        this.width.max ?? Infinity,
-      );
-    } else if (isHug(this.width) && !isRow) {
-      // column container, cross=width, hug — will be resolved after children
-      selfW = clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
-    } else {
-      selfW = clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
-    }
+    const initialSelfW = (): number => {
+      if (this.width.fixed !== undefined) {
+        return clamp(this.width.fixed, this.width.min ?? 0, this.width.max ?? Infinity);
+      }
+      return clamp(outerW, this.width.min ?? 0, this.width.max ?? Infinity);
+    };
+    const initialSelfH = (): number => {
+      if (this.height.fixed !== undefined) {
+        return clamp(this.height.fixed, this.height.min ?? 0, this.height.max ?? Infinity);
+      }
+      return clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
+    };
 
-    if (this.height.fixed !== undefined) {
-      selfH = clamp(
-        this.height.fixed,
-        this.height.min ?? 0,
-        this.height.max ?? Infinity,
-      );
-    } else if (isHug(this.height) && isRow) {
-      // row container, cross=height, hug — will be resolved after children
-      selfH = clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
-    } else {
-      selfH = clamp(outerH, this.height.min ?? 0, this.height.max ?? Infinity);
-    }
+    selfW = initialSelfW();
+    selfH = initialSelfH();
 
     let contentW = Math.max(0, selfW - bOff * 2 - p.left - p.right);
     let contentH = Math.max(0, selfH - bOff * 2 - p.top - p.bottom);
@@ -320,7 +310,31 @@ export class Box {
       }
 
       // ── Cross-axis available ───────────────────────────────────────────────
-      const crossAvailable = isRow ? contentH : contentW;
+      let crossAvailable = isRow ? contentH : contentW;
+
+      // When cross-hugging, children that have a `grow` constraint on the
+      // cross axis will grow to fill crossAvailable, defeating shrink-wrap.
+      // We temporarily override those children to `{}` (hug) so their
+      // final rect reflects content size, not available space.
+
+      const crossOverride: ({ axis: "height" | "width"; saved: SizeConstraint } | null)[] = [];
+
+      if (crossHug) {
+        for (let i = 0; i < childCount; i++) {
+          const child = this.children[i];
+          const sc = isRow ? child.height : child.width;
+          if (sc.fixed === undefined && sc.grow !== undefined) {
+            crossOverride[i] = {
+              axis: isRow ? "height" : "width",
+              saved: { ...sc },
+            };
+            if (isRow) child.height = {};
+            else child.width = {};
+          } else {
+            crossOverride[i] = null;
+          }
+        }
+      }
 
       // ── Compute main-axis positions ────────────────────────────────────────
       const freeSpace = (isRow ? contentW : contentH) - totalMain;
@@ -355,9 +369,8 @@ export class Box {
           mainOffsets = this._spreadOffsets(mainSizes, gutter);
       }
 
-      // ── First pass: lay out children to measure cross-axis for hug ────────
-      // We need to know the max cross size before we can finalise selfH/selfW
-      // when crossHug is active.
+      // ── Lay out children ───────────────────────────────────────────────────
+      // For cross-hug, we measure the natural content size of each child.
 
       // Determine per-child cross size
       const childCrossSizes: number[] = [];
@@ -420,6 +433,15 @@ export class Box {
             };
 
         child.layout(childParentRect);
+      }
+
+      // ── Restore overridden cross constraints ──────────────────────────────
+      for (let i = 0; i < childCount; i++) {
+        const ov = crossOverride[i];
+        if (ov) {
+          if (ov.axis === "height") this.children[i].height = ov.saved;
+          else this.children[i].width = ov.saved;
+        }
       }
 
       // ── Cross-axis hug: shrink-wrap self to tallest/widest child ──────────
@@ -487,6 +509,63 @@ export class Box {
     }
   }
 
+  /**
+   * Recursively compute the natural size of `child` along `mainAxisIsRow`.
+   *
+   * `mainAxisIsRow` indicates which axis we are measuring:
+   *   true  → measuring width  (main axis of a row container)
+   *   false → measuring height (main axis of a column container)
+   *
+   * When the child stacks its own children in the SAME axis as we are
+   * measuring, sizes are **summed** (e.g. a column measuring height).
+   * When the child arranges children perpendicularly, the **max** is
+   * taken (e.g. a row measuring height — the tallest child wins).
+   */
+  private _computeNaturalMainSize(child: Box, mainAxisIsRow: boolean): number {
+    const sc = mainAxisIsRow ? child.width : child.height;
+    if (sc.fixed !== undefined) return sc.fixed;
+
+    const grandchildren = child.children;
+    if (grandchildren.length === 0) return Math.max(1, sc.min ?? 1);
+
+    const childIsRow = child.style.direction === "row";
+    // True when the child's layout direction matches the axis we measure.
+    const childStacksAlongAxis = childIsRow === mainAxisIsRow;
+    const gutter = child.style.gutter;
+
+    let total = 0;
+    let maxItem = 0;
+
+    for (const gc of grandchildren) {
+      const gcSC = mainAxisIsRow ? gc.width : gc.height;
+      let itemSize: number;
+      if (gcSC.fixed !== undefined) {
+        itemSize = gcSC.fixed;
+      } else {
+        itemSize = this._computeNaturalMainSize(gc, mainAxisIsRow);
+      }
+
+      if (childStacksAlongAxis) {
+        total += itemSize;
+      } else {
+        maxItem = Math.max(maxItem, itemSize);
+      }
+    }
+
+    if (childStacksAlongAxis) {
+      total += gutter * Math.max(0, grandchildren.length - 1);
+    } else {
+      total = maxItem;
+    }
+
+    const hasBorder = child.style.border !== "none";
+    const bOff = hasBorder ? 1 : 0;
+    const p = child.style.padding;
+    total += bOff * 2 + (mainAxisIsRow ? p.left + p.right : p.top + p.bottom);
+
+    return Math.max(1, total);
+  }
+
   private _resolveMainAxis(
     available: number,
     gutter: number,
@@ -512,12 +591,15 @@ export class Box {
         sizes[i] = sz;
         remaining -= sz;
       } else if (hugMode) {
-        // In hug mode the container will shrink-wrap; give each child its min
-        sizes[i] = sc.min ?? 0;
+        // In hug mode the container will shrink-wrap; give each child its
+        // natural size so we can measure the total
+        sizes[i] = this._computeNaturalMainSize(c, isRow);
       } else if (isHug(sc)) {
-        // Child wants to hug — treat as min size for now; parent distributes
-        // leftover space to grow children, hug children just take what they need.
-        sizes[i] = sc.min ?? 0;
+        // Child wants to hug but parent is NOT hugging — compute the child's
+        // natural size so it gets enough room and doesn't collapse to 0.
+        sizes[i] = this._computeNaturalMainSize(c, isRow);
+        // NOTE: we don't subtract from `remaining` because hug children
+        // take what they need and overflow the parent
       } else {
         totalGrow += sc.grow ?? 1;
       }
