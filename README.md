@@ -171,14 +171,35 @@ await app.run();
 
 ---
 
-## Code Quality & Verification
+---
 
-The **tuix** codebase and all sample applications compile cleanly without any TypeScript errors. You can run automated verification checking via:
+## Documentation
 
-```bash
-# Type check public modules
-deno check src/mod.ts
+Detailed documentation for each component is available in the [`docs/`](./docs/) directory:
 
-# Type check all examples
-deno check examples/*.ts
-```
+### Core Concepts
+- [**Layout**](./docs/layout.md) — `Box` containers, flex-like layout engine (direction, align, justify, gutter, padding, margin, border, overflow), size constraints, `Splitter` panels
+- [**Theme**](./docs/theme.md) — `Theme` interface, built-in themes (VS Code Dark+, Amber), `ThemeRegistry`, border styles, color utilities
+- [**App**](./docs/app.md) — `App` class, event loop, overlay management, terminal lifecycle
+- [**Events**](./docs/events.md) — Keyboard and SGR mouse event parsing, async `readEvents` generator
+- [**Focus**](./docs/focus.md) — `FocusManager`, Tab/Shift+Tab cycling, shortcut keys
+- [**Terminal**](./docs/terminal.md) — `CellBuffer`, `Renderer` (double-buffer diff/flush), raw mode, ANSI helpers
+
+### Widgets
+- [**Custom Widgets**](./docs/custom_widget.md) — How to create your own widgets
+- [**Button**](./docs/button.md) — Clickable button with disabled, toggle, and flash states
+- [**SmallButton**](./docs/small_button.md) — Borderless single-row button
+- [**ButtonGroup**](./docs/button_group.md) — Horizontal segmented control
+- [**Checkbox**](./docs/checkbox.md) — Toggle checkbox with disabled state
+- [**TextInput**](./docs/text_input.md) — Single-line text input with cursor, selection, clipboard
+- [**TextArea**](./docs/textarea.md) — Multi-line text editor with scroll
+- [**ListBox**](./docs/listbox.md) — Scrollable list selector with per-item disabled support
+- [**ProgressBar**](./docs/progress_bar.md) — Percentage progress bar
+- [**Autocomplete**](./docs/autocomplete.md) — Dropdown and inline suggestion completion
+- [**RadioButton / RadioGroup**](./docs/radio.md) — Mutually exclusive radio selection
+- [**Tabs**](./docs/tabs.md) — Multi-tab container
+- [**Dropdown**](./docs/dropdown.md) — Combo-box style selector
+- [**Dialog**](./docs/dialog.md) — Modal dialog with backdrop dimming
+- [**Notification**](./docs/notification.md) — Auto-dismissing toast notification
+- [**FloatingWindow**](./docs/window.md) — Draggable floating window
+- [**Collapsible**](./docs/collapsible.md) — Collapsible section header

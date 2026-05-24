@@ -118,8 +118,8 @@ export class Dialog extends Box {
         }
       };
       const origOnMouse = btn.onMouse;
-      btn.onMouse = (col, row, action) => {
-        origOnMouse?.call(btn, col, row, action);
+      btn.onMouse = (col, row, action, button) => {
+        origOnMouse?.call(btn, col, row, action, button);
         // Button's own onMouse calls onClick (the action) — close dialog afterwards
         if (action === "press") {
           this.close();

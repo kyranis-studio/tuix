@@ -17,8 +17,6 @@ export class FloatingListBox extends Box {
   /** Set by the parent to call removeOverlay */
   removeFn: (() => void) | null = null;
 
-  private _scrollOffset = 0;
-
   constructor(
     items: string[],
     selectedIndex: number,
@@ -31,12 +29,12 @@ export class FloatingListBox extends Box {
 
     this.style.border = "single";
     this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-    this.style.overflow = "hidden";
+    this.style.overflow = "auto";
 
     this.onPaint = (buf, rect, theme) => {
-      const visibleCount = Math.min(this.items.length, rect.height, this.maxVisible);
-      for (let i = 0; i < visibleCount; i++) {
-        const itemIndex = i + this._scrollOffset;
+      const rowsAvailable = rect.height;
+      for (let i = 0; i < rowsAvailable; i++) {
+        const itemIndex = i + this.scrollY;
         if (itemIndex >= this.items.length) break;
         const item = this.items[itemIndex];
         const isCur = itemIndex === this.selectedIndex;
@@ -80,7 +78,7 @@ export class FloatingListBox extends Box {
       if (action === "press") {
         const r = this.rect;
         // Items are painted starting at r.y + 1 (due to single border)
-        const itemIndex = row - (r.y + 1) + this._scrollOffset;
+        const itemIndex = row - (r.y + 1) + this.scrollY;
         if (itemIndex >= 0 && itemIndex < this.items.length) {
           this.selectedIndex = itemIndex;
           this.onItemSelect?.(this.items[itemIndex], itemIndex);
@@ -116,6 +114,9 @@ export class FloatingListBox extends Box {
       const aboveY = triggerRect.y - listH;
       this.rect.y = Math.max(0, aboveY);
     }
+
+    this.scrollMaxY = Math.max(0, this.items.length - listH + 2);
+    this.scrollY = clamp(this.scrollY, 0, this.scrollMaxY);
   }
 
   private _maxItemWidth(): number {
@@ -128,16 +129,17 @@ export class FloatingListBox extends Box {
 
   /** Ensure the selected index is visible by adjusting scroll offset. */
   clampScroll(): void {
-    if (this.selectedIndex < this._scrollOffset) {
-      this._scrollOffset = this.selectedIndex;
-    } else if (this.selectedIndex >= this._scrollOffset + this.maxVisible) {
-      this._scrollOffset = this.selectedIndex - this.maxVisible + 1;
+    const rowsAvailable = (this.height.fixed ?? this.maxVisible) - 2;
+    if (this.selectedIndex < this.scrollY) {
+      this.scrollY = this.selectedIndex;
+    } else if (this.selectedIndex >= this.scrollY + rowsAvailable) {
+      this.scrollY = this.selectedIndex - rowsAvailable + 1;
     }
-    this._scrollOffset = Math.max(
-      0,
-      Math.min(this._scrollOffset, Math.max(0, this.items.length - this.maxVisible)),
-    );
+    this.scrollMaxY = Math.max(0, this.items.length - rowsAvailable);
+    this.scrollY = Math.max(0, Math.min(this.scrollY, this.scrollMaxY));
   }
+}
 
-
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(val, max));
 }

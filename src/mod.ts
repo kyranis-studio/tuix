@@ -19,6 +19,11 @@ export type { AutocompleteMode, TabDefinition, ListBoxItem, DialogButton, Notifi
 export {
   vscodeDarkTheme,
   amberTheme,
+  oneDarkTheme,
+  solarizedDarkTheme,
+  nordTheme,
+  draculaTheme,
+  catppuccinTheme,
   defaultTheme,
   ThemeRegistry,
   BORDERS,

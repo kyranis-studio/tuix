@@ -141,6 +141,96 @@ export const amberTheme: Theme = {
   defaultBorder: "single",
 };
 
+// ─── One Dark (Atom) ──────────────────────────────────────────────────────────
+
+export const oneDarkTheme: Theme = {
+  bg:          hex("#282C34"),
+  panelBg:     hex("#21252B"),
+  text:        hex("#ABB2BF"),
+  muted:       hex("#5C6370"),
+  highlight:   hex("#E5C07B"),
+  focus:       hex("#528BFF"),
+  border:      hex("#3E4452"),
+  focusBorder: hex("#528BFF"),
+  disabled:    hex("#2C323C"),
+  toolbarBg:   hex("#181A1F"),
+  toolbarText: hex("#E5C07B"),
+  splitter:    hex("#528BFF"),
+  defaultBorder: "rounded",
+};
+
+// ─── Solarized Dark ───────────────────────────────────────────────────────────
+
+export const solarizedDarkTheme: Theme = {
+  bg:          hex("#002B36"),
+  panelBg:     hex("#073642"),
+  text:        hex("#93A1A1"),
+  muted:       hex("#657B83"),
+  highlight:   hex("#B58900"),
+  focus:       hex("#268BD2"),
+  border:      hex("#073642"),
+  focusBorder: hex("#268BD2"),
+  disabled:    hex("#00212B"),
+  toolbarBg:   hex("#00161D"),
+  toolbarText: hex("#B58900"),
+  splitter:    hex("#268BD2"),
+  defaultBorder: "single",
+};
+
+// ─── Nord ─────────────────────────────────────────────────────────────────────
+
+export const nordTheme: Theme = {
+  bg:          hex("#2E3440"),
+  panelBg:     hex("#3B4252"),
+  text:        hex("#D8DEE9"),
+  muted:       hex("#616E88"),
+  highlight:   hex("#88C0D0"),
+  focus:       hex("#81A1C1"),
+  border:      hex("#4C566A"),
+  focusBorder: hex("#81A1C1"),
+  disabled:    hex("#363C49"),
+  toolbarBg:   hex("#242933"),
+  toolbarText: hex("#88C0D0"),
+  splitter:    hex("#81A1C1"),
+  defaultBorder: "single",
+};
+
+// ─── Dracula ──────────────────────────────────────────────────────────────────
+
+export const draculaTheme: Theme = {
+  bg:          hex("#282A36"),
+  panelBg:     hex("#1E1F29"),
+  text:        hex("#F8F8F2"),
+  muted:       hex("#6272A4"),
+  highlight:   hex("#BD93F9"),
+  focus:       hex("#FF79C6"),
+  border:      hex("#44475A"),
+  focusBorder: hex("#FF79C6"),
+  disabled:    hex("#21222C"),
+  toolbarBg:   hex("#191A21"),
+  toolbarText: hex("#BD93F9"),
+  splitter:    hex("#FF79C6"),
+  defaultBorder: "rounded",
+};
+
+// ─── Catppuccin Mocha ─────────────────────────────────────────────────────────
+
+export const catppuccinTheme: Theme = {
+  bg:          hex("#1E1E2E"),
+  panelBg:     hex("#181825"),
+  text:        hex("#CDD6F4"),
+  muted:       hex("#6C7086"),
+  highlight:   hex("#F9E2AF"),
+  focus:       hex("#89B4FA"),
+  border:      hex("#45475A"),
+  focusBorder: hex("#89B4FA"),
+  disabled:    hex("#313244"),
+  toolbarBg:   hex("#11111B"),
+  toolbarText: hex("#F9E2AF"),
+  splitter:    hex("#89B4FA"),
+  defaultBorder: "rounded",
+};
+
 export const defaultTheme = vscodeDarkTheme;
 
 // ─── Theme registry ───────────────────────────────────────────────────────────
@@ -148,6 +238,11 @@ export const defaultTheme = vscodeDarkTheme;
 const registry: Map<string, Theme> = new Map([
   ["vscode-dark", vscodeDarkTheme],
   ["amber", amberTheme],
+  ["one-dark", oneDarkTheme],
+  ["solarized-dark", solarizedDarkTheme],
+  ["nord", nordTheme],
+  ["dracula", draculaTheme],
+  ["catppuccin", catppuccinTheme],
 ]);
 let _active = vscodeDarkTheme;
 

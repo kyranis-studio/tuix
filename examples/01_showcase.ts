@@ -36,8 +36,15 @@ import {
   paintText,
   edgesAll,
   defaultTheme,
+  vscodeDarkTheme,
+  amberTheme,
+  oneDarkTheme,
+  solarizedDarkTheme,
+  nordTheme,
+  draculaTheme,
+  catppuccinTheme,
 } from "../src/mod.ts";
-import type { ListBoxItem } from "../src/mod.ts";
+import type { ListBoxItem, Theme } from "../src/mod.ts";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -51,6 +58,16 @@ let selectedOption = "option_a";
 let clickCount = 0;
 let selectedTheme = "VS Code Dark";
 let selectedAlign = "Left";
+
+const themeMap: Record<string, Theme> = {
+  "VS Code Dark": vscodeDarkTheme,
+  "Amber": amberTheme,
+  "One Dark": oneDarkTheme,
+  "Solarized Dark": solarizedDarkTheme,
+  "Nord": nordTheme,
+  "Dracula": draculaTheme,
+  "Catppuccin": catppuccinTheme,
+};
 let shortcutTarget = "";
 
 const profiles: ListBoxItem[] = [
@@ -63,23 +80,44 @@ const profiles: ListBoxItem[] = [
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-const header = new Box("hdr");
+const header = Box.row("hdr");
 header.height = { fixed: 3 };
 header.style.bg = defaultTheme.toolbarBg;
-header.onPaint = (buf, rect, theme) => {
-  buf.fill(rect.x, rect.y, rect.width, rect.height, {
-    char: " ",
-    bg: theme.toolbarBg,
-  });
+header.style.align = "center";
+header.style.padding = { top: 0, bottom: 0, left: 2, right: 1 };
+header.style.gutter = 0;
+
+const titleBox = new Box("title");
+titleBox.onPaint = (buf, rect, theme) => {
   paintCenteredText(
     buf,
     rect,
     "✦  tuix Component Showcase  ✦",
     theme.toolbarText,
-    theme.toolbarBg,
+    null,
     true,
   );
 };
+
+const themeDropdown = new Dropdown(
+  "Theme",
+  ["VS Code Dark", "Amber", "One Dark", "Solarized Dark", "Nord", "Dracula", "Catppuccin"],
+  0,
+  (val) => {
+    selectedTheme = val;
+    const t = themeMap[val];
+    if (t) {
+      app.setTheme(t);
+      header.style.bg = t.toolbarBg;
+      titleBox.onPaint = (buf, rect, _theme) => {
+        paintCenteredText(buf, rect, "✦  tuix Component Showcase  ✦", t.toolbarText, null, true);
+      };
+    }
+  },
+);
+themeDropdown.width = { fixed: 22 };
+
+header.add(titleBox, themeDropdown);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: Layout — scroll demos
@@ -598,7 +636,7 @@ uiHeader.onPaint = (_buf, rect, theme) =>
   paintCenteredText(
     _buf,
     rect,
-    "Checkboxes | Radio | ListBox — Actions — ButtonGroup — Dropdown",
+    "Checkboxes | Radio | ListBox — Actions — ButtonGroup — Sort",
     theme.muted,
     theme.bg,
   );
@@ -672,21 +710,22 @@ smallBtns.style.gutter = 1;
 smallBtns.height = { fixed: 1 };
 smallBtns.add(sbtnReset, sbtnFlash, sbtnLocked);
 
-const themeDropdown = new Dropdown(
-  "Theme",
-  ["VS Code Dark", "Amber", "Monokai", "Solarized", "Nord"],
-  0,
-  (val) => {
-    selectedTheme = val;
-  },
-);
-
 const alignGroup = new ButtonGroup(
   "Align",
   ["Left", "Center", "Right", "Justify"],
   0,
   (val) => {
     selectedAlign = val;
+  },
+);
+
+let selectedSort = "Name";
+const sortDropdown = new Dropdown(
+  "Sort By",
+  ["Name", "Date", "Size", "Type"],
+  0,
+  (val) => {
+    selectedSort = val;
   },
 );
 
@@ -701,8 +740,8 @@ uiStatus.onPaint = (_buf, rect, theme) => {
     `Radio: ${selectedOption.replace("option_", "")}`,
     `Profile: ${selectedProfile}`,
     `Clicks: ${clickCount}`,
-    `Theme: ${selectedTheme}`,
     `Align: ${selectedAlign}`,
+    `Sort: ${selectedSort}`,
   ];
   paintText(_buf, rect, `  ${parts.join("  |  ")}`, 0, theme.muted);
 };
@@ -746,7 +785,7 @@ smallBtnRow.add(lbl("SmallButtons:"), smallBtns);
 const dropdownRow = Box.col("dropdown-row");
 dropdownRow.style.gutter = 1;
 dropdownRow.height = { fixed: 5 };
-dropdownRow.add(lbl("Dropdown:"), themeDropdown);
+dropdownRow.add(lbl("Sort By Dropdown:"), sortDropdown);
 
 // Scrollable container for UI controls
 const uiScroll = Box.col("ui-scroll");
@@ -1253,6 +1292,7 @@ const app = new App(root, { theme: defaultTheme, fps: 30, mouse: true });
 // Wire up appRef for widgets that show overlay notifications
 copyOnSelectInput.appRef = app;
 themeDropdown.appRef = app;
+sortDropdown.appRef = app;
 autoDropdown.appRef = app;
 autoInline.appRef = app;
 

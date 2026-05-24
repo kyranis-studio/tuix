@@ -82,6 +82,10 @@ export class App {
     return this.theme;
   }
 
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+  }
+
   /** Register a shortcut that jumps focus to a box. */
   shortcut(key: string, box: Box): this {
     this.focus.registerShortcut(key, box);
