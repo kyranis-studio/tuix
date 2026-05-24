@@ -102,6 +102,38 @@ function parseKey(bytes: Uint8Array): KeyEvent | null {
         return { type: "key", key: arrowMap[inner], raw, modifiers: mods };
       }
 
+      // CSI u (kitty keyboard protocol): ESC [ code ; modifier u
+      // code = Unicode code point of the base key (lowercase, e.g. 99 for 'c')
+      // modifier = 1 + sum(bit values): Shift=1, Alt=2, Ctrl=4, Super=8
+      //   Ctrl+Shift+C     → ESC [ 99 ; 6 u   (1 + 4 + 1 = 6)
+      //   Ctrl+C           → ESC [ 99 ; 5 u   (1 + 4 = 5)
+      //   Ctrl+Shift+V     → ESC [ 118 ; 6 u  (1 + 4 + 1 = 6)
+      const csiU = inner.match(/^(\d+);(\d+)(?::\d+)?u$/);
+      if (csiU) {
+        const code = parseInt(csiU[1]);
+        const modVal = parseInt(csiU[2]);
+        const key = String.fromCodePoint(code);
+        const bits = modVal - 1; // subtract 1 base to get bitmask
+        return {
+          type: "key",
+          key,
+          raw,
+          modifiers: {
+            ctrl: (bits & 4) !== 0,
+            alt: (bits & 2) !== 0,
+            shift: (bits & 1) !== 0,
+          },
+        };
+      }
+
+      // CSI u without modifier: ESC [ code u
+      const csiUPlain = inner.match(/^(\d+)u$/);
+      if (csiUPlain) {
+        const code = parseInt(csiUPlain[1]);
+        const key = String.fromCodePoint(code);
+        return { type: "key", key, raw, modifiers: mods };
+      }
+
       // F-keys
       const fkMap: Record<string, string> = {
         "11~": "F1", "12~": "F2", "13~": "F3", "14~": "F4",

@@ -526,19 +526,29 @@ autoInline.mode = "inline";
 
 const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
 
-const copyInput = new TextInput("", "Sample text — Shift+C to copy");
-const pasteInput = new TextInput("Paste here — focus and press Shift+V");
+const copyInput = new TextInput("", "Sample text — Ctrl+Shift+C to copy");
+const pasteInput = new TextInput("Paste here — focus and press Ctrl+Shift+V");
+
+const copyOnSelectInput = new TextInput("", "Select me with mouse — auto-copies", undefined, true, true, "✧ Copied!");
 
 const cpHint = new Box("cp-hint");
-cpHint.height = { fixed: 1 };
-cpHint.onPaint = (_buf, rect, theme) =>
+cpHint.height = { fixed: 2 };
+cpHint.onPaint = (_buf, rect, theme) => {
   paintText(
     _buf,
     rect,
-    "  Shift+C to copy · Tab to next · Shift+V to paste · right-click to paste",
+    "  Ctrl+Shift+C to copy · Tab to next · Ctrl+Shift+V to paste · right-click to paste",
     0,
     theme.muted,
   );
+  paintText(
+    _buf,
+    rect,
+    "  TextInput(..., true, true, \"✧ Copied!\") for copyOnSelect+notifyOnCopy — select text to auto-copy & notify",
+    1,
+    theme.muted,
+  );
+};
 
 const textStatus = new Box("text-status");
 textStatus.height = { fixed: 1 };
@@ -564,10 +574,12 @@ textScroll.add(
   lbl("TextArea (multi-line):"),
   textArea,
   cpHint,
-  lbl("Copy/Paste — copy (Shift+C) from here:"),
+  lbl("Copy/Paste — copy (Ctrl+Shift+C) from here:"),
   copyInput,
-  lbl("Then paste (Shift+V) here:"),
+  lbl("Then paste (Ctrl+Shift+V) here:"),
   pasteInput,
+  lbl("Copy-on-select (TextInput with copyOnSelect=true):"),
+  copyOnSelectInput,
   textStatus,
 );
 textTab.add(textScroll);
@@ -1237,6 +1249,9 @@ root.add(header, tabs, statusBar);
 // ═══════════════════════════════════════════════════════════════════════════
 
 const app = new App(root, { theme: defaultTheme, fps: 30, mouse: true });
+
+// Wire up appRef for widgets that show overlay notifications
+copyOnSelectInput.appRef = app;
 
 for (const [key, box] of appShortcuts) {
   app.shortcut(key, box);

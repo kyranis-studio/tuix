@@ -1,5 +1,6 @@
 import { Box } from "../layout.ts";
 import { copyToClipboard, pasteFromClipboard } from "../clipboard.ts";
+import { Notification } from "./notification.ts";
 
 export class TextInput extends Box {
   value = "";
@@ -7,12 +8,26 @@ export class TextInput extends Box {
   cursorPos = 0;
   onChange: ((val: string) => void) | null = null;
   onSubmit: ((val: string) => void) | null = null;
+  copyOnSelect: boolean;
+  notifyOnCopy: boolean;
+  copyNotificationMessage: string;
+  private _appRef: {
+    showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+    removeOverlay: (box: Box) => void;
+  } | null = null;
 
   // Selection state for mouse drag-to-select
   private _selStart = -1;
   private _selEnd = -1;
 
-  constructor(placeholder = "", value = "", onChange?: (val: string) => void) {
+  constructor(
+    placeholder = "",
+    value = "",
+    onChange?: (val: string) => void,
+    copyOnSelect = false,
+    notifyOnCopy = false,
+    copyNotificationMessage = "Copied!",
+  ) {
     super("Input");
     this.focusable = true;
     this.tabIndex = 0;
@@ -20,6 +35,9 @@ export class TextInput extends Box {
     this.value = value;
     this.cursorPos = 0;
     this.onChange = onChange ?? null;
+    this.copyOnSelect = copyOnSelect;
+    this.notifyOnCopy = notifyOnCopy;
+    this.copyNotificationMessage = copyNotificationMessage;
 
     this.style.border = "single";
     this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
@@ -86,18 +104,28 @@ export class TextInput extends Box {
     };
 
     this.onKey = (key, modifiers) => {
+      // Save selection before clearing (copy handler needs it)
+      const selStart = this._selStart;
+      const selEnd = this._selEnd;
+
       // Any keyboard input clears the text selection
       this._selStart = -1;
       this._selEnd = -1;
 
-      // Shift+C: copy value to clipboard
-      if (key === "c" && modifiers.shift) {
-        copyToClipboard(this.value);
+      // Ctrl+Shift+C: copy selected text (or whole value) to clipboard
+      if (key === "c" && modifiers.ctrl && modifiers.shift) {
+        if (selStart >= 0 && selEnd >= 0 && selStart !== selEnd) {
+          const start = Math.min(selStart, selEnd);
+          const end = Math.max(selStart, selEnd);
+          copyToClipboard(this.value.slice(start, end));
+        } else {
+          copyToClipboard(this.value);
+        }
         return;
       }
 
-      // Shift+V: paste from clipboard at cursor
-      if (key === "v" && modifiers.shift) {
+      // Ctrl+Shift+V: paste from clipboard at cursor
+      if (key === "v" && modifiers.ctrl && modifiers.shift) {
         pasteFromClipboard().then((text) => {
           if (text) {
             this.value =
@@ -168,15 +196,29 @@ export class TextInput extends Box {
       } else if (action === "move") {
         this._selEnd = pos;
       } else if (action === "release") {
-        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
+        if (this.copyOnSelect && this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
           const start = Math.min(this._selStart, this._selEnd);
           const end = Math.max(this._selStart, this._selEnd);
           const selected = this.value.slice(start, end);
           copyToClipboard(selected);
+          if (this.notifyOnCopy && this._appRef) {
+            const notif = new Notification(this.copyNotificationMessage, "info", 1500);
+            this._appRef.showOverlay(notif, { modal: false });
+            notif.removeFn = () => this._appRef!.removeOverlay(notif);
+            notif.show();
+          }
         }
-        this._selStart = -1;
-        this._selEnd = -1;
       }
     };
+  }
+
+  /** Reference to the App for showing overlay notifications on copy. */
+  set appRef(
+    ref: {
+      showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+      removeOverlay: (box: Box) => void;
+    } | null,
+  ) {
+    this._appRef = ref;
   }
 }

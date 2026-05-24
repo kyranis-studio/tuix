@@ -248,9 +248,14 @@ export class App {
     if (ev.type === "key") {
       const { key, modifiers } = ev;
 
-      // Quit: Ctrl+C or Ctrl+Q
-      if ((key === "c" && modifiers.ctrl) || (key === "q" && modifiers.ctrl)) {
+      // Quit: Ctrl+Q
+      if (key === "q" && modifiers.ctrl) {
         this.stop();
+        return;
+      }
+
+      // Block plain Ctrl+C (without shift) — consumed but does nothing
+      if (key === "c" && modifiers.ctrl && !modifiers.shift) {
         return;
       }
 
