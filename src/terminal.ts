@@ -34,9 +34,24 @@ export const EMPTY_CELL: Cell = {
 // ─── ANSI escape sequences ────────────────────────────────────────────────────
 
 const ESC = "\x1b";
-const CSI = `${ESC}[`;
+const CSI: string = `${ESC}[`;
 
-export const ansi = {
+export const ansi: {
+  reset: string;
+  bold: string;
+  dim: string;
+  underline: string;
+  hideCursor: string;
+  showCursor: string;
+  clearScreen: string;
+  altScreenOn: string;
+  altScreenOff: string;
+  mouseOn: string;
+  mouseOff: string;
+  moveTo: (row: number, col: number) => string;
+  fg: (c: Color) => string;
+  bg: (c: Color) => string;
+} = {
   reset: `${CSI}0m`,
   bold: `${CSI}1m`,
   dim: `${CSI}2m`,

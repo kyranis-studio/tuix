@@ -231,7 +231,7 @@ export const catppuccinTheme: Theme = {
   defaultBorder: "rounded",
 };
 
-export const defaultTheme = vscodeDarkTheme;
+export const defaultTheme: Theme = vscodeDarkTheme;
 
 // ─── Theme registry ───────────────────────────────────────────────────────────
 
@@ -246,7 +246,14 @@ const registry: Map<string, Theme> = new Map([
 ]);
 let _active = vscodeDarkTheme;
 
-export const ThemeRegistry = {
+export interface ThemeRegistryInterface {
+  register(name: string, theme: Theme): void;
+  set(name: string): void;
+  readonly active: Theme;
+  setDirect(theme: Theme): void;
+}
+
+export const ThemeRegistry: ThemeRegistryInterface = {
   register(name: string, theme: Theme): void {
     registry.set(name, theme);
   },

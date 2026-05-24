@@ -1,6 +1,7 @@
 {
-  "name": "tuix",
+  "name": "@kyranis-studio/tuix",
   "version": "0.1.0",
+  "license": "MIT",
   "tasks": {
     "example:01": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/01_center_text.ts",
     "example:02": "deno run --allow-env --allow-read --allow-write --allow-sys --unstable-kv examples/02_focus_zones.ts",
