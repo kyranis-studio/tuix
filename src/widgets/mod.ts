@@ -39,3 +39,6 @@ export type { NotificationType } from "./notification.ts";
 export { FloatingWindow } from "./window.ts";
 
 export { Collapsible } from "./collapsible.ts";
+export { CodeEditor } from "./code_editor.ts";
+export type { SyntaxTokenType, SyntaxTheme, TokenRange } from "./code_editor.ts";
+export { tokenizeLine, buildTokenLookup, defaultSyntaxTheme } from "./code_editor.ts";

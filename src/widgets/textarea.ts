@@ -327,21 +327,21 @@ export class TextArea extends InputPrimitive {
   //  Line helpers
   // ────────────────────────────────────────────────────────────
 
-  private _lines(): string[] {
+  protected _lines(): string[] {
     return this.value.split("\n");
   }
 
-  private _cursorRow(): number {
+  protected _cursorRow(): number {
     return this.value.slice(0, this.cursorPos).split("\n").length - 1;
   }
 
-  private _cursorCol(): number {
+  protected _cursorCol(): number {
     const before = this.value.slice(0, this.cursorPos);
     const nl = before.lastIndexOf("\n");
     return nl >= 0 ? this.cursorPos - nl - 1 : this.cursorPos;
   }
 
-  private _lineStart(row: number): number {
+  protected _lineStart(row: number): number {
     let pos = 0;
     for (let i = 0; i < row; i++) {
       const nl = this.value.indexOf("\n", pos);
@@ -351,17 +351,17 @@ export class TextArea extends InputPrimitive {
     return pos;
   }
 
-  private _lineEnd(row: number): number {
+  protected _lineEnd(row: number): number {
     const start = this._lineStart(row);
     const nl = this.value.indexOf("\n", start);
     return nl >= 0 ? nl : this.value.length;
   }
 
-  private _lineLength(row: number): number {
+  protected _lineLength(row: number): number {
     return this._lineEnd(row) - this._lineStart(row);
   }
 
-  private _rowCount(): number {
+  protected _rowCount(): number {
     return this._lines().length;
   }
 

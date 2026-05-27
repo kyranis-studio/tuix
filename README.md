@@ -68,16 +68,21 @@ Tab between widgets, type in the input, and click (or press Enter on) the button
    - Character-aware cursor navigation, backspace, and deletion.
 
 3. **🛡️ Burst Protection**
-   - Automatic detection of terminal pastes and fast input bursts via `burstThreshold` (counts **lines**, not characters).
+   - Automatic detection of terminal pastes and fast input bursts via `burstThreshold` (counts **chars**, not lines).
    - Replaces large bursts with interactive markers to maintain UI performance and prevent buffer overflow.
    - Multi-line pastes are detected as single bursts in `TextArea`.
 
-4. **🎨 Customizable Scrollbar**
+4. **🎨 CodeEditor with Syntax Highlighting**
+   - Regex-based tokenizer supporting TypeScript/JavaScript with 7 token types (keywords, strings, comments, numbers, types, functions, decorators).
+   - Customisable colour palette inspired by VS Code Dark+.
+   - Builds on `TextArea` — full cursor, selection, clipboard, and scrollbar support.
+
+5. **🎨 Customizable Scrollbar**
    - Vertical and horizontal scrollbars with arrow indicators (↑/↓/◄/►) that dim at scroll limits.
    - Fully customizable characters for track, thumb, and arrows via `style.scrollbar`.
    - Alt+Wheel flips mouse wheel to horizontal scrolling.
 
-4. **Reactive Flex-Like Layout Engine**
+6. **Reactive Flex-Like Layout Engine**
    - **Main-axis Flows**: Support for both `row` and `column` directions.
    - **Cross-axis Alignment**: `start`, `center`, `end`, and `stretch` support.
    - **Main-axis Justification**: `start`, `center`, `end`, `space-between`, and `space-around`.
@@ -101,6 +106,7 @@ Detailed guides and API references for every part of the library:
 ### Widgets & Controls
 - [**TextInput**](docs/text_input.md) — Single-line input with multi-byte support.
 - [**TextArea**](docs/textarea.md) — Multi-line editor with burst protection.
+- [**CodeEditor**](docs/code_editor.md) — Code editor with syntax highlighting (keywords, strings, comments, numbers, types, functions, decorators).
 - [**Autocomplete**](docs/autocomplete.md) — Suggestion completion (dropdown/inline).
 - [**Button**](docs/button.md) & [**SmallButton**](docs/small_button.md) — Interactive buttons.
 - [**ButtonGroup**](docs/button_group.md) — Segmented selection.
@@ -125,6 +131,7 @@ Detailed guides and API references for every part of the library:
    - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, and `burstThreshold` protection.
    - [**`TextInput`**](docs/text_input.md): Single-line text input with overflow scrolling (`...` ellipsis at boundaries), cursor, Home/End/arrow navigation, character insertion, block cursor, and placeholder. Fully multi-byte aware.
    - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
+   - [**`CodeEditor`**](docs/code_editor.md): Syntax-highlighted code editor built on TextArea. Regex-based tokenizer colours keywords, strings, comments, numbers, types, functions, and decorators. Customisable colour palette.
    - [**`Button`**](docs/button.md): Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
    - [**`ButtonGroup`**](docs/button_group.md): Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
    - [**`Checkbox`**](docs/checkbox.md): Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks. Supports `disabled` state.
@@ -152,6 +159,7 @@ tuix/
       button.ts         — Clickable button
       text_input.ts     — Single-line text input (multi-byte support)
       textarea.ts       — Multi-line text editor (burst protection)
+      code_editor.ts    — Code editor with syntax highlighting
       ...
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts

@@ -32,6 +32,7 @@ import {
   FloatingWindow,
   SmallButton,
   Collapsible,
+  CodeEditor,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -723,6 +724,100 @@ textScroll.add(
 textTab.add(textScroll);
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TAB: Code — syntax-highlighted editor
+// ═══════════════════════════════════════════════════════════════════════════
+
+const codeTab = Box.col("Code");
+codeTab.style.gutter = 1;
+codeTab.style.bg = defaultTheme.bg;
+
+const codeHeader = new Box("code-header");
+codeHeader.height = { fixed: 1 };
+codeHeader.onPaint = (buf, rect, theme) =>
+  paintCenteredText(
+    buf,
+    rect,
+    "Syntax-highlighted Code Editor (TypeScript) — keywords · strings · comments · numbers · types",
+    theme.muted,
+    theme.bg,
+  );
+
+const demoCode = `import { App, Box, Button } from "../src/mod.ts";
+import { Theme } from "./theme.ts";
+
+/**
+ * Demonstrates a simple counter app.
+ * This is a sample to show syntax highlighting
+ * with keywords, strings, numbers, and comments.
+ */
+
+// ─── State ─────────────────────────────────────────────────────
+
+let count: number = 0;
+const MAX_COUNT = 100;
+
+const root = Box.col("app");
+root.style.bg = { r: 30, g: 30, b: 46 };
+const label = new Box();
+
+label.height = { fixed: 1 };
+label.style.align = "center";
+label.onPaint = (buf, rect, theme) => {
+  const text = \`Count: \${count} / \${MAX_COUNT}\`;
+  paintCenteredText(buf, rect, text, theme.highlight, null, true);
+};
+
+const btnRow = Box.row("btns");
+btnRow.height = { fixed: 3 };
+btnRow.style.gutter = 2;
+btnRow.style.justify = "center";
+
+const decBtn = new Button("-1", () => {
+  if (count > 0) {
+    count--;
+  }
+});
+
+const incBtn = new Button("+1", () => {
+  if (count < MAX_COUNT) {
+    count++;
+  }
+});
+
+const resetBtn = new Button("Reset", () => {
+  count = 0;
+});
+
+btnRow.add(decBtn, incBtn, resetBtn);
+root.add(label, btnRow);
+
+// Launch the app
+const app = new App(root, {
+  fps: 30,
+  mouse: true,
+  theme: defaultTheme,
+});
+
+await app.run();
+`;
+
+const codeEditor = new CodeEditor(
+  "Type some code...",
+  demoCode,
+  undefined,
+  "typescript",
+);
+// border already set by TextArea constructor; mono is default in terminal
+
+// Scrollable wrapper for the editor
+const codeScroll = Box.col("code-scroll");
+codeScroll.style.gutter = 1;
+codeScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+codeScroll.add(codeHeader, codeEditor);
+
+codeTab.add(codeScroll);
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TAB: UI Controls
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1406,6 +1501,7 @@ const tabs = new Tabs(
     { label: "Resizable", content: resizableContent },
     { label: "Shortcuts", content: shortcutTab },
     { label: "Text", content: textTab },
+    { label: "Code", content: codeTab },
     { label: "UI", content: uiTab },
     { label: "Animation", content: animTab },
     { label: "Floating", content: floatTab },
