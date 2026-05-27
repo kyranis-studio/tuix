@@ -125,6 +125,7 @@ header.add(titleBox, themeDropdown);
 
 const layoutTab = Box.col("Layout");
 layoutTab.style.gutter = 1;
+layoutTab.style.overflow = "scroll";
 layoutTab.style.bg = defaultTheme.bg;
 
 // ─── Row 1: fixed + grow layout demo ────────────────────────────────────────
@@ -192,7 +193,7 @@ const fg2c = colorBox(
 fg2c.width = { grow: 1 };
 fixedGrowRow2.add(fg2a, fg2b, fg2c);
 
-// ─── Scroll demo row ──────────────────────────────────────────────────────────
+// ─── Scroll demo: 3 sections (vertical · horizontal · both axes) ──────────────
 
 const palette = [
   { r: 60, g: 60, b: 80 },
@@ -223,17 +224,18 @@ scrollHint.onPaint = (buf, rect, theme) =>
     theme.muted,
   );
 
-const scrollDemoRow = Box.row("scroll-demo-row");
-scrollDemoRow.style.gutter = 2;
-// height defaults to grow:1 — fills remaining tab space
+// ── 1. Vertical scroll ────────────────────────────────────────────────────────
 
-// Vertical scroll
+const vScrollLbl = new Box("vscroll-lbl");
+vScrollLbl.height = { fixed: 1 };
+vScrollLbl.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, "  Vertical Scroll (overflow: scroll):", 0, theme.highlight);
+
 const vScrollCol = Box.col("vscroll-col");
 vScrollCol.style.border = "single";
 vScrollCol.style.overflow = "scroll";
 vScrollCol.style.gutter = 1;
 vScrollCol.style.padding = edgesAll(1);
-// width/height default to grow:1
 
 for (let i = 1; i <= 25; i++) {
   const item = colorBox(`Item ${i}`, palette[i % palette.length], {
@@ -273,16 +275,31 @@ for (let i = 1; i <= 25; i++) {
   vScrollCol.add(item);
 }
 
-// Horizontal scroll
-const hScrollRow = Box.row("hscroll-row");
-hScrollRow.style.border = "single";
-hScrollRow.style.overflow = "scroll";
-hScrollRow.style.gutter = 1;
-hScrollRow.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-// width/height default to grow:1
+// ── 2. Horizontal scroll ──────────────────────────────────────────────────────
 
-for (let i = 0; i < palette.length; i++) {
-  const item = colorBox(`Item ${i}`, palette[i], { r: 200, g: 200, b: 220 });
+const hScrollLbl = new Box("hscroll-lbl");
+hScrollLbl.height = { fixed: 1 };
+hScrollLbl.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, "  Horizontal Scroll (overflow: scroll):", 0, theme.highlight);
+
+const hScrollContainer = Box.col("hscroll-container");
+hScrollContainer.style.border = "single";
+hScrollContainer.style.overflow = "scroll";
+hScrollContainer.style.gutter = 1;
+hScrollContainer.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+
+const hScrollInner = Box.row("hscroll-inner");
+hScrollInner.height = { fixed: 4 };
+hScrollInner.width = { min: 300 };
+hScrollInner.style.gutter = 1;
+hScrollInner.style.padding = edgesAll(1);
+
+for (let i = 0; i < 20; i++) {
+  const item = colorBox(`Item ${i}`, palette[i % palette.length], {
+    r: 200,
+    g: 200,
+    b: 220,
+  });
   item.width = { fixed: 12 };
   if (i === 0 || i === 1) {
     item.focusable = true;
@@ -312,11 +329,55 @@ for (let i = 0; i < palette.length; i++) {
       );
     };
   }
-  hScrollRow.add(item);
+  hScrollInner.add(item);
+}
+hScrollContainer.add(hScrollInner);
+
+// ── 3. Both axes scroll ───────────────────────────────────────────────────────
+
+const bothLbl = new Box("both-lbl");
+bothLbl.height = { fixed: 1 };
+bothLbl.onPaint = (buf, rect, theme) =>
+  paintText(buf, rect, "  Both Axes (overflow: scroll):", 0, theme.highlight);
+
+const bothScroll = Box.col("both-scroll");
+bothScroll.style.border = "single";
+bothScroll.style.overflow = "scroll";
+bothScroll.style.gutter = 1;
+bothScroll.style.padding = edgesAll(1);
+
+for (let r = 0; r < 12; r++) {
+  const row = Box.row(`both-row-${r}`);
+  row.height = { fixed: 2 };
+  row.style.gutter = 1;
+  row.width = { min: 200 };
+  for (let c = 0; c < 12; c++) {
+    const item = colorBox(
+      `R${r}C${c}`,
+      palette[(r * 3 + c) % palette.length],
+      { r: 200, g: 200, b: 220 },
+    );
+    item.width = { fixed: 10 };
+    row.add(item);
+  }
+  bothScroll.add(row);
 }
 
-scrollDemoRow.add(vScrollCol, hScrollRow);
-layoutTab.add(fixedGrowRow, fixedGrowRow2, scrollHint, scrollDemoRow);
+const scrollRow = Box.row("scroll-row");
+scrollRow.style.gutter = 2;
+
+const vScrollSection = Box.col("vscroll-section");
+vScrollSection.add(vScrollLbl, vScrollCol);
+
+const hScrollSection = Box.col("hscroll-section");
+hScrollSection.add(hScrollLbl, hScrollContainer);
+
+const bothSection = Box.col("both-section");
+bothSection.add(bothLbl, bothScroll);
+
+scrollRow.add(vScrollSection, hScrollSection, bothSection);
+
+layoutTab.add(fixedGrowRow, fixedGrowRow2, scrollHint, scrollRow);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: Resizable — splitter panels
@@ -648,7 +709,7 @@ textScroll.add(
   autoInline,
   lbl("TextArea (multi-line):"),
   textArea,
-  lbl("TextArea (burstThreshold=50 — paste >50 lines inserts bold marker block into content):"),
+  lbl("TextArea (burstThreshold=50 — paste >50 chars creates shaded paste markers):"),
   pasteThreshTextArea,
   cpHint,
   lbl("Copy/Paste — select text with mouse (auto-copied) from here:"),
@@ -842,7 +903,66 @@ const extraChk2 = new Checkbox("Auto-save", true);
 const extraChk3 = new Checkbox("Dark Mode", true);
 collapsibleDemo.add(extraChk1, extraChk2, extraChk3);
 
-uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo);
+// ─── Paste marker shading demo ────────────────────────────────────────────
+const pasteDemoCol = Box.col("paste-demo");
+pasteDemoCol.style.border = "single";
+pasteDemoCol.style.gutter = 1;
+pasteDemoCol.style.padding = edgesAll(1);
+
+const pasteDemoLbl = new Box();
+pasteDemoLbl.height = { fixed: 1 };
+pasteDemoLbl.onPaint = (buf, rect, theme) =>
+  paintText(
+    buf,
+    rect,
+    " Paste Markers (burstThreshold=1 — paste >1 char creates shaded marker):",
+    0,
+    theme.highlight,
+  );
+
+// Pre-populated TextArea showing multiple paste markers with different colors
+// (value and burstThreshold passed to constructor so _syncHeight runs automatically)
+const pasteDemoArea = new TextArea(
+  "",
+  "copied text 1 [5 chars]Pasted version info block...\n" +
+    "With typed lines between pastes — normal look.\n" +
+    "copied text 2 [3 chars]Pasted error log excerpt...\n" +
+    "More regular user-typed content here.\n" +
+    "copied text 3 [8 chars]Pasted configuration data...\n" +
+    "Type between markers — stays plain text.\n",
+  undefined,
+  5,
+  false,
+  false,
+  "Copied!",
+  1,
+);
+
+const pasteHint = new Box();
+pasteHint.height = { fixed: 1 };
+pasteHint.onPaint = (buf, rect, theme) =>
+  paintText(
+    buf,
+    rect,
+    "  Each paste marker shows in a distinct color — Backspace/Delete removes entire marker.",
+    0,
+    theme.muted,
+  );
+
+// Interactive TextInput with burstThreshold for live testing
+const pasteTestInput = new TextInput(
+  "Paste multi-line text here (Ctrl+Shift+V)...",
+  "",
+  undefined,
+  false,
+  false,
+  "Copied!",
+  1,
+);
+
+pasteDemoCol.add(pasteDemoLbl, pasteDemoArea, pasteHint, pasteTestInput);
+
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo, pasteDemoCol);
 
 uiTab.add(uiHeader, uiScroll, uiStatus);
 

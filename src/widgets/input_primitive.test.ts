@@ -15,7 +15,7 @@ class MockInput extends InputPrimitive {
 
 Deno.test("InputPrimitive - burst detection with timer", async () => {
   const input = new MockInput("test");
-  input.burstThreshold = 3;  // line threshold: trigger when > 3 lines
+  input.burstThreshold = 3;  // char threshold: trigger when > 3 chars
 
   const mods = { ctrl: false, alt: false, shift: false };
   input.onKey!("a", mods);
@@ -24,17 +24,17 @@ Deno.test("InputPrimitive - burst detection with timer", async () => {
   input.onKey!("Enter", mods);
   input.onKey!("c", mods);
   input.onKey!("Enter", mods);
-  input.onKey!("d", mods);  // 4 lines total: a\nb\nc\nd
+  input.onKey!("d", mods);  // 7 chars total: a\nb\nc\nd
 
   assertEquals(input.value, "a\nb\nc\nd");
 
   await new Promise(resolve => setTimeout(resolve, 150));
-  assertEquals(input.value, "copied text 1[4 ]");
+  assertEquals(input.value, "copied text 1 [7 chars]");
 });
 
 Deno.test("InputPrimitive - multi-byte characters in burst", async () => {
   const input = new MockInput("test");
-  input.burstThreshold = 2;  // line threshold: trigger when > 2 lines
+  input.burstThreshold = 2;  // char threshold: trigger when > 2 chars
 
   const mods = { ctrl: false, alt: false, shift: false };
   // "🚀" is length 2 in JS strings
@@ -49,12 +49,12 @@ Deno.test("InputPrimitive - multi-byte characters in burst", async () => {
   assertEquals(input.cursorPos, 7);
 
   await new Promise(resolve => setTimeout(resolve, 150));
-  assertEquals(input.value, "copied text 1[3 ]");
+  assertEquals(input.value, "copied text 1 [7 chars]");
 });
 
 Deno.test("TextArea - newline in burst", async () => {
   const textarea = new TextArea("test");
-  textarea.burstThreshold = 3;  // line threshold: trigger when > 3 lines
+  textarea.burstThreshold = 3;  // char threshold: trigger when > 3 chars
 
   const mods = { ctrl: false, alt: false, shift: false };
   textarea.onKey!("a", mods);
@@ -64,17 +64,17 @@ Deno.test("TextArea - newline in burst", async () => {
   textarea.onKey!("c", mods);
   textarea.onKey!("Enter", mods);
   textarea.onKey!("d", mods);
-  // 4 lines: a\nb\nc\nd
+  // 7 chars: a\nb\nc\nd
 
   assertEquals(textarea.value, "a\nb\nc\nd");
   
   await new Promise(resolve => setTimeout(resolve, 150));
-  assertEquals(textarea.value, "copied text 1[4 ]");
+  assertEquals(textarea.value, "copied text 1 [7 chars]");
 });
 
 Deno.test("InputPrimitive - non-char key finalizes burst immediately", () => {
   const input = new MockInput("test");
-  input.burstThreshold = 3;  // line threshold: trigger when > 3 lines
+  input.burstThreshold = 3;  // char threshold: trigger when > 3 chars
 
   const mods = { ctrl: false, alt: false, shift: false };
   input.onKey!("a", mods);
@@ -83,11 +83,11 @@ Deno.test("InputPrimitive - non-char key finalizes burst immediately", () => {
   input.onKey!("Enter", mods);
   input.onKey!("c", mods);
   input.onKey!("Enter", mods);
-  input.onKey!("d", mods);  // 4 lines: a\nb\nc\nd
+  input.onKey!("d", mods);  // 7 chars: a\nb\nc\nd
 
   assertEquals(input.value, "a\nb\nc\nd");
   input.onKey!("ArrowLeft", mods);
-  assertEquals(input.value, "copied text 1[4 ]");
+  assertEquals(input.value, "copied text 1 [7 chars]");
 });
 
 Deno.test("InputPrimitive - multi-byte character navigation", () => {
@@ -122,8 +122,8 @@ Deno.test("InputPrimitive - multi-byte character navigation", () => {
 
 Deno.test("InputPrimitive - delete/backspace paste ranges", () => {
   const input = new MockInput("test", "", "abcMARKERdef");
-  // MARKER is "copied text 1[10 ]" (length 18)
-  const marker = "copied text 1[10 ]";
+  // MARKER is "copied text 1 [10 chars]" (length 23)
+  const marker = "copied text 1 [10 chars]";
   input.value = "abc" + marker + "def";
   input.cursorPos = 3 + marker.length; // after marker
 

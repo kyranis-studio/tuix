@@ -23,6 +23,23 @@ export abstract class InputPrimitive extends Box {
   protected _appRef: AppOverlayRef | null = null;
   private _pasteCount = 0;
 
+  // Palette of foreground colors for paste marker shading (cycles)
+  private static _PASTE_SHADES: Array<{ r: number; g: number; b: number }> = [
+    { r: 160, g: 120, b: 255 },   // purple
+    { r: 255, g: 170, b: 80 },    // orange
+    { r: 80, g: 180, b: 255 },    // blue
+    { r: 255, g: 130, b: 170 },   // pink
+    { r: 120, g: 230, b: 120 },   // green
+    { r: 255, g: 210, b: 80 },    // gold
+    { r: 200, g: 140, b: 220 },   // lavender
+    { r: 100, g: 220, b: 220 },   // teal
+  ];
+
+  /** Get the shade color for a paste marker by its 1-based paste index. */
+  static getPasteShade(index: number): { r: number; g: number; b: number } {
+    return InputPrimitive._PASTE_SHADES[(index - 1) % InputPrimitive._PASTE_SHADES.length];
+  }
+
   // Burst tracking — detect terminal paste via fast-arriving key events
   private _burstPos = -1;
   private _burstText = "";
@@ -239,10 +256,9 @@ export abstract class InputPrimitive extends Box {
     }
     if (this.burstThreshold === null || this._burstPos < 0) return;
 
-    const lineCount = this._burstText.split('\n').length;
-    if (!this._burstReplaced && lineCount > this.burstThreshold) {
+    if (!this._burstReplaced && this._burstText.length > this.burstThreshold) {
       this._pasteCount++;
-      const marker = `copied text ${this._pasteCount}[${lineCount} ]`;
+      const marker = `copied text ${this._pasteCount} [${this._burstText.length} chars]`;
       const valBefore = this.value;
 
       const actualText = valBefore.slice(
@@ -279,11 +295,8 @@ export abstract class InputPrimitive extends Box {
     key: string,
     modifiers: { ctrl: boolean; alt: boolean; shift: boolean },
   ): boolean {
-    // Copy: Ctrl+Shift+C or Alt+C
-    if (
-      (key === "c" && modifiers.ctrl && modifiers.shift) ||
-      (key === "c" && modifiers.alt)
-    ) {
+    // Copy: Ctrl+Shift+C (terminal default)
+    if (key === "c" && modifiers.ctrl && modifiers.shift) {
       if (this._hasSelection()) {
         const start = Math.min(this._selStart, this._selEnd);
         const end = Math.max(this._selStart, this._selEnd);
@@ -304,11 +317,8 @@ export abstract class InputPrimitive extends Box {
       return true;
     }
 
-    // Paste: Ctrl+Shift+V or Alt+V
-    if (
-      (key === "v" && modifiers.ctrl && modifiers.shift) ||
-      (key === "v" && modifiers.alt)
-    ) {
+    // Paste: Ctrl+V or Ctrl+Shift+V (terminal default)
+    if (key === "v" && modifiers.ctrl) {
       this._pasteAtCursor();
       return true;
     }
@@ -486,10 +496,9 @@ export abstract class InputPrimitive extends Box {
         this.value.slice(insertPos);
       this.cursorPos = insertPos + text.length;
 
-      const lineCount = text.split('\n').length;
-      if (this.burstThreshold !== null && lineCount > this.burstThreshold) {
+      if (this.burstThreshold !== null && text.length > this.burstThreshold) {
         this._pasteCount++;
-        const marker = `copied text ${this._pasteCount}[${lineCount} ]`;
+        const marker = `copied text ${this._pasteCount} [${text.length} chars]`;
         this.value =
           this.value.slice(0, insertPos) +
           marker +
@@ -503,12 +512,16 @@ export abstract class InputPrimitive extends Box {
   }
 
   /** Scan the value for paste marker blocks. */
-  protected _findPasteRanges(): Array<{start: number; end: number}> {
-    const ranges: Array<{start: number; end: number}> = [];
-    const re = /copied text \d+\[\d+ \]/g;
+  protected _findPasteRanges(): Array<{start: number; end: number; pasteIndex: number}> {
+    const ranges: Array<{start: number; end: number; pasteIndex: number}> = [];
+    const re = /copied text (\d+) \[(\d+) chars]/g;
     let match;
     while ((match = re.exec(this.value)) !== null) {
-      ranges.push({ start: match.index, end: match.index + match[0].length });
+      ranges.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        pasteIndex: parseInt(match[1], 10),
+      });
     }
     return ranges;
   }

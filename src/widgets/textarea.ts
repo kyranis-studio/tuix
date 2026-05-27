@@ -213,6 +213,12 @@ export class TextArea extends InputPrimitive {
       const pasteRanges = this._findPasteRanges();
       const inPasteRange = (idx: number) =>
         pasteRanges.some((r) => idx >= r.start && idx < r.end);
+      const pasteShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+        for (const r of pasteRanges) {
+          if (idx >= r.start && idx < r.end) return InputPrimitive.getPasteShade(r.pasteIndex);
+        }
+        return null;
+      };
 
       for (let row = 0; row < ch; row++) {
         const lineIdx = this.scrollY + row;
@@ -248,9 +254,10 @@ export class TextArea extends InputPrimitive {
                 bold: true,
               });
             } else if (isMarker) {
+              const shade = pasteShadeAt(charIdx);
               buf.set(rect.x + col, rect.y + row, {
                 char: line[col],
-                fg: theme.muted,
+                fg: shade ?? theme.muted,
                 bg,
                 bold: true,
               });

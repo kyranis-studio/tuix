@@ -101,6 +101,12 @@ export class TextInput extends InputPrimitive {
     const pasteRanges = this._findPasteRanges();
     const inPasteRange = (idx: number) =>
       pasteRanges.some((r) => idx >= r.start && idx < r.end);
+    const pasteShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+      for (const r of pasteRanges) {
+        if (idx >= r.start && idx < r.end) return InputPrimitive.getPasteShade(r.pasteIndex);
+      }
+      return null;
+    };
 
     for (let i = 0; i < maxW; i++) {
       const charIdx = this.scrollX + i - leftOffset;
@@ -133,9 +139,10 @@ export class TextInput extends InputPrimitive {
             bold: true,
           });
         } else if (isMarker) {
+          const shade = pasteShadeAt(charIdx);
           buf.set(rect.x + i, rect.y, {
             char: ch,
-            fg: theme.muted,
+            fg: shade ?? theme.muted,
             bg: theme.panelBg,
             bold: true,
           });
