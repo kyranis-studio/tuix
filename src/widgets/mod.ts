@@ -3,6 +3,9 @@ export { SmallButton } from "./small_button.ts";
 
 export { Checkbox } from "./checkbox.ts";
 
+export { InputPrimitive } from "./input_primitive.ts";
+export type { AppOverlayRef } from "./input_primitive.ts";
+
 export { TextInput } from "./text_input.ts";
 
 export { ListBox } from "./listbox.ts";

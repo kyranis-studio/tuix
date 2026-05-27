@@ -1,6 +1,6 @@
 # TextArea
 
-A multi-line text editor with scrollbar, cursor navigation, line-based operations, and clipboard support.
+A multi-line text editor with scrollbar, cursor navigation, line-based operations, clipboard support, multi-byte/emoji support, and burst protection.
 
 ```typescript
 import { TextArea } from "jsr:@kyranis-studio/tuix";
@@ -19,6 +19,7 @@ const ta = new TextArea(
   true,                        // copyOnSelect
   true,                        // notifyOnCopy
   "✓ Copied!",                 // copy notification message
+  200,                         // burstThreshold — replace bursts >200 chars
 );
 ```
 
@@ -31,18 +32,30 @@ const ta = new TextArea(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy selected text |
 | `notifyOnCopy` | `boolean` | `false` | Show toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
+| `burstThreshold` | `number` | `null` | Max input burst length (null = no limit) |
+
+---
+
+## Key Features
+
+- **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold`. If a burst exceeds the limit, it's replaced by an interactive marker `copied text N[length ]` to protect UI performance.
+- **📝 Multi-line Bursts**: In `TextArea`, newlines are tracked as part of input bursts. This means a multi-line paste from the terminal is detected as a single burst and replaced by a single marker.
+- **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (line) selection.
 
 ---
 
 ## Interaction
 
+### Keyboard
+
 | Key | Action |
 |-----|--------|
-| Printable char | Insert at cursor |
-| `Enter` | Newline at cursor |
-| `Backspace` | Delete char before cursor |
-| `Delete` | Delete char after cursor |
-| `ArrowLeft` / `ArrowRight` | Move cursor horizontally |
+| Printable char | Insert at cursor (replaces selection if active) |
+| `Enter` | Newline at cursor (tracked in bursts) |
+| `Backspace` | Delete character before cursor (or delete selection) |
+| `Delete` | Delete character after cursor (or delete selection) |
+| `ArrowLeft` / `ArrowRight` | Move cursor character-by-character |
 | `ArrowUp` / `ArrowDown` | Move cursor vertically (same column) |
 | `Home` | Start of line |
 | `End` | End of line |
@@ -58,20 +71,33 @@ const ta = new TextArea(
 | Action | Behavior |
 |--------|----------|
 | Left-click | Position cursor at click location |
-| Drag left button | Select text (auto-copies on release) |
+| Double-click | Select the word under cursor |
+| Triple-click | Select the current line |
+| Drag left button | Select text (auto-copies on release if `copyOnSelect` is true) |
 | Right-click release | Paste from clipboard |
+
+---
+
+## Burst Protection
+
+When `burstThreshold` is set, input arriving in a fast burst (like a terminal paste) that exceeds the threshold is replaced by an inline `copied text N[length ]` marker. This prevents the UI from freezing or lagging when handling extremely large volumes of text. These markers are interactive:
+
+- They are rendered in **bold** to distinguish them from regular text.
+- They can be deleted as a single unit using Backspace (at the end) or Delete (at the start).
+- You can freely type text between or beside them.
 
 ---
 
 ## Properties
 
 ```typescript
-ta.value;           // Full text content (\\n-separated)
-ta.placeholder;     // Placeholder text
-ta.cursorPos;       // Global cursor position (0 to value.length)
-ta.minRows;         // Minimum visible rows (default 3)
-ta.maxLines;        // Maximum visible rows (null = unlimited)
-ta.onChange;        // (val: string) => void
+ta.value;              // Full text content (\n-separated)
+ta.placeholder;        // Placeholder text
+ta.cursorPos;          // Global cursor position (string index)
+ta.minRows;            // Minimum visible rows (default 3)
+ta.maxLines;           // Maximum visible rows (null = unlimited)
+ta.burstThreshold;     // Max burst length (null = no limit)
+ta.onChange;           // (val: string) => void
 ```
 
 The height auto-adjusts to content up to `maxLines`. A scrollbar is rendered in the rightmost column when content exceeds visible rows.

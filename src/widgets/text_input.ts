@@ -1,25 +1,9 @@
-import { Box } from "../layout.ts";
-import { copyToClipboard, pasteFromClipboard } from "../clipboard.ts";
-import { Notification } from "./notification.ts";
+import { Rect } from "../layout.ts";
+import { CellBuffer } from "../terminal.ts";
+import { Theme } from "../theme.ts";
+import { InputPrimitive } from "./input_primitive.ts";
 
-export class TextInput extends Box {
-  value = "";
-  placeholder = "";
-  cursorPos = 0;
-  onChange: ((val: string) => void) | null = null;
-  onSubmit: ((val: string) => void) | null = null;
-  copyOnSelect: boolean;
-  notifyOnCopy: boolean;
-  copyNotificationMessage: string;
-  private _appRef: {
-    showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
-    removeOverlay: (box: Box) => void;
-  } | null = null;
-
-  // Selection state for mouse drag-to-select
-  private _selStart = -1;
-  private _selEnd = -1;
-
+export class TextInput extends InputPrimitive {
   constructor(
     placeholder = "",
     value = "",
@@ -27,20 +11,18 @@ export class TextInput extends Box {
     copyOnSelect = false,
     notifyOnCopy = false,
     copyNotificationMessage = "Copied!",
+    burstThreshold?: number,
   ) {
-    super("Input");
-    this.focusable = true;
-    this.tabIndex = 0;
-    this.placeholder = placeholder;
-    this.value = value;
-    this.cursorPos = 0;
-    this.onChange = onChange ?? null;
-    this.copyOnSelect = copyOnSelect;
-    this.notifyOnCopy = notifyOnCopy;
-    this.copyNotificationMessage = copyNotificationMessage;
-
-    this.style.border = "single";
-    this.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+    super(
+      "Input",
+      placeholder,
+      value,
+      onChange ?? null,
+      copyOnSelect,
+      notifyOnCopy,
+      copyNotificationMessage,
+    );
+    this.burstThreshold = burstThreshold ?? null;
     this.height = { fixed: 3 };
 
     this.onFocus = () => {
@@ -48,49 +30,26 @@ export class TextInput extends Box {
     };
 
     this.onPaint = (buf, rect, theme) => {
-      const isFocused = this.focused;
-      const showPlaceholder = !this.value;
-      const displayText = showPlaceholder ? this.placeholder : this.value;
-      const fg = showPlaceholder ? theme.muted : theme.text;
+      this.renderContent(buf, rect, theme);
+    };
+  }
+
+  renderContent(buf: CellBuffer, rect: Rect, theme: Theme): void {
+    const isFocused = this.focused;
+    const showPlaceholder = !this.value;
+
+    if (showPlaceholder) {
+      const fg = theme.muted;
       const bg = theme.panelBg;
-
-      const selActive = this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd;
-      const selMin = selActive ? Math.min(this._selStart, this._selEnd) : -1;
-      const selMax = selActive ? Math.max(this._selStart, this._selEnd) : -1;
-
       for (let i = 0; i < rect.width; i++) {
-        const inSel = selActive && i >= selMin && i < selMax;
         const isCursorHere = isFocused && i === this.cursorPos;
-
-        if (i < displayText.length) {
-          if (inSel && isCursorHere) {
-            // Cursor within selection: brighter block
-            buf.set(rect.x + i, rect.y, {
-              char: displayText[i],
-              fg: theme.highlight,
-              bg: theme.text,
-              bold: true,
-            });
-          } else if (inSel) {
-            buf.set(rect.x + i, rect.y, {
-              char: displayText[i],
-              fg: theme.bg,
-              bg: theme.highlight,
-            });
-          } else if (isCursorHere) {
-            buf.set(rect.x + i, rect.y, {
-              char: displayText[i],
-              fg: bg,
-              bg: fg,
-              bold: true,
-            });
-          } else {
-            buf.set(rect.x + i, rect.y, {
-              char: displayText[i],
-              fg,
-              bg,
-            });
-          }
+        if (i < this.placeholder.length) {
+          buf.set(rect.x + i, rect.y, {
+            char: this.placeholder[i],
+            fg: isCursorHere ? bg : fg,
+            bg: isCursorHere ? fg : bg,
+            bold: isCursorHere,
+          });
         } else if (isCursorHere) {
           buf.set(rect.x + i, rect.y, {
             char: " ",
@@ -101,154 +60,145 @@ export class TextInput extends Box {
           buf.set(rect.x + i, rect.y, { char: " ", fg, bg });
         }
       }
-    };
+      return;
+    }
 
-    this.onKey = (key, modifiers) => {
-      // Any keyboard input clears the text selection
-      this._selStart = -1;
-      this._selEnd = -1;
+    // ── Overflow handling with "..." ─────────────────────────
+    const maxW = rect.width;
+    const textLen = this.value.length;
 
-      // ── Copy/Paste ───────────────────────────────────────────────────
-      // Mouse selection auto-copies on release. Right-click pastes.
-      // Keyboard alternatives (Alt+C / Alt+V) — these don't conflict with
-      // terminal emulators which typically intercept Ctrl+Shift+C/V.
-      // Ctrl+Shift+C/V are also kept for terminals with Kitty keyboard
-      // protocol (which can distinguish shift from non-shift on Ctrl keys).
+    // Auto-scroll to keep cursor visible
+    this._ensureCursorVisible(maxW, textLen);
 
-      // Ctrl+Shift+C: copy (terminals with Kitty protocol)
-      if (key === "c" && modifiers.ctrl && modifiers.shift) {
-        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
-          const start = Math.min(this._selStart, this._selEnd);
-          const end = Math.max(this._selStart, this._selEnd);
-          copyToClipboard(this.value.slice(start, end));
+    const leftEllipsis = this.scrollX > 0;
+    const rightEllipsis = this.scrollX + maxW < textLen;
+
+    // Build visible slice
+    let displayText = this.value.slice(this.scrollX, this.scrollX + maxW);
+    let cursorScreenX = this.cursorPos - this.scrollX;
+    let leftOffset = 0;
+    const minW = 4; // minimum width to show ellipsis
+
+    if (leftEllipsis && rightEllipsis && maxW >= minW + 2) {
+      displayText = ".." + displayText.slice(2, maxW - 2) + "..";
+      leftOffset = 2;
+      cursorScreenX += 2;
+    } else if (leftEllipsis && maxW >= minW) {
+      displayText = ".." + displayText.slice(2);
+      leftOffset = 2;
+      cursorScreenX += 2;
+    } else if (rightEllipsis && maxW >= minW) {
+      displayText = displayText.slice(0, maxW - 2) + "..";
+    }
+
+    const selActive = this._hasSelection();
+    const selMin = selActive
+      ? Math.min(this._selStart, this._selEnd)
+      : -1;
+    const selMax = selActive
+      ? Math.max(this._selStart, this._selEnd)
+      : -1;
+    const pasteRanges = this._findPasteRanges();
+    const inPasteRange = (idx: number) =>
+      pasteRanges.some((r) => idx >= r.start && idx < r.end);
+
+    for (let i = 0; i < maxW; i++) {
+      const charIdx = this.scrollX + i - leftOffset;
+      const inSel =
+        selActive && charIdx >= selMin && charIdx < selMax;
+      const isCursorHere =
+        isFocused && i === cursorScreenX;
+      const isMarker = !inSel && !isCursorHere && inPasteRange(charIdx);
+
+      if (i < displayText.length) {
+        const ch = displayText[i];
+        if (inSel && isCursorHere) {
+          buf.set(rect.x + i, rect.y, {
+            char: ch,
+            fg: theme.panelBg,
+            bg: theme.text,
+            bold: true,
+          });
+        } else if (inSel) {
+          buf.set(rect.x + i, rect.y, {
+            char: ch,
+            fg: theme.bg,
+            bg: theme.highlight,
+          });
+        } else if (isCursorHere) {
+          buf.set(rect.x + i, rect.y, {
+            char: ch,
+            fg: theme.panelBg,
+            bg: theme.text,
+            bold: true,
+          });
+        } else if (isMarker) {
+          buf.set(rect.x + i, rect.y, {
+            char: ch,
+            fg: theme.muted,
+            bg: theme.panelBg,
+            bold: true,
+          });
         } else {
-          copyToClipboard(this.value);
+          buf.set(rect.x + i, rect.y, {
+            char: ch,
+            fg: theme.text,
+            bg: theme.panelBg,
+          });
         }
-        return;
-      }
-
-      // Ctrl+Shift+V: paste (terminals with Kitty protocol)
-      if (key === "v" && modifiers.ctrl && modifiers.shift) {
-        pasteFromClipboard().then((text) => {
-          if (text) {
-            this.value =
-              this.value.slice(0, this.cursorPos) +
-              text +
-              this.value.slice(this.cursorPos);
-            this.cursorPos += text.length;
-            if (this.onChange) this.onChange(this.value);
-          }
+      } else if (isCursorHere) {
+        buf.set(rect.x + i, rect.y, {
+          char: " ",
+          fg: theme.panelBg,
+          bg: theme.highlight,
         });
-        return;
-      }
-
-      // Alt+C: copy (works on all terminal emulators)
-      if (key === "c" && modifiers.alt) {
-        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
-          const start = Math.min(this._selStart, this._selEnd);
-          const end = Math.max(this._selStart, this._selEnd);
-          copyToClipboard(this.value.slice(start, end));
-        } else {
-          copyToClipboard(this.value);
-        }
-        return;
-      }
-
-      // Alt+V: paste (works on all terminal emulators)
-      if (key === "v" && modifiers.alt) {
-        pasteFromClipboard().then((text) => {
-          if (text) {
-            this.value =
-              this.value.slice(0, this.cursorPos) +
-              text +
-              this.value.slice(this.cursorPos);
-            this.cursorPos += text.length;
-            if (this.onChange) this.onChange(this.value);
-          }
+      } else {
+        buf.set(rect.x + i, rect.y, {
+          char: " ",
+          fg: theme.text,
+          bg: theme.panelBg,
         });
-        return;
       }
-
-      if (key === "Backspace") {
-        if (this.cursorPos > 0) {
-          this.value = this.value.slice(0, this.cursorPos - 1) + this.value.slice(this.cursorPos);
-          this.cursorPos--;
-          if (this.onChange) this.onChange(this.value);
-        }
-      } else if (key === "Enter") {
-        if (this.onSubmit) this.onSubmit(this.value);
-      } else if (key === "ArrowLeft") {
-        if (this.cursorPos > 0) this.cursorPos--;
-      } else if (key === "ArrowRight") {
-        if (this.cursorPos < this.value.length) this.cursorPos++;
-      } else if (key === "Home") {
-        this.cursorPos = 0;
-      } else if (key === "End") {
-        this.cursorPos = this.value.length;
-      } else if (key.length === 1 && !modifiers.ctrl && !modifiers.alt) {
-        this.value = this.value.slice(0, this.cursorPos) + key + this.value.slice(this.cursorPos);
-        this.cursorPos++;
-        if (this.onChange) this.onChange(this.value);
-      }
-    };
-
-    this.onMouse = (col, row, action, button) => {
-      const hasBorder = this.style.border !== "none";
-      const bOff = hasBorder ? 1 : 0;
-      const p = this.style.padding;
-      const contentX = this.rect.x + bOff + p.left;
-      const contentY = this.rect.y + bOff + p.top;
-
-      // Right-click: paste from clipboard at cursor position
-      if (button === 2 && action === "release") {
-        pasteFromClipboard().then((text) => {
-          if (text) {
-            this.value =
-              this.value.slice(0, this.cursorPos) +
-              text +
-              this.value.slice(this.cursorPos);
-            this.cursorPos += text.length;
-            if (this.onChange) this.onChange(this.value);
-          }
-        });
-        return;
-      }
-
-      if (button !== 0) return;
-
-      const relCol = col - contentX;
-      const pos = Math.max(0, Math.min(relCol, this.value.length));
-      this.cursorPos = pos;
-
-      if (action === "press") {
-        this._selStart = pos;
-        this._selEnd = pos;
-      } else if (action === "move") {
-        this._selEnd = pos;
-      } else if (action === "release") {
-        if (this._selStart >= 0 && this._selEnd >= 0 && this._selStart !== this._selEnd) {
-          const start = Math.min(this._selStart, this._selEnd);
-          const end = Math.max(this._selStart, this._selEnd);
-          const selected = this.value.slice(start, end);
-          copyToClipboard(selected);
-          if (this.notifyOnCopy && this._appRef) {
-            const notif = new Notification(this.copyNotificationMessage, "info", 1500);
-            this._appRef.showOverlay(notif, { modal: false });
-            notif.removeFn = () => this._appRef!.removeOverlay(notif);
-            notif.show();
-          }
-        }
-      }
-    };
+    }
   }
 
-  /** Reference to the App for showing overlay notifications on copy. */
-  set appRef(
-    ref: {
-      showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
-      removeOverlay: (box: Box) => void;
-    } | null,
-  ) {
-    this._appRef = ref;
+  protected override _mouseToCursor(
+    col: number,
+    _row: number,
+    contentX: number,
+    _contentY: number,
+  ): number | null {
+    const maxW = this._contentWidth();
+    const leftEllipsis = this.scrollX > 0;
+    const leftOff = leftEllipsis ? 2 : 0;
+    const relCol = col - contentX;
+    let pos = this.scrollX + relCol - leftOff;
+    if (pos < 0) pos = 0;
+    if (pos > this.value.length) pos = this.value.length;
+    return pos;
+  }
+
+  private _contentWidth(): number {
+    const hasBorder = this.style.border !== "none";
+    const bOff = hasBorder ? 2 : 0;
+    const p = this.style.padding;
+    return Math.max(0, this.rect.width - bOff - p.left - p.right);
+  }
+
+  private _ensureCursorVisible(maxW: number, textLen: number): void {
+    const cursorScreenX = this.cursorPos - this.scrollX;
+    const margin = 2;
+    if (cursorScreenX < margin) {
+      this.scrollX = Math.max(0, this.cursorPos - margin);
+    } else if (cursorScreenX >= maxW - margin) {
+      this.scrollX = Math.min(
+        Math.max(0, textLen - maxW),
+        this.cursorPos - maxW + margin,
+      );
+    }
+    this.scrollX = Math.max(
+      0,
+      Math.min(this.scrollX, Math.max(0, textLen - maxW)),
+    );
   }
 }

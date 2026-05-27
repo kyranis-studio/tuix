@@ -564,26 +564,48 @@ autoInline.mode = "inline";
 
 const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
 
+const longTextInput = new TextInput(
+  "",
+  "A very long text that overflows the input field width — use ArrowLeft/Right or Home/End to scroll through the content. The overflow shows ... at the start/end when text doesn't fit.",
+);
+const pasteThreshTextArea = new TextArea(
+  "Paste >50 chars via terminal Ctrl+Shift+V to see marker...",
+  "",
+  undefined,
+  3,
+  false,
+  false,
+  "Copied!",
+  50,
+);
+
 const copyInput = new TextInput("", "Select text with mouse — auto-copies to clipboard");
 const pasteInput = new TextInput("Right-click here to paste from clipboard");
 
 const copyOnSelectInput = new TextInput("", "Select me — auto-copies ✓", undefined, true, true, "✧ Copied!");
 
 const cpHint = new Box("cp-hint");
-cpHint.height = { fixed: 2 };
+cpHint.height = { fixed: 3 };
 cpHint.onPaint = (_buf, rect, theme) => {
   paintText(
     _buf,
     rect,
-    "  Select text with mouse → auto-copies · Right-click to paste · Alt+C to copy · Alt+V to paste",
+    "  Select text → auto-copies · Right-click paste · Backspace/Delete deletes selection",
     0,
     theme.muted,
   );
   paintText(
     _buf,
     rect,
-    "  Tip: If terminal captures Ctrl+Shift+C/V, use Alt instead. Or select text & it auto-copies.",
+    "  Double-click to select a word · Triple-click to select the line · Arrow keys scroll overflow",
     1,
+    theme.muted,
+  );
+  paintText(
+    _buf,
+    rect,
+    "  Paste threshold — fast paste (Ctrl+Shift+V or right-click) > threshold inserts bold marker, edit/delete.",
+    2,
     theme.muted,
   );
 };
@@ -603,7 +625,9 @@ textStatus.onPaint = (_buf, rect, theme) => {
 };
 
 textScroll.add(
-  lbl("TextInput:"),
+  lbl("TextInput (overflow scrolls with ...):"),
+  longTextInput,
+  lbl("TextInput (standard):"),
   textInput,
   lbl("Autocomplete (dropdown mode):"),
   autoDropdown,
@@ -611,6 +635,8 @@ textScroll.add(
   autoInline,
   lbl("TextArea (multi-line):"),
   textArea,
+  lbl("TextArea (burstThreshold=50 — paste >50 chars inserts bold marker block into content):"),
+  pasteThreshTextArea,
   cpHint,
   lbl("Copy/Paste — select text with mouse (auto-copied) from here:"),
   copyInput,
@@ -1265,7 +1291,7 @@ statusBar.style.bg = defaultTheme.bg;
 statusBar.onPaint = (_buf, rect, theme) => {
   _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
   const hint =
-    " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Spc: toggle  |  Esc: close  |  Ctrl+C: quit  |  Mouse select: copy";
+    " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Db-clk: word  |  Trpl-clk: line  |  Esc: close  |  Ctrl+C: quit";
   for (let i = 0; i < hint.length && i < rect.width; i++)
     _buf.set(rect.x + i, rect.y, {
       char: hint[i],

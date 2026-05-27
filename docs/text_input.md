@@ -1,6 +1,6 @@
 # TextInput
 
-A single-line text input field with cursor, text selection, clipboard copy/paste, and placeholder support.
+A single-line text input field with cursor, text selection, clipboard copy/paste, placeholder support, multi-byte/emoji support, burst protection, and overflow scrolling.
 
 ```typescript
 import { TextInput } from "jsr:@kyranis-studio/tuix";
@@ -18,6 +18,7 @@ const input = new TextInput(
   true,                      // copyOnSelect — auto-copy selected text
   true,                      // notifyOnCopy — show "Copied!" toast
   "✓ Copied!",               // custom copy notification message
+  50,                        // burstThreshold — replace large pastes with marker
 );
 ```
 
@@ -29,17 +30,29 @@ const input = new TextInput(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy to clipboard on selection |
 | `notifyOnCopy` | `boolean` | `false` | Show notification toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
+| `burstThreshold` | `number` | `null` | Max input burst length (null = no limit) |
+
+---
+
+## Key Features
+
+- **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold`. If a burst exceeds the limit, it's replaced by an interactive marker `copied text N[length ]` to protect UI performance.
+- **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (entire text) selection.
 
 ---
 
 ## Interaction
 
+### Keyboard
+
 | Key | Action |
 |-----|--------|
-| Printable char | Insert at cursor |
-| `Backspace` | Delete char before cursor |
+| Printable char | Insert at cursor (replaces selection if active) |
+| `Backspace` | Delete character before cursor (or delete selection) |
+| `Delete` | Delete character after cursor (or delete selection) |
 | `Enter` | Fire `onSubmit` |
-| `ArrowLeft` / `ArrowRight` | Move cursor |
+| `ArrowLeft` / `ArrowRight` | Move cursor character-by-character (scrolls overflow text) |
 | `Home` / `End` | Jump to start / end |
 | `Alt+C` | Copy selection (or all text) |
 | `Alt+V` | Paste from clipboard |
@@ -51,20 +64,34 @@ const input = new TextInput(
 | Action | Behavior |
 |--------|----------|
 | Left-click | Position cursor |
-| Drag left button | Select text (auto-copies on release) |
+| Double-click | Select the word under cursor |
+| Triple-click | Select entire text |
+| Drag left button | Select text (auto-copies on release if `copyOnSelect` is true) |
 | Right-click release | Paste from clipboard at cursor |
+
+---
+
+## Overflow Scrolling
+
+When the text exceeds the available width:
+
+- `scrollX` tracks the horizontal offset into the text.
+- `..` ellipsis indicators appear at the left and/or right boundaries.
+- Arrow keys auto-scroll to keep the cursor visible.
+- `Home`/`End` jump to the start/end of the text.
 
 ---
 
 ## Properties
 
 ```typescript
-input.value;          // Current text
-input.placeholder;    // Placeholder text
-input.cursorPos;      // Cursor position (0-indexed)
-input.copyOnSelect;   // Auto-copy on selection
-input.onChange;       // (val: string) => void
-input.onSubmit;       // (val: string) => void — Enter key
+input.value;            // Current text
+input.placeholder;      // Placeholder text
+input.cursorPos;        // Cursor position (string index)
+input.burstThreshold;   // Current burst threshold
+input.copyOnSelect;     // Auto-copy on selection
+input.onChange;         // (val: string) => void
+input.onSubmit;         // (val: string) => void — Enter key
 ```
 
 Selection is highlighted with `theme.highlight` background and `theme.bg` foreground. The cursor renders as an inverted block over the character.
