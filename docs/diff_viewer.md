@@ -55,6 +55,18 @@ dv.setDiffContent(content: string): void;
 ```
 Update the displayed diff content. Parses the unified diff string and re-renders with appropriate colours.
 
+### Scrolling
+
+The `DiffViewer` is a read-only view — arrow keys and page keys scroll the viewport rather than moving a cursor. Scrollbar with up/down arrows is drawn on the right edge. Both mouse wheel and keyboard scrolling are supported.
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Scroll up/down one line |
+| `PageUp` / `PageDown` | Scroll by 80% of viewport |
+| `Ctrl`+`Home` | Scroll to top |
+| `Ctrl`+`End` | Scroll to bottom |
+| Mouse wheel | Vertical scroll (3 lines per tick) |
+
 ### Properties
 
 ```typescript
@@ -87,7 +99,9 @@ Recompute and display the split diff between two texts.
 sv.diffTheme: DiffTheme;  // Customize colours
 ```
 
-### Keyboard Navigation
+### Scrolling
+
+The `SplitDiffViewer` supports both keyboard and mouse wheel scrolling. A scrollbar with up/down arrows is drawn on the right edge.
 
 | Key | Action |
 |-----|--------|
@@ -95,6 +109,9 @@ sv.diffTheme: DiffTheme;  // Customize colours
 | `PageUp` / `PageDown` | Scroll by 80% of viewport |
 | `Home` | Scroll to top |
 | `End` | Scroll to bottom |
+| Mouse wheel | Vertical scroll (3 lines per tick) |
+
+*Note: Focus the SplitDiffViewer by clicking or tabbing to it for keyboard scrolling. Mouse wheel works without focus.*
 
 ---
 

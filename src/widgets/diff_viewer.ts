@@ -359,7 +359,6 @@ export function computeSplitDiff(
  */
 export class SplitDiffViewer extends Box {
   private _rows: SplitDiffRow[] = [];
-  private _scrollY = 0;
 
   /** Custom diff colour palette (shares DiffTheme). */
   diffTheme: DiffTheme = { ...defaultDiffTheme };
@@ -374,42 +373,38 @@ export class SplitDiffViewer extends Box {
   /** Update with new old/new texts and recompute the split diff. */
   setDiffContent(oldText: string, newText: string): void {
     this._rows = computeSplitDiff(oldText, newText);
-    this._scrollY = 0;
+    this.scrollY = 0;
   }
 
   private _handleKey(k: string): boolean {
+    const maxY = this.scrollMaxY;
     if (k === "ArrowUp") {
-      this._scrollY = Math.max(0, this._scrollY - 1);
+      this.scrollY = Math.max(0, this.scrollY - 1);
       return true;
     }
     if (k === "ArrowDown") {
-      this._scrollY = Math.min(this._maxScrollY(), this._scrollY + 1);
+      this.scrollY = Math.min(maxY, this.scrollY + 1);
       return true;
     }
     if (k === "PageUp") {
       const ch = this.rect?.height ?? 10;
-      this._scrollY = Math.max(0, this._scrollY - Math.floor(ch * 0.8));
+      this.scrollY = Math.max(0, this.scrollY - Math.floor(ch * 0.8));
       return true;
     }
     if (k === "PageDown") {
       const ch = this.rect?.height ?? 10;
-      this._scrollY = Math.min(this._maxScrollY(), this._scrollY + Math.floor(ch * 0.8));
+      this.scrollY = Math.min(maxY, this.scrollY + Math.floor(ch * 0.8));
       return true;
     }
     if (k === "Home") {
-      this._scrollY = 0;
+      this.scrollY = 0;
       return true;
     }
     if (k === "End") {
-      this._scrollY = this._maxScrollY();
+      this.scrollY = maxY;
       return true;
     }
     return false;
-  }
-
-  private _maxScrollY(): number {
-    const ch = this.rect?.height ?? 10;
-    return Math.max(0, this._rows.length - ch + 1);
   }
 
   private _renderSplit(
@@ -420,6 +415,10 @@ export class SplitDiffViewer extends Box {
     const bg = theme.panelBg;
     const ch = rect.height;
     const w = rect.width;
+
+    // Update scroll range based on current viewport height
+    this.scrollMaxY = Math.max(0, this._rows.length - ch + 1);
+    this.scrollY = Math.min(this.scrollY, this.scrollMaxY);
 
     // ── Layout dimensions ─────────────────────────────────────
     const lineNumW = 5; // right-aligned line number (e.g. " 123") + space
@@ -455,7 +454,7 @@ export class SplitDiffViewer extends Box {
 
     // ── Render rows ──────────────────────────────────────────
     for (let row = 0; row < ch; row++) {
-      const rowIdx = this._scrollY + row;
+      const rowIdx = this.scrollY + row;
       if (rowIdx >= this._rows.length) break;
 
       const r = this._rows[rowIdx];
@@ -502,7 +501,7 @@ export class SplitDiffViewer extends Box {
 
     // ── Scrollbar ───────────────────────────────────────────
     const totalRows = this._rows.length;
-    const maxScroll = this._maxScrollY();
+    const maxScroll = this.scrollMaxY;
     const sbX = rect.x + w - 1;
 
     if (maxScroll <= 0) {
@@ -518,11 +517,11 @@ export class SplitDiffViewer extends Box {
       if (availH > 0) {
         const thumbH = Math.max(1, Math.floor((ch / totalRows) * availH));
         const thumbY = Math.floor(
-          (this._scrollY / maxScroll) * (availH - thumbH),
+          (this.scrollY / maxScroll) * (availH - thumbH),
         );
 
         let sRow = 0;
-        const canUp = this._scrollY > 0;
+        const canUp = this.scrollY > 0;
         buf.set(sbX, rect.y + sRow, {
           char: "↑",
           fg: canUp ? theme.text : theme.muted,
@@ -539,7 +538,7 @@ export class SplitDiffViewer extends Box {
           });
           sRow++;
         }
-        const canDown = this._scrollY < maxScroll;
+        const canDown = this.scrollY < maxScroll;
         buf.set(sbX, rect.y + sRow, {
           char: "↓",
           fg: canDown ? theme.text : theme.muted,
@@ -633,6 +632,41 @@ export class DiffViewer extends TextArea {
     this._parsed = parseDiff(this.value);
   }
 
+  // ── Scroll overrides (read-only view — scroll viewport instead of cursor) ──
+
+  protected override _onArrowUp(): void {
+    this.scrollY = Math.max(0, this.scrollY - 1);
+  }
+
+  protected override _onArrowDown(): void {
+    this.scrollY = Math.min(this.scrollMaxY, this.scrollY + 1);
+  }
+
+  protected override _onHome(modifiers: { ctrl: boolean; alt: boolean; shift: boolean }): void {
+    this.scrollY = 0;
+  }
+
+  protected override _onEnd(modifiers: { ctrl: boolean; alt: boolean; shift: boolean }): void {
+    this.scrollY = Math.max(0, this.scrollMaxY);
+  }
+
+  protected override _onBeforeKey(
+    key: string,
+    _modifiers: { ctrl: boolean; alt: boolean; shift: boolean },
+  ): boolean {
+    if (key === "PageUp") {
+      const ch = this.rect?.height ?? 10;
+      this.scrollY = Math.max(0, this.scrollY - Math.floor(ch * 0.8));
+      return true;
+    }
+    if (key === "PageDown") {
+      const ch = this.rect?.height ?? 10;
+      this.scrollY = Math.min(this.scrollMaxY, this.scrollY + Math.floor(ch * 0.8));
+      return true;
+    }
+    return false;
+  }
+
   // ── Diff rendering ────────────────────────────────────────────
 
   private _renderDiff(
@@ -693,16 +727,6 @@ export class DiffViewer extends TextArea {
     } else {
       const cursorRow = this._cursorRow();
       const cursorCol = this._cursorCol();
-
-      // Scroll to keep cursor visible
-      if (cursorRow < this.scrollY) this.scrollY = cursorRow;
-      else if (cursorRow >= this.scrollY + ch)
-        this.scrollY = cursorRow - ch + 1;
-      this.scrollY = Math.max(
-        0,
-        Math.min(this.scrollY, this.scrollMaxY),
-      );
-
       const lines = this._lines();
       const selActive = this._hasSelection();
       const selMin = selActive
