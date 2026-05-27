@@ -32,14 +32,14 @@ const ta = new TextArea(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy selected text |
 | `notifyOnCopy` | `boolean` | `false` | Show toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
-| `burstThreshold` | `number` | `null` | Max input burst length (null = no limit) |
+| `burstThreshold` | `number` | `null` | Max input burst lines (null = no limit) |
 
 ---
 
 ## Key Features
 
 - **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
-- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold`. If a burst exceeds the limit, it's replaced by an interactive marker `copied text N[length ]` to protect UI performance.
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold` (counts **lines**, not characters). If a burst exceeds the threshold, it's replaced by an interactive marker `copied text N[L ]` where `L` is the line count.
 - **📝 Multi-line Bursts**: In `TextArea`, newlines are tracked as part of input bursts. This means a multi-line paste from the terminal is detected as a single burst and replaced by a single marker.
 - **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (line) selection.
 
@@ -80,7 +80,7 @@ const ta = new TextArea(
 
 ## Burst Protection
 
-When `burstThreshold` is set, input arriving in a fast burst (like a terminal paste) that exceeds the threshold is replaced by an inline `copied text N[length ]` marker. This prevents the UI from freezing or lagging when handling extremely large volumes of text. These markers are interactive:
+When `burstThreshold` is set, input arriving in a fast burst (like a terminal paste) that exceeds the threshold (counted in **lines**) is replaced by an inline `copied text N[L ]` marker where `L` is the number of lines. This prevents the UI from freezing or lagging when handling extremely large volumes of text. These markers are interactive:
 
 - They are rendered in **bold** to distinguish them from regular text.
 - They can be deleted as a single unit using Backspace (at the end) or Delete (at the start).
@@ -98,6 +98,21 @@ ta.minRows;            // Minimum visible rows (default 3)
 ta.maxLines;           // Maximum visible rows (null = unlimited)
 ta.burstThreshold;     // Max burst length (null = no limit)
 ta.onChange;           // (val: string) => void
+``` The height auto-adjusts to content up to `maxLines`. A scrollbar is rendered in the rightmost column when content exceeds visible rows.
+
+### Scrollbar Customization
+
+The scrollbar characters can be customized via `style.scrollbar`:
+
+```typescript
+textarea.style.scrollbar = {
+  showArrows: true,           // show ↑/↓ arrow indicators at scrollbar ends
+  verticalTrack: "│",         // track character (default "│")
+  verticalThumb: "▌",         // thumb character (default "▌")
+  arrowUp: "↑",               // upward arrow (default "↑")
+  arrowDown: "↓",             // downward arrow (default "↓")
+};
 ```
 
-The height auto-adjusts to content up to `maxLines`. A scrollbar is rendered in the rightmost column when content exceeds visible rows.
+Arrow indicators dim when at the scroll limit and become bold when scrolling is possible in that direction.
+

@@ -147,12 +147,13 @@ The app's event dispatcher processes keys in this priority:
 | Other keys | Dispatched to the focused widget's `onKey` |
 | Arrow / Page keys | Walk up from the focused widget and scroll the nearest scrollable container |
 | `Ctrl+Arrow` | Horizontal scroll with larger step (3 instead of 1) |
+| `Alt+Wheel` | Flip mouse wheel to horizontal scroll (when held) |
 
 ### Mouse Events (`_handleMouse`)
 
 | Event | Action |
 |-------|--------|
-| **Wheel** | Find hit in overlays first, then main tree; walk up to scroll the nearest container with `scrollMaxY > 0` or `scrollMaxX > 0` |
+| **Wheel** | Find hit in overlays first, then main tree; walk up to scroll the nearest container with `scrollMaxY > 0` or `scrollMaxX > 0`. Holding **Alt** flips to horizontal scroll. |
 | **Left-click press** | Check overlays first (focus and dispatch `onMouse`). If no overlay hit and no modal blocking: check splitter handles, then focus and dispatch to main tree |
 | **Right-click press** | Focus the widget under the cursor (paste typically happens on release via the widget's own handler) |
 | **Move** | If dragging a floating box, update position. If dragging a splitter, resize panels. If in a text selection drag, send `"move"` to the widget |

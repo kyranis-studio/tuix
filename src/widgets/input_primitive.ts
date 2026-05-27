@@ -239,9 +239,10 @@ export abstract class InputPrimitive extends Box {
     }
     if (this.burstThreshold === null || this._burstPos < 0) return;
 
-    if (!this._burstReplaced && this._burstText.length > this.burstThreshold) {
+    const lineCount = this._burstText.split('\n').length;
+    if (!this._burstReplaced && lineCount > this.burstThreshold) {
       this._pasteCount++;
-      const marker = `copied text ${this._pasteCount}[${this._burstText.length} ]`;
+      const marker = `copied text ${this._pasteCount}[${lineCount} ]`;
       const valBefore = this.value;
 
       const actualText = valBefore.slice(
@@ -485,9 +486,10 @@ export abstract class InputPrimitive extends Box {
         this.value.slice(insertPos);
       this.cursorPos = insertPos + text.length;
 
-      if (this.burstThreshold !== null && text.length > this.burstThreshold) {
+      const lineCount = text.split('\n').length;
+      if (this.burstThreshold !== null && lineCount > this.burstThreshold) {
         this._pasteCount++;
-        const marker = `copied text ${this._pasteCount}[${text.length} ]`;
+        const marker = `copied text ${this._pasteCount}[${lineCount} ]`;
         this.value =
           this.value.slice(0, insertPos) +
           marker +

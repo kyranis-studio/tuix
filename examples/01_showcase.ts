@@ -339,8 +339,13 @@ function makeResizePanel(
   inner.style.gutter = 0;
   inner.style.padding = { top: 1, bottom: 1, left: 1, right: 1 };
 
+  // Compute the longest line in the panel so we can set minimum widths
+  // that trigger horizontal scroll when the panel is too narrow.
+  const maxLineLen = Math.max(...body.map((l) => l.length), 0);
+
   const titleLine = new Box();
   titleLine.height = { fixed: 1 };
+  titleLine.width = { min: Math.max(maxLineLen, panelLabel.trim().length + 2) };
   titleLine.onPaint = (buf, rect, theme) => {
     const tc = container.focused ? theme.highlight : theme.muted;
     paintText(buf, rect, ` ${panelLabel.trim()} `, 0, tc, container.focused);
@@ -350,6 +355,7 @@ function makeResizePanel(
   for (const line of body) {
     const lb = new Box();
     lb.height = { fixed: 1 };
+    lb.width = { min: line.length };
     lb.onPaint = (buf, rect, theme) =>
       paintText(buf, rect, line, 0, theme.text);
     inner.add(lb);
@@ -357,6 +363,7 @@ function makeResizePanel(
 
   const infoLine = new Box();
   infoLine.height = { fixed: 1 };
+  infoLine.width = { min: Math.max(maxLineLen, 22) };
   infoLine.onPaint = (buf, rect, theme) => {
     paintText(
       buf,
@@ -560,9 +567,15 @@ const autoInline = new Autocomplete(
     selectedCommand = item;
   },
 );
-autoInline.mode = "inline";
-
-const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
+autoInline.mode = "inline";  const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
+  // Customize textarea scrollbar with arrows and different characters
+  textArea.style.scrollbar = {
+    showArrows: true,
+    verticalTrack: "║",
+    verticalThumb: "█",
+    arrowUp: "▲",
+    arrowDown: "▼",
+  };
 
 const longTextInput = new TextInput(
   "",
@@ -635,7 +648,7 @@ textScroll.add(
   autoInline,
   lbl("TextArea (multi-line):"),
   textArea,
-  lbl("TextArea (burstThreshold=50 — paste >50 chars inserts bold marker block into content):"),
+  lbl("TextArea (burstThreshold=50 — paste >50 lines inserts bold marker block into content):"),
   pasteThreshTextArea,
   cpHint,
   lbl("Copy/Paste — select text with mouse (auto-copied) from here:"),

@@ -91,6 +91,33 @@ export type Justify =
 /** Overflow behavior for content that exceeds the container bounds */
 export type Overflow = "auto" | "scroll" | "hidden" | "visible";
 
+// ─── Scrollbar customization ───────────────────────────────────────────────────
+
+/**
+ * Customizable characters and behavior for scrollbar rendering.
+ * All fields are optional — defaults are used when omitted.
+ */
+export interface ScrollbarStyle {
+  /** Vertical track character (default: "│") */
+  verticalTrack?: string;
+  /** Vertical thumb character (default: "▌") */
+  verticalThumb?: string;
+  /** Horizontal track character (default: "─") */
+  horizontalTrack?: string;
+  /** Horizontal thumb character (default: "▄") */
+  horizontalThumb?: string;
+  /** Show directional arrows at scrollbar ends (default: true) */
+  showArrows?: boolean;
+  /** Character for the up arrow (default: "↑") */
+  arrowUp?: string;
+  /** Character for the down arrow (default: "↓") */
+  arrowDown?: string;
+  /** Character for the left arrow (default: "◄") */
+  arrowLeft?: string;
+  /** Character for the right arrow (default: "►") */
+  arrowRight?: string;
+}
+
 export interface BoxStyle {
   direction: Direction;
   /** Spacing between children */
@@ -112,6 +139,8 @@ export interface BoxStyle {
    * "visible" — overflow is not clipped (no scrollbar, no clip).
    */
   overflow: Overflow;
+  /** Custom scrollbar characters and behavior (optional) */
+  scrollbar?: Partial<ScrollbarStyle>;
 }
 
 function defaultStyle(): BoxStyle {
@@ -421,12 +450,12 @@ export class Box {
         const childParentRect: Rect = isRow
           ? {
               x: contentX + mainOff - this.scrollX,
-              y: contentY + crossOff,
+              y: contentY + crossOff - this.scrollY,
               width: mainSize,
               height: crossSize,
             }
           : {
-              x: contentX + crossOff,
+              x: contentX + crossOff - this.scrollX,
               y: contentY + mainOff - this.scrollY,
               width: crossSize,
               height: mainSize,
@@ -768,8 +797,7 @@ export class Box {
 
     // Scrollbar
     const wantsScrollbar =
-      (overflow === "scroll" || (overflow === "auto" && isOverflowing)) &&
-      hasChildren;
+      (overflow === "scroll" || (overflow === "auto" && isOverflowing));
     if (wantsScrollbar) {
       this._paintScrollbar(buf, theme);
     }
@@ -786,70 +814,115 @@ export class Box {
     const contentH = Math.max(0, r.height - bOff * 2 - p.top - p.bottom);
     if (contentW < 3 || contentH < 3) return;
 
-    const isRow = this.style.direction === "row";
+    const sb = this.style.scrollbar ?? {};
+    const showArrows = sb.showArrows ?? true;
+
+    // Resolve characters with defaults
+    const vTrack = sb.verticalTrack ?? "│";
+    const vThumb = sb.verticalThumb ?? "▌";
+    const hTrack = sb.horizontalTrack ?? "─";
+    const hThumb = sb.horizontalThumb ?? "▄";
+    const upArrow = sb.arrowUp ?? "↑";
+    const downArrow = sb.arrowDown ?? "↓";
+    const leftArrow = sb.arrowLeft ?? "◄";
+    const rightArrow = sb.arrowRight ?? "►";
+
+    // Determine whether each scrollbar is needed
+    const showVScroll = this.scrollMaxY > 0 || this.style.overflow === "scroll";
+    const showHScroll = this.scrollMaxX > 0 || this.style.overflow === "scroll";
+    const showBoth = showVScroll && showHScroll;
+
+    // ── Corner cell (when both scrollbars visible) ───────────────────────
+    const cornerCol = contentX + contentW - 1;
+    const cornerRow = contentY + contentH - 1;
 
     // ── Vertical scrollbar (right edge of content) ─────────────────────────
-    if (this.scrollMaxY > 0 || (!isRow && this.style.overflow === "scroll")) {
+    if (showVScroll) {
       const maxScroll = this.scrollMaxY;
+      const col = cornerCol;
+      // If horizontal bar is also visible, shorten vertical bar by 1 row
+      const vh = showBoth ? contentH - 1 : contentH;
+
+      const arrowTop = showArrows && maxScroll > 0;
+      const arrowBot = showArrows && maxScroll > 0;
+      const arrowSlots = (arrowTop ? 1 : 0) + (arrowBot ? 1 : 0);
+      const availH = vh - arrowSlots;
+
       if (maxScroll <= 0) {
-        for (let row = contentY; row < contentY + contentH; row++) {
-          buf.set(contentX + contentW - 1, row, {
-            char: "│",
-            fg: theme.muted,
-            bg: theme.panelBg,
-          });
+        for (let row = contentY; row < contentY + vh; row++) {
+          buf.set(col, row, { char: vTrack, fg: theme.muted, bg: theme.panelBg });
         }
+      } else if (availH <= 0) {
+        if (arrowTop) buf.set(col, contentY, { char: upArrow, fg: theme.muted, bg: theme.panelBg });
+        if (arrowBot) buf.set(col, contentY + vh - 1, { char: downArrow, fg: theme.muted, bg: theme.panelBg });
       } else {
-        const totalContent = contentH + maxScroll;
-        const thumbH = Math.max(
-          1,
-          Math.floor((contentH / totalContent) * contentH),
-        );
-        const thumbY = Math.floor(
-          (this.scrollY / maxScroll) * (contentH - thumbH),
-        );
-        for (let row = contentY; row < contentY + contentH; row++) {
-          const off = row - contentY;
-          const isThumb = off >= thumbY && off < thumbY + thumbH;
-          buf.set(contentX + contentW - 1, row, {
-            char: isThumb ? "▌" : "│",
-            fg: isThumb ? theme.text : theme.muted,
-            bg: theme.panelBg,
-          });
+        const totalContent = availH + maxScroll;
+        const thumbH = Math.max(1, Math.floor((availH / totalContent) * availH));
+        const thumbY = Math.floor((this.scrollY / maxScroll) * (availH - thumbH));
+
+        let row = contentY;
+        if (arrowTop) {
+          const canScrollUp = this.scrollY > 0;
+          buf.set(col, row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollUp });
+          row++;
+        }
+        for (let r = 0; r < availH; r++) {
+          const isThumb = r >= thumbY && r < thumbY + thumbH;
+          buf.set(col, row, { char: isThumb ? vThumb : vTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.panelBg });
+          row++;
+        }
+        if (arrowBot) {
+          const canScrollDown = this.scrollY < maxScroll;
+          buf.set(col, row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollDown });
         }
       }
     }
 
     // ── Horizontal scrollbar (bottom edge of content) ──────────────────────
-    if (this.scrollMaxX > 0 || (isRow && this.style.overflow === "scroll")) {
+    if (showHScroll) {
       const maxScroll = this.scrollMaxX;
+      const row = cornerRow;
+      // If vertical bar is also visible, shorten horizontal bar by 1 column
+      const hw = showBoth ? contentW - 1 : contentW;
+
+      const arrowLeftEnd = showArrows && maxScroll > 0;
+      const arrowRightEnd = showArrows && maxScroll > 0;
+      const arrowSlots = (arrowLeftEnd ? 1 : 0) + (arrowRightEnd ? 1 : 0);
+      const availW = hw - arrowSlots;
+
       if (maxScroll <= 0) {
-        for (let col = contentX; col < contentX + contentW; col++) {
-          buf.set(col, contentY + contentH - 1, {
-            char: "─",
-            fg: theme.muted,
-            bg: theme.panelBg,
-          });
+        for (let col = contentX; col < contentX + hw; col++) {
+          buf.set(col, row, { char: hTrack, fg: theme.muted, bg: theme.panelBg });
         }
+      } else if (availW <= 0) {
+        if (arrowLeftEnd) buf.set(contentX, row, { char: leftArrow, fg: theme.muted, bg: theme.panelBg });
+        if (arrowRightEnd) buf.set(contentX + hw - 1, row, { char: rightArrow, fg: theme.muted, bg: theme.panelBg });
       } else {
-        const totalContent = contentW + maxScroll;
-        const thumbW = Math.max(
-          1,
-          Math.floor((contentW / totalContent) * contentW),
-        );
-        const thumbX = Math.floor(
-          (this.scrollX / maxScroll) * (contentW - thumbW),
-        );
-        for (let col = contentX; col < contentX + contentW; col++) {
-          const off = col - contentX;
-          const isThumb = off >= thumbX && off < thumbX + thumbW;
-          buf.set(col, contentY + contentH - 1, {
-            char: isThumb ? "▄" : "─",
-            fg: isThumb ? theme.text : theme.muted,
-            bg: theme.panelBg,
-          });
+        const totalContent = availW + maxScroll;
+        const thumbW = Math.max(1, Math.floor((availW / totalContent) * availW));
+        const thumbX = Math.floor((this.scrollX / maxScroll) * (availW - thumbW));
+
+        let col = contentX;
+        if (arrowLeftEnd) {
+          const canScrollLeft = this.scrollX > 0;
+          buf.set(col, row, { char: leftArrow, fg: canScrollLeft ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollLeft });
+          col++;
+        }
+        for (let c = 0; c < availW; c++) {
+          const isThumb = c >= thumbX && c < thumbX + thumbW;
+          buf.set(col, row, { char: isThumb ? hThumb : hTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.panelBg });
+          col++;
+        }
+        if (arrowRightEnd) {
+          const canScrollRight = this.scrollX < maxScroll;
+          buf.set(col, row, { char: rightArrow, fg: canScrollRight ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollRight });
         }
       }
+    }
+
+    // ── Corner cell ────────────────────────────────────────────────────────
+    if (showBoth) {
+      buf.set(cornerCol, cornerRow, { char: "┘", fg: theme.muted, bg: theme.panelBg });
     }
   }
 

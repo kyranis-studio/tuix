@@ -6,7 +6,7 @@ export { App } from "./app.ts";
 export type { AppOptions } from "./app.ts";
 
 export { Box, paintCenteredText, paintText, edgesZero, edgesAll, edgesXY } from "./layout.ts";
-export type { Rect, SizeConstraint, Edges, BoxStyle, Direction, Align, Justify, Overflow } from "./layout.ts";
+export type { Rect, SizeConstraint, Edges, BoxStyle, Direction, Align, Justify, Overflow, ScrollbarStyle } from "./layout.ts";
 
 export { Splitter } from "./splitter.ts";
 export type { SplitDirection } from "./splitter.ts";

@@ -30,14 +30,14 @@ const input = new TextInput(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy to clipboard on selection |
 | `notifyOnCopy` | `boolean` | `false` | Show notification toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
-| `burstThreshold` | `number` | `null` | Max input burst length (null = no limit) |
+| `burstThreshold` | `number` | `null` | Max input burst lines (null = no limit) |
 
 ---
 
 ## Key Features
 
 - **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
-- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold`. If a burst exceeds the limit, it's replaced by an interactive marker `copied text N[length ]` to protect UI performance.
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold` (counts **lines**, not characters). If a burst exceeds the threshold, it's replaced by an interactive marker `copied text N[L ]` where `L` is the line count.
 - **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (entire text) selection.
 
 ---

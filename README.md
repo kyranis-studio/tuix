@@ -68,16 +68,21 @@ Tab between widgets, type in the input, and click (or press Enter on) the button
    - Character-aware cursor navigation, backspace, and deletion.
 
 3. **🛡️ Burst Protection**
-   - Automatic detection of terminal pastes and fast input bursts via `burstThreshold`.
+   - Automatic detection of terminal pastes and fast input bursts via `burstThreshold` (counts **lines**, not characters).
    - Replaces large bursts with interactive markers to maintain UI performance and prevent buffer overflow.
    - Multi-line pastes are detected as single bursts in `TextArea`.
+
+4. **🎨 Customizable Scrollbar**
+   - Vertical and horizontal scrollbars with arrow indicators (↑/↓/◄/►) that dim at scroll limits.
+   - Fully customizable characters for track, thumb, and arrows via `style.scrollbar`.
+   - Alt+Wheel flips mouse wheel to horizontal scrolling.
 
 4. **Reactive Flex-Like Layout Engine**
    - **Main-axis Flows**: Support for both `row` and `column` directions.
    - **Cross-axis Alignment**: `start`, `center`, `end`, and `stretch` support.
    - **Main-axis Justification**: `start`, `center`, `end`, `space-between`, and `space-around`.
    - **Multi-dimensional Spacing**: Precise control over margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
-   - **Auto-scrolling Containers**: When children overflow the viewport, a scrollbar appears automatically. Arrow keys, PageUp, and PageDown scroll from any focused widget inside the container.
+   - **Auto-scrolling Containers**: When children overflow the viewport, a scrollbar appears automatically with arrow indicators (↑/↓/◄/►) and customizable characters. Arrow keys, PageUp, PageDown, and mouse wheel scroll from any focused widget inside the container. Alt+Wheel flips to horizontal scroll.
 
 ---
 

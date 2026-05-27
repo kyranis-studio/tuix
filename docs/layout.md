@@ -211,7 +211,27 @@ When overflow is `"auto"` or `"scroll"`, the engine calculates `scrollMaxX` and 
 - Ctrl+ArrowLeft/Right — horizontal scroll with larger step
 - Mouse wheel — scrolls under the cursor
 
-The scrollbar is painted as a track (`│`/`─`) with a draggable thumb (`▌`/`▄`).
+### Scrollbar Customization
+
+The scrollbar characters can be customized via `style.scrollbar` on any `Box`:
+
+```typescript
+container.style.scrollbar = {
+  showArrows: true,             // show ◄/► or ↑/↓ arrow indicators
+  verticalTrack: "│",           // vertical track character
+  verticalThumb: "▌",           // vertical thumb character
+  horizontalTrack: "─",         // horizontal track character
+  horizontalThumb: "▄",         // horizontal thumb character
+  arrowUp: "↑",                 // scroll up arrow
+  arrowDown: "↓",               // scroll down arrow
+  arrowLeft: "◄",               // scroll left arrow
+  arrowRight: "►",              // scroll right arrow
+};
+```
+
+Arrow indicators appear at the scrollbar ends. They dim when at the scroll limit and become bold when scrolling is possible in that direction. All fields are optional — defaults are used for any omitted values.
+
+The scrollbar is painted as a track (`│`/`─`) with a draggable thumb (`▌`/`▄`) and optional arrow indicators at each end.
 
 ---
 

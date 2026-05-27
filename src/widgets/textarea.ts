@@ -149,6 +149,14 @@ export class TextArea extends InputPrimitive {
     const sbX = rect.x + rect.width - 1;
     const cw = Math.max(0, rect.width - 1);
 
+    // Customizable scrollbar chars
+    const sb = this.style.scrollbar ?? {};
+    const showArrows = sb.showArrows ?? true;
+    const vTrack = sb.verticalTrack ?? "│";
+    const vThumb = sb.verticalThumb ?? "▌";
+    const upArrow = sb.arrowUp ?? "↑";
+    const downArrow = sb.arrowDown ?? "↓";
+
     // Clear text area
     for (let row = 0; row < ch; row++) {
       for (let col = 0; col < cw; col++) {
@@ -264,24 +272,46 @@ export class TextArea extends InputPrimitive {
       }
     }
 
-    // ── Scrollbar ─────────────────────────────────────────────
+    // ── Scrollbar with customizable characters and arrows ──────
     const maxScroll = this.scrollMaxY;
     if (maxScroll <= 0) {
       for (let row = 0; row < ch; row++) {
-        buf.set(sbX, rect.y + row, { char: "│", fg: theme.muted, bg });
+        buf.set(sbX, rect.y + row, { char: vTrack, fg: theme.muted, bg });
       }
     } else {
-      const thumbH = Math.max(1, Math.floor((ch / totalRows) * ch));
-      const thumbY = Math.floor(
-        (this.scrollY / maxScroll) * (ch - thumbH),
-      );
-      for (let row = 0; row < ch; row++) {
-        const isThumb = row >= thumbY && row < thumbY + thumbH;
-        buf.set(sbX, rect.y + row, {
-          char: isThumb ? "▌" : "│",
-          fg: isThumb ? theme.highlight : theme.muted,
-          bg,
-        });
+      const arrowTop = showArrows;
+      const arrowBot = showArrows;
+      const arrowSlots = (arrowTop ? 1 : 0) + (arrowBot ? 1 : 0);
+      const availH = ch - arrowSlots;
+
+      if (availH <= 0) {
+        if (arrowTop) buf.set(sbX, rect.y, { char: upArrow, fg: theme.muted, bg });
+        if (arrowBot) buf.set(sbX, rect.y + ch - 1, { char: downArrow, fg: theme.muted, bg });
+      } else {
+        const thumbH = Math.max(1, Math.floor((availH / totalRows) * availH));
+        const thumbY = Math.floor(
+          (this.scrollY / maxScroll) * (availH - thumbH),
+        );
+
+        let row = 0;
+        if (arrowTop) {
+          const canScrollUp = this.scrollY > 0;
+          buf.set(sbX, rect.y + row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg, bold: canScrollUp });
+          row++;
+        }
+        for (let r = 0; r < availH; r++) {
+          const isThumb = r >= thumbY && r < thumbY + thumbH;
+          buf.set(sbX, rect.y + row, {
+            char: isThumb ? vThumb : vTrack,
+            fg: isThumb ? theme.highlight : theme.muted,
+            bg,
+          });
+          row++;
+        }
+        if (arrowBot) {
+          const canScrollDown = this.scrollY < maxScroll;
+          buf.set(sbX, rect.y + row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg, bold: canScrollDown });
+        }
       }
     }
   }

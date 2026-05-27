@@ -33,12 +33,27 @@ export class FloatingListBox extends Box {
 
     this.onPaint = (buf, rect, theme) => {
       const rowsAvailable = rect.height;
+      const hasBorder = this.style.border !== "none";
+      const bOff = hasBorder ? 1 : 0;
+
+      // Check if we need a scrollbar
+      const needsScrollbar = this.scrollMaxY > 0 && rowsAvailable >= 3;
+      const sbX = rect.x + rect.width - 1;
+      const contentW = needsScrollbar ? rect.width - 1 : rect.width;
+
+      const sb = this.style.scrollbar ?? {};
+      const showArrows = sb.showArrows ?? true;
+      const vTrack = sb.verticalTrack ?? "│";
+      const vThumb = sb.verticalThumb ?? "▌";
+      const upArrow = sb.arrowUp ?? "↑";
+      const downArrow = sb.arrowDown ?? "↓";
+
       for (let i = 0; i < rowsAvailable; i++) {
         const itemIndex = i + this.scrollY;
         if (itemIndex >= this.items.length) break;
         const item = this.items[itemIndex];
         const isCur = itemIndex === this.selectedIndex;
-        for (let col = 0; col < rect.width; col++) {
+        for (let col = 0; col < contentW; col++) {
           const ch = col < item.length ? item[col] : " ";
           buf.set(rect.x + col, rect.y + i, {
             char: ch,
@@ -46,6 +61,44 @@ export class FloatingListBox extends Box {
             bg: isCur ? theme.highlight : theme.panelBg,
             bold: isCur,
           });
+        }
+      }
+
+      // ── Draw scrollbar if needed ───────────────────────────
+      if (needsScrollbar) {
+        const maxScroll = this.scrollMaxY;
+        const arrowTop = showArrows;
+        const arrowBot = showArrows;
+        const arrowSlots = (arrowTop ? 1 : 0) + (arrowBot ? 1 : 0);
+        const availH = rowsAvailable - arrowSlots;
+
+        if (availH <= 0) {
+          if (arrowTop) buf.set(sbX, rect.y, { char: upArrow, fg: theme.muted, bg: theme.panelBg });
+          if (arrowBot) buf.set(sbX, rect.y + rowsAvailable - 1, { char: downArrow, fg: theme.muted, bg: theme.panelBg });
+        } else {
+          const totalContent = availH + maxScroll;
+          const thumbH = Math.max(1, Math.floor((availH / totalContent) * availH));
+          const thumbY = Math.floor((this.scrollY / maxScroll) * (availH - thumbH));
+
+          let row = 0;
+          if (arrowTop) {
+            const canScrollUp = this.scrollY > 0;
+            buf.set(sbX, rect.y + row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollUp });
+            row++;
+          }
+          for (let r = 0; r < availH; r++) {
+            const isThumb = r >= thumbY && r < thumbY + thumbH;
+            buf.set(sbX, rect.y + row, {
+              char: isThumb ? vThumb : vTrack,
+              fg: isThumb ? theme.text : theme.muted,
+              bg: theme.panelBg,
+            });
+            row++;
+          }
+          if (arrowBot) {
+            const canScrollDown = this.scrollY < maxScroll;
+            buf.set(sbX, rect.y + row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollDown });
+          }
         }
       }
     };

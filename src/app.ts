@@ -396,14 +396,26 @@ export class App {
     if (action === "wheel" && wheelDelta) {
       const hit = findOverlayHit() ?? this.root.hitTest(col, row);
       if (hit) {
+        const isAlt = ev.modifiers.alt;
         let box: Box | null = hit;
         while (box) {
-          if (box.scrollMaxY > 0) {
+          if (isAlt && box.scrollMaxX > 0) {
+            // Alt+wheel → horizontal scroll
+            const prev = box.scrollX;
+            box.scrollX = Math.max(0, Math.min(box.scrollX + (wheelDelta > 0 ? 3 : -3), box.scrollMaxX));
+            if (box.scrollX !== prev) break;
+          } else if (!isAlt && box.scrollMaxY > 0) {
+            // Default wheel → vertical scroll
             const prev = box.scrollY;
             box.scrollY = Math.max(0, Math.min(box.scrollY + (wheelDelta > 0 ? 3 : -3), box.scrollMaxY));
             if (box.scrollY !== prev) break;
           }
-          if (box.scrollMaxX > 0) {
+          // Fallback: if the preferred axis has no scroll, try the other axis
+          if (isAlt && box.scrollMaxX <= 0 && box.scrollMaxY > 0) {
+            const prev = box.scrollY;
+            box.scrollY = Math.max(0, Math.min(box.scrollY + (wheelDelta > 0 ? 3 : -3), box.scrollMaxY));
+            if (box.scrollY !== prev) break;
+          } else if (!isAlt && box.scrollMaxY <= 0 && box.scrollMaxX > 0) {
             const prev = box.scrollX;
             box.scrollX = Math.max(0, Math.min(box.scrollX + (wheelDelta > 0 ? 3 : -3), box.scrollMaxX));
             if (box.scrollX !== prev) break;
