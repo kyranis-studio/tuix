@@ -33,6 +33,10 @@ import {
   SmallButton,
   Collapsible,
   CodeEditor,
+  DiffViewer,
+  SplitDiffViewer,
+  computeDiff,
+  computeSplitDiff,
   paintCenteredText,
   paintText,
   edgesAll,
@@ -731,6 +735,8 @@ const codeTab = Box.col("Code");
 codeTab.style.gutter = 1;
 codeTab.style.bg = defaultTheme.bg;
 
+// ─── CodeEditor (syntax highlighting) ───────────────────────────
+
 const codeHeader = new Box("code-header");
 codeHeader.height = { fixed: 1 };
 codeHeader.onPaint = (buf, rect, theme) =>
@@ -801,21 +807,114 @@ const app = new App(root, {
 await app.run();
 `;
 
+const originalCode = demoCode; // baseline for real-time diffing
+
+const diffViewer = new DiffViewer(
+  "",
+  undefined,
+  16,
+);
+
+const splitDiffViewer = new SplitDiffViewer();
+
 const codeEditor = new CodeEditor(
   "Type some code...",
   demoCode,
-  undefined,
+  (val: string) => {
+    const d = computeDiff(originalCode, val);
+    diffViewer.setDiffContent(d);
+    splitDiffViewer.setDiffContent(originalCode, val);
+  },
   "typescript",
 );
-// border already set by TextArea constructor; mono is default in terminal
 
-// Scrollable wrapper for the editor
-const codeScroll = Box.col("code-scroll");
-codeScroll.style.gutter = 1;
-codeScroll.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
-codeScroll.add(codeHeader, codeEditor);
+// ─── DiffViewer (unified diff view) ─────────────────────────────
 
-codeTab.add(codeScroll);
+const unifiedHeader = new Box("unified-header");
+unifiedHeader.height = { fixed: 1 };
+unifiedHeader.onPaint = (buf, rect, theme) =>
+  paintCenteredText(
+    buf,
+    rect,
+    "Unified Diff (green: + · red: -)",
+    theme.muted,
+    theme.bg,
+  );
+
+// ─── SplitDiffViewer (side-by-side diff view) ───────────────────
+
+const splitHeader = new Box("split-header");
+splitHeader.height = { fixed: 1 };
+splitHeader.onPaint = (buf, rect, theme) =>
+  paintCenteredText(
+    buf,
+    rect,
+    "Split Diff (original │ current)",
+    theme.muted,
+    theme.bg,
+  );
+
+// ─── Diff mode selector ────────────────────────────────────────────────
+let diffMode: "both" | "unified" | "split" = "both";
+
+const diffContent = Box.col("diff-content");
+diffContent.style.gutter = 1;
+
+function rebuildDiffContent() {
+  // Clear children (orphan them safely; add() resets parent)
+  for (const c of diffContent.children) c.parent = null;
+  diffContent.children = [];
+
+  if (diffMode === "both" || diffMode === "unified") {
+    diffContent.add(unifiedPane);
+  }
+  if (diffMode === "both" || diffMode === "split") {
+    diffContent.add(splitPane);
+  }
+}
+
+const diffModeGroup = new ButtonGroup(
+  "Diff:",
+  ["Both", "Unified", "Split"],
+  0,
+  (val) => {
+    diffMode = val.toLowerCase() as typeof diffMode;
+    rebuildDiffContent();
+  },
+);
+
+const diffModeRow = Box.row("diff-mode-row");
+diffModeRow.style.padding = { top: 0, bottom: 0, left: 0, right: 0 };
+diffModeRow.style.gutter = 2;
+diffModeRow.height = { fixed: 3 };
+diffModeRow.add(diffModeGroup);
+
+// ─── Layout: Code Editor (left) | Diff views stacked (right) ───────────
+const codeRow = Box.row("code-row");
+codeRow.style.gutter = 2;
+codeRow.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
+
+const codePane = Box.col("code-pane");
+codePane.style.gutter = 1;
+codePane.add(codeHeader, codeEditor);
+
+const diffStack = Box.col("diff-stack");
+diffStack.style.gutter = 1;
+
+const unifiedPane = Box.col("unified-pane");
+unifiedPane.style.gutter = 1;
+unifiedPane.add(unifiedHeader, diffViewer);
+
+const splitPane = Box.col("split-pane");
+splitPane.style.gutter = 1;
+splitPane.add(splitHeader, splitDiffViewer);
+
+// Initial build: show both
+diffStack.add(diffModeRow, diffContent);
+rebuildDiffContent();
+
+codeRow.add(codePane, diffStack);
+codeTab.add(codeRow);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: UI Controls
@@ -998,66 +1097,7 @@ const extraChk2 = new Checkbox("Auto-save", true);
 const extraChk3 = new Checkbox("Dark Mode", true);
 collapsibleDemo.add(extraChk1, extraChk2, extraChk3);
 
-// ─── Paste marker shading demo ────────────────────────────────────────────
-const pasteDemoCol = Box.col("paste-demo");
-pasteDemoCol.style.border = "single";
-pasteDemoCol.style.gutter = 1;
-pasteDemoCol.style.padding = edgesAll(1);
-
-const pasteDemoLbl = new Box();
-pasteDemoLbl.height = { fixed: 1 };
-pasteDemoLbl.onPaint = (buf, rect, theme) =>
-  paintText(
-    buf,
-    rect,
-    " Paste Markers (burstThreshold=1 — paste >1 char creates shaded marker):",
-    0,
-    theme.highlight,
-  );
-
-// Pre-populated TextArea showing multiple paste markers with different colors
-// (value and burstThreshold passed to constructor so _syncHeight runs automatically)
-const pasteDemoArea = new TextArea(
-  "",
-  "copied text 1 [5 chars]Pasted version info block...\n" +
-    "With typed lines between pastes — normal look.\n" +
-    "copied text 2 [3 chars]Pasted error log excerpt...\n" +
-    "More regular user-typed content here.\n" +
-    "copied text 3 [8 chars]Pasted configuration data...\n" +
-    "Type between markers — stays plain text.\n",
-  undefined,
-  5,
-  false,
-  false,
-  "Copied!",
-  1,
-);
-
-const pasteHint = new Box();
-pasteHint.height = { fixed: 1 };
-pasteHint.onPaint = (buf, rect, theme) =>
-  paintText(
-    buf,
-    rect,
-    "  Each paste marker shows in a distinct color — Backspace/Delete removes entire marker.",
-    0,
-    theme.muted,
-  );
-
-// Interactive TextInput with burstThreshold for live testing
-const pasteTestInput = new TextInput(
-  "Paste multi-line text here (Ctrl+Shift+V)...",
-  "",
-  undefined,
-  false,
-  false,
-  "Copied!",
-  1,
-);
-
-pasteDemoCol.add(pasteDemoLbl, pasteDemoArea, pasteHint, pasteTestInput);
-
-uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo, pasteDemoCol);
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo);
 
 uiTab.add(uiHeader, uiScroll, uiStatus);
 

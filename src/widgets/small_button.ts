@@ -45,8 +45,8 @@ export class SmallButton extends Box {
         textFg = theme.bg;
         bold = true;
       } else if (this.focused) {
-        fillBg = theme.highlight;
-        textFg = theme.bg;
+        fillBg = theme.panelBg;
+        textFg = theme.text;
         bold = true;
       } else {
         fillBg = theme.panelBg;

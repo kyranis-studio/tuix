@@ -40,5 +40,8 @@ export { FloatingWindow } from "./window.ts";
 
 export { Collapsible } from "./collapsible.ts";
 export { CodeEditor } from "./code_editor.ts";
+export { DiffViewer, SplitDiffViewer } from "./diff_viewer.ts";
+export type { DiffLine, DiffTheme, SplitDiffRow } from "./diff_viewer.ts";
+export { parseDiff, computeDiff, computeSplitDiff, defaultDiffTheme } from "./diff_viewer.ts";
 export type { SyntaxTokenType, SyntaxTheme, TokenRange } from "./code_editor.ts";
 export { tokenizeLine, buildTokenLookup, defaultSyntaxTheme } from "./code_editor.ts";

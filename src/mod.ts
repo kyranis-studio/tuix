@@ -13,7 +13,7 @@ export type { SplitDirection } from "./splitter.ts";
 
 export { FocusManager } from "./focus.ts";
 
-export { Button, SmallButton, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup, TextArea, Dropdown, ButtonGroup, Dialog, Notification, FloatingWindow, Collapsible, CodeEditor } from "./widgets/mod.ts";
+export { Button, SmallButton, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, RadioButton, RadioGroup, TextArea, Dropdown, ButtonGroup, Dialog, Notification, FloatingWindow, Collapsible, CodeEditor, DiffViewer, SplitDiffViewer, computeDiff, computeSplitDiff } from "./widgets/mod.ts";
 export type { AutocompleteMode, TabDefinition, ListBoxItem, DialogButton, NotificationType } from "./widgets/mod.ts";
 
 export {

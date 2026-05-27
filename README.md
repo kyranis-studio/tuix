@@ -89,6 +89,12 @@ Tab between widgets, type in the input, and click (or press Enter on) the button
    - **Multi-dimensional Spacing**: Precise control over margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
    - **Auto-scrolling Containers**: When children overflow the viewport, a scrollbar appears automatically with arrow indicators (↑/↓/◄/►) and customizable characters. Arrow keys, PageUp, PageDown, and mouse wheel scroll from any focused widget inside the container. Alt+Wheel flips to horizontal scroll.
 
+7. **📊 Real-time Diff Viewer**
+   - Unified and side-by-side diff views with colour-coded additions (green) and deletions (red).
+   - LCS-based line diff algorithm with 3-line context hunks.
+   - Customisable `DiffTheme` for per-token colour overrides.
+   - Interactive mode selector to switch between Unified, Split, or Both views.
+
 ---
 
 ## 📚 Documentation
@@ -107,6 +113,7 @@ Detailed guides and API references for every part of the library:
 - [**TextInput**](docs/text_input.md) — Single-line input with multi-byte support.
 - [**TextArea**](docs/textarea.md) — Multi-line editor with burst protection.
 - [**CodeEditor**](docs/code_editor.md) — Code editor with syntax highlighting (keywords, strings, comments, numbers, types, functions, decorators).
+- [**DiffViewer**](docs/diff_viewer.md) — Unified and side-by-side diff viewers with colour-highlighted additions/deletions.
 - [**Autocomplete**](docs/autocomplete.md) — Suggestion completion (dropdown/inline).
 - [**Button**](docs/button.md) & [**SmallButton**](docs/small_button.md) — Interactive buttons.
 - [**ButtonGroup**](docs/button_group.md) — Segmented selection.
@@ -132,6 +139,7 @@ Detailed guides and API references for every part of the library:
    - [**`TextInput`**](docs/text_input.md): Single-line text input with overflow scrolling (`...` ellipsis at boundaries), cursor, Home/End/arrow navigation, character insertion, block cursor, and placeholder. Fully multi-byte aware.
    - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
    - [**`CodeEditor`**](docs/code_editor.md): Syntax-highlighted code editor built on TextArea. Regex-based tokenizer colours keywords, strings, comments, numbers, types, functions, and decorators. Customisable colour palette.
+   - [**`DiffViewer`**](docs/diff_viewer.md): Unified and side-by-side diff viewer with colour-highlighted additions/deletions, LCS-based diff computation, and customisable `DiffTheme`.
    - [**`Button`**](docs/button.md): Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
    - [**`ButtonGroup`**](docs/button_group.md): Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
    - [**`Checkbox`**](docs/checkbox.md): Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks. Supports `disabled` state.
@@ -160,6 +168,7 @@ tuix/
       text_input.ts     — Single-line text input (multi-byte support)
       textarea.ts       — Multi-line text editor (burst protection)
       code_editor.ts    — Code editor with syntax highlighting
+      diff_viewer.ts    — Unified and split diff viewer widgets
       ...
     splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
