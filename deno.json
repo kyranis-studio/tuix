@@ -1,6 +1,6 @@
 {
   "name": "@kyranis-studio/tuix",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "MIT",
   "tasks": {
     "01_showcase": "deno run -A examples/01_showcase.ts"
@@ -8,5 +8,15 @@
   "exports": {
     ".": "./src/mod.ts",
     "./examples/showcase": "./examples/01_showcase.ts"
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "examples/01_showcase.ts",
+      "docs/**/*.md",
+      "README.md",
+      "deno.json",
+      "LICENSE"
+    ]
   }
 }
