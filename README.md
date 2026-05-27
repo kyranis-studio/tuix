@@ -26,6 +26,7 @@
 
 1. **🚀 AI-First Architecture**
    - Designed for and by AI agents, prioritizing clean abstractions and predictable patterns.
+   - Built for the Deno 2 ecosystem with zero external dependencies.
 
 2. **✨ Full Emoji & Multi-byte Support**
    - Robust handling of UTF-8 characters (emojis, multi-byte sequences) across all input widgets.
@@ -37,38 +38,62 @@
    - Multi-line pastes are detected as single bursts in `TextArea`.
 
 4. **Reactive Flex-Like Layout Engine**
-   - Main-axis (`direction: "row" | "column"`) layout flows.
-   - Cross-axis alignment (`align: "start" | "center" | "end" | "stretch"`).
-   - Main-axis justification (`justify: "start" | "center" | "end" | "space-between" | "space-around"`).
-   - Multi-dimensional spacing: margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
-   - **Auto-scrolling containers**: when children overflow the viewport, a scrollbar appears automatically.
+   - **Main-axis Flows**: Support for both `row` and `column` directions.
+   - **Cross-axis Alignment**: `start`, `center`, `end`, and `stretch` support.
+   - **Main-axis Justification**: `start`, `center`, `end`, `space-between`, and `space-around`.
+   - **Multi-dimensional Spacing**: Precise control over margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
+   - **Auto-scrolling Containers**: When children overflow the viewport, a scrollbar appears automatically. Arrow keys, PageUp, and PageDown scroll from any focused widget inside the container.
 
-5. **Stateful TUI Component Library**
-   - **`InputPrimitive`**: Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, and `burstThreshold` protection.
-   - **`TextInput`**: Single-line text input with overflow scrolling (`...` ellipsis at boundaries), multi-byte character support, and placeholder.
-   - **`TextArea`**: Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning.
-   - **`Button`**: Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings.
-   - **`ButtonGroup`**: Horizontal segmented control — multiple labeled options with single selection.
-   - **`Checkbox`**: Toggle check/uncheck indicator box (`☑` vs `☐`).
-   - **`Dropdown`**: Combo-box style selector with scrollable list.
-   - **`ListBox`**: Stateful list selector with Scroll Viewport offsets and Arrow/Vim key navigation.
-   - **`ProgressBar`**: Stateful percentage loading bar using block levels.
-   - **`Autocomplete`**: Dropdown and inline suggestion completion with filtering.
-   - **`RadioGroup`**: Mutually exclusive radio selection with `(•)` / `(○)` indicators.
-   - **`Tabs`**: Multi-tab container with keyboard and mouse switching.  
+---
 
-6. **Resizable Panel Splitters**
-   - Horizontally and vertically draggable divider panes (`Splitter`).
-   - Deepest-first/bottom-up layout recursive hit-testing.
+## 📚 Documentation
 
-7. **Terminal I/O & Double-Buffer Rendering**
-   - Seamless raw terminal mode toggling and capture of key actions, escape codes, and SGR mouse reporting.
-   - High-performance double-buffered cell grid flushes only updated sections to stdout, eliminating screen flicker.
-   - Reactive resize listener dynamically reflows layout boxes on terminal window resize.
+Detailed guides and API references for every part of the library:
 
-8. **Focus Management & Theme Registry**
-   - Centralized `FocusManager` managing Tab cycles, tab-indices, and shortcuts.
-   - Built-in premium VS Code Dark+ theme alongside numerous classical themes (Amber, Nord, Catppuccin, etc.).
+### Core Concepts
+- [**App**](docs/app.md) — Main entry point, render loop, and event handling.
+- [**Layout**](docs/layout.md) — The `Box` model, sizing, alignment, and borders.
+- [**Focus**](docs/focus.md) — Keyboard navigation and focus management.
+- [**Theming**](docs/theme.md) — Built-in color palettes and custom theme creation.
+- [**Events**](docs/events.md) — Keyboard and mouse event parsing.
+- [**Terminal**](docs/terminal.md) — Raw mode and double-buffered rendering.
+
+### Widgets & Controls
+- [**TextInput**](docs/text_input.md) — Single-line input with multi-byte support.
+- [**TextArea**](docs/textarea.md) — Multi-line editor with burst protection.
+- [**Autocomplete**](docs/autocomplete.md) — Suggestion completion (dropdown/inline).
+- [**Button**](docs/button.md) & [**SmallButton**](docs/small_button.md) — Interactive buttons.
+- [**ButtonGroup**](docs/button_group.md) — Segmented selection.
+- [**Checkbox**](docs/checkbox.md) & [**RadioGroup**](docs/radio.md) — Selection toggles.
+- [**Dropdown**](docs/dropdown.md) & [**ListBox**](docs/listbox.md) — List selection.
+- [**ProgressBar**](docs/progress_bar.md) — Visual progress indicators.
+
+### Layout & Overlays
+- [**Tabs**](docs/tabs.md) — Multi-tab containers.
+- [**Collapsible**](docs/collapsible.md) — Show/hide content sections.
+- [**FloatingWindow**](docs/window.md) — Draggable overlay windows.
+- [**Dialog**](docs/dialog.md) — Modal confirmation dialogs.
+- [**Notification**](docs/notification.md) — Toast alerts.
+
+### Extending
+- [**Custom Widgets**](docs/custom_widget.md) — Building your own components.
+
+---
+
+## Component Overview
+
+   - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, and `burstThreshold` protection.
+   - [**`TextInput`**](docs/text_input.md): Single-line text input with overflow scrolling (`...` ellipsis at boundaries), cursor, Home/End/arrow navigation, character insertion, block cursor, and placeholder. Fully multi-byte aware.
+   - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
+   - [**`Button`**](docs/button.md): Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
+   - [**`ButtonGroup`**](docs/button_group.md): Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
+   - [**`Checkbox`**](docs/checkbox.md): Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks. Supports `disabled` state.
+   - [**`Dropdown`**](docs/dropdown.md): Combo-box style selector — shows current selection with `▼` indicator, opens scrollable list on activation, arrow-key navigation, Enter to select, Escape to close.
+   - [**`ListBox`**](docs/listbox.md): Stateful list selector with Scroll Viewport offsets, Arrow/Vim key navigation (`j`/`k`), custom select prefixes (`▶ `), and click highlights. Supports per-item `disabled` state.
+   - [**`ProgressBar`**](docs/progress_bar.md): Stateful percentage loading bar utilizing character block levels (`█████░░░░░ 50%`).
+   - [**`Autocomplete`**](docs/autocomplete.md): Dropdown and inline suggestion completion with keyboard/mouse filtering and selection, cursor position tracking with `cursorPos`.
+   - [**`RadioGroup`**](docs/radio.md): Mutually exclusive radio selection with `(•)` / `(○)` indicators, keyboard and mouse support. Supports per-option and group-level `disabled` states.
+   - [**`Tabs`**](docs/tabs.md): Multi-tab container with keyboard (←/→) and mouse-driven tab switching.  
 
 ---
 
@@ -88,10 +113,10 @@ tuix/
       text_input.ts     — Single-line text input (multi-byte support)
       textarea.ts       — Multi-line text editor (burst protection)
       ...
-    splitter.ts         — Draggable panel splitter panes
+    splitter.ts         — Draggable horizontal & vertical panel splitter panes
     focus.ts            — Tab cycle focus management & keyboard shortcuts
     events.ts           — Async keyboard and SGR mouse event parser
-    theme.ts            — Theme interfaces and built-in palettes
+    theme.ts            — Theme interfaces, registries, and built-in palettes
   examples/
     01_showcase.ts      — Interactive showcase dashboard
   deno.json             — Deno config and script tasks
@@ -107,7 +132,7 @@ tuix/
 
 ### Running the Showcase Dashboard
 
-Execute the comprehensive, interactive showcase dashboard:
+Execute the comprehensive, interactive showcase dashboard featuring all stateful widgets in real time:
 
 ```bash
 deno run -A examples/01_showcase.ts
