@@ -63,8 +63,7 @@ The `DiffViewer` is a read-only view — arrow keys and page keys scroll the vie
 |-----|--------|
 | `↑` / `↓` | Scroll up/down one line |
 | `PageUp` / `PageDown` | Scroll by 80% of viewport |
-| `Ctrl`+`Home` | Scroll to top |
-| `Ctrl`+`End` | Scroll to bottom |
+| `Home` / `End` | Scroll to top / bottom |
 | Mouse wheel | Vertical scroll (3 lines per tick) |
 
 ### Properties
