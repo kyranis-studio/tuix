@@ -45,6 +45,10 @@ export abstract class InputPrimitive extends Box {
    *  Called from _pasteAtCursor() after text is inserted. */
   clipboardPasteHandler: ((widget: InputPrimitive, insertPos: number, text: string) => void) | null = null;
 
+  /** Optional callback to provide custom atomic ranges (e.g. for @-mentions/chips).
+   *  Each range is {start, end} in the value string. */
+  getCustomAtomicRanges: (() => Array<{ start: number; end: number }>) | null = null;
+
   protected _appRef: AppOverlayRef | null = null;
 
   /** Instance-level paste shade palette (overrides static default if set). */
@@ -284,9 +288,9 @@ export abstract class InputPrimitive extends Box {
     // Core keys
     if (key === "Backspace") {
       if (this.cursorPos > 0) {
-        // Special: delete entire paste range if cursor is at the end of one
-        const ranges = this._findPasteRanges();
-        const at = ranges.find((r) => r.end === this.cursorPos);
+        // Special: delete entire atomic range if cursor is within or at end of one
+        const ranges = this._findAtomicRanges();
+        const at = ranges.find((r) => this.cursorPos > r.start && this.cursorPos <= r.end);
         if (at) {
           this.value =
             this.value.slice(0, at.start) + this.value.slice(at.end);
@@ -309,9 +313,9 @@ export abstract class InputPrimitive extends Box {
       }
     } else if (key === "Delete") {
       if (this.cursorPos < this.value.length) {
-        // Special: delete entire paste range if cursor is at the start of one
-        const ranges = this._findPasteRanges();
-        const at = ranges.find((r) => r.start === this.cursorPos);
+        // Special: delete entire atomic range if cursor is within or at start of one
+        const ranges = this._findAtomicRanges();
+        const at = ranges.find((r) => this.cursorPos >= r.start && this.cursorPos < r.end);
         if (at) {
           this.value =
             this.value.slice(0, at.start) + this.value.slice(at.end);
@@ -331,25 +335,39 @@ export abstract class InputPrimitive extends Box {
           if (this.onChange) this.onChange(this.value);
         }
       }
-    } else if (key === "Enter") {
+    }
+ else if (key === "Enter") {
       this._onEnter();
     } else if (key === "ArrowLeft") {
       if (this.cursorPos > 0) {
-        const before = this.value.slice(0, this.cursorPos);
-        const chars = [...before];
-        if (chars.length > 0) {
-          this.cursorPos -= chars.pop()!.length;
+        const ranges = this._findAtomicRanges();
+        const at = ranges.find((r) => this.cursorPos > r.start && this.cursorPos <= r.end);
+        if (at) {
+          this.cursorPos = at.start;
+        } else {
+          const before = this.value.slice(0, this.cursorPos);
+          const chars = [...before];
+          if (chars.length > 0) {
+            this.cursorPos -= chars.pop()!.length;
+          }
         }
       }
     } else if (key === "ArrowRight") {
       if (this.cursorPos < this.value.length) {
-        const after = this.value.slice(this.cursorPos);
-        const chars = [...after];
-        if (chars.length > 0) {
-          this.cursorPos += chars[0].length;
+        const ranges = this._findAtomicRanges();
+        const at = ranges.find((r) => this.cursorPos >= r.start && this.cursorPos < r.end);
+        if (at) {
+          this.cursorPos = at.end;
+        } else {
+          const after = this.value.slice(this.cursorPos);
+          const chars = [...after];
+          if (chars.length > 0) {
+            this.cursorPos += chars[0].length;
+          }
         }
       }
-    } else if (key === "ArrowUp") {
+    }
+ else if (key === "ArrowUp") {
       this._onArrowUp();
     } else if (key === "ArrowDown") {
       this._onArrowDown();
@@ -440,7 +458,7 @@ export abstract class InputPrimitive extends Box {
     const pos = this._mouseToCursor(col, row, contentX, contentY);
     if (pos === null) return;
 
-    this.cursorPos = pos;
+    this.cursorPos = this._snapToAtomicRange(pos);
 
     if (action === "press") {
       const now = Date.now();
@@ -457,11 +475,11 @@ export abstract class InputPrimitive extends Box {
       } else if (this._clickCount === 2) {
         this._selectWord();
       } else {
-        this._selStart = pos;
-        this._selEnd = pos;
+        this._selStart = this.cursorPos;
+        this._selEnd = this.cursorPos;
       }
     } else if (action === "move") {
-      this._selEnd = pos;
+      this._selEnd = this._snapToAtomicRange(pos);
     } else if (action === "release") {
       if (this._hasSelection()) {
         this._autoCopySelection();
@@ -604,6 +622,31 @@ export abstract class InputPrimitive extends Box {
       });
     }
     return ranges;
+  }
+
+  /** Find all atomic ranges (blocks of text treated as a single unit).
+   *  Includes paste markers and custom ranges provided via `getCustomAtomicRanges`. */
+  protected _findAtomicRanges(): Array<{ start: number; end: number }> {
+    const ranges: Array<{ start: number; end: number }> = this._findPasteRanges().map((r) => ({
+      start: r.start,
+      end: r.end,
+    }));
+    if (this.getCustomAtomicRanges) {
+      ranges.push(...this.getCustomAtomicRanges());
+    }
+    return ranges;
+  }
+
+  /** Snap a position to the nearest boundary of an atomic range if it falls inside one. */
+  protected _snapToAtomicRange(pos: number): number {
+    const ranges = this._findAtomicRanges();
+    for (const r of ranges) {
+      if (pos > r.start && pos < r.end) {
+        // Snap to nearest boundary
+        return (pos - r.start) < (r.end - pos) ? r.start : r.end;
+      }
+    }
+    return pos;
   }
 
   // ────────────────────────────────────────────────────────────

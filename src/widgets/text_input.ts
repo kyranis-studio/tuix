@@ -97,10 +97,12 @@ export class TextInput extends InputPrimitive {
     const selMax = selActive
       ? Math.max(this._selStart, this._selEnd)
       : -1;
-    const pasteRanges = this._findPasteRanges();
-    const inPasteRange = (idx: number) =>
-      pasteRanges.some((r) => idx >= r.start && idx < r.end);
-    const pasteShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+    const atomicRanges = this._findAtomicRanges();
+    const inAtomicRange = (idx: number) =>
+      atomicRanges.some((r) => idx >= r.start && idx < r.end);
+    const atomicShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+      // Only paste markers have shades by default
+      const pasteRanges = this._findPasteRanges();
       for (const r of pasteRanges) {
         if (idx >= r.start && idx < r.end) return this.getPasteShade(r.pasteIndex);
       }
@@ -113,7 +115,7 @@ export class TextInput extends InputPrimitive {
         selActive && charIdx >= selMin && charIdx < selMax;
       const isCursorHere =
         isFocused && i === cursorScreenX;
-      const isMarker = !inSel && !isCursorHere && inPasteRange(charIdx);
+      const isAtomic = !inSel && !isCursorHere && inAtomicRange(charIdx);
 
       if (i < displayText.length) {
         const rawCh = displayText[i];
@@ -140,8 +142,8 @@ export class TextInput extends InputPrimitive {
             bg: theme.text,
             bold: true,
           });
-        } else if (isMarker) {
-          const shade = pasteShadeAt(charIdx);
+        } else if (isAtomic) {
+          const shade = atomicShadeAt(charIdx);
           buf.set(rect.x + i, rect.y, {
             char: ch,
             fg: shade ?? theme.muted,

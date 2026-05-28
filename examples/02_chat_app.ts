@@ -5,6 +5,7 @@ import {
   TextArea,
   Collapsible,
   FloatingListBox,
+  InputPrimitive,
   paintText,
 } from "../src/mod.ts";
 
@@ -39,7 +40,7 @@ const ASCII_LOGO = [
   " ╚═════╝  ╚═════╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝",
 ];
 
-function setupPromptInput(promptInput: TextArea, app: App): void {
+function setupPromptInput(promptInput: TextArea, app: App, modelState: { current: string }): void {
   // ── State for the slash/mention dropdown overlay ────────────
   let triggerType: "/" | "@" | null = null;
   let triggerPos = -1;
@@ -63,8 +64,38 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
   }
 
   const COMMANDS = ["/new", "/help", "/clear", "/models"];
+  const MODELS = ["claude-sonnet-4", "gpt-4o", "gpt-4o-mini", "deepseek-v3", "o3-mini"];
 
   files = FAKE_FILES;
+
+  // ── Paste burst threshold support ───────────────────────────
+  const pasteBurstHandler = InputPrimitive.createPasteBurstHandler({
+    threshold: 50,
+    trackEnter: true,
+  });
+  promptInput.clipboardPasteHandler = pasteBurstHandler.handleClipboardPaste;
+
+  // ── Atomic range support for @-mentions ──────────────────────
+  promptInput.getCustomAtomicRanges = () => {
+    const ranges: Array<{ start: number; end: number }> = [];
+    const val = promptInput.value;
+    for (const tag of selectedFiles) {
+      const searchStr = `@${tag.stripped}`;
+      let pos = 0;
+      while ((pos = val.indexOf(searchStr, pos)) >= 0) {
+        if (!ranges.some((r) => r.start === pos)) {
+          let end = pos + searchStr.length;
+          // Include up to 2 trailing spaces
+          if (val[end] === " ") end++;
+          if (val[end] === " ") end++;
+          ranges.push({ start: pos, end });
+          break;
+        }
+        pos += searchStr.length;
+      }
+    }
+    return ranges;
+  };
 
   // ── Dropdown helpers ────────────────────────────────────────
   function closeDropdown(): void {
@@ -122,9 +153,80 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
     overlay = list;
   }
 
+  // ── Model dropdown state ─────────────────────────────────────
+  let modelListOverlay: FloatingListBox | null = null;
+  let selectedModelIndex = 0;
+  let modelFilter = "";
+
+  function selectModel(model: string): void {
+    modelState.current = model;
+    if (modelListOverlay) app.removeOverlay(modelListOverlay);
+    modelListOverlay = null;
+    modelFilter = "";
+    // Clear the filter text from the textarea
+    promptInput.value = "";
+    promptInput.cursorPos = 0;
+    (promptInput as any)._onValueChanged();
+    if (promptInput.onChange) promptInput.onChange(promptInput.value);
+  }
+
+  // ── Show model selection dropdown ────────────────────────────
+  function showModelDropdown(): void {
+    selectedModelIndex = 0;
+    modelFilter = "";
+    const list = new FloatingListBox(MODELS, 0);
+    list.maxVisible = 8;
+    list.focusable = false;
+
+    list.onItemSelect = (model: string) => {
+      selectModel(model);
+    };
+    list.removeFn = () => {
+      if (modelListOverlay) {
+        app.removeOverlay(modelListOverlay);
+        modelListOverlay = null;
+      }
+    };
+
+    const maxItemWidth = Math.max(...MODELS.map((s) => s.length));
+    const listWidth = Math.max(maxItemWidth + 4, promptInput.rect.width);
+    list.width = { fixed: listWidth };
+    // Fixed height — filtering may show fewer items but the box stays the same size
+    list.height = { fixed: Math.min(MODELS.length, 8) + 2 };
+
+    app.showOverlay(list, {
+      modal: false,
+      autoDismiss: true,
+      triggerRect: promptInput.rect,
+      reposition: () => {
+        list.positionRelativeTo(promptInput.rect);
+      },
+      onClose: () => {
+        modelListOverlay = null;
+      },
+    });
+    list.positionRelativeTo(promptInput.rect);
+    modelListOverlay = list;
+  }
+
   function selectItem(item: string): void {
+    // ── Intercept /models to show model picker instead ──────
+    if (triggerType === "/" && item === "/models") {
+      // Clear the /models text from the textarea
+      promptInput.value = "";
+      promptInput.cursorPos = 0;
+      (promptInput as any)._onValueChanged();
+      if (promptInput.onChange) promptInput.onChange(promptInput.value);
+      closeDropdown();
+      showModelDropdown();
+      return;
+    }
+
     // Strip icon prefix for @ mentions
     const stripped = item.replace(/^[📁📄]\s*/, "");
+    // Use only the leaf (last segment) for the chip text so e.g.
+    // "📁 src/components" becomes "@components" instead of "@src/components"
+    const leaf = stripped.split("/").pop() ?? stripped;
     // Preserve @ prefix for file mentions so Backspace can detect the block
     const prefix = triggerType === "@" ? "@" : "";
     // Append two spaces after the chip so the cursor is clearly visible past the chip
@@ -132,8 +234,8 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
     // Replace everything from triggerPos with the selected item
     promptInput.value =
       promptInput.value.slice(0, triggerPos) +
-      prefix + stripped + suffix;
-    promptInput.cursorPos = triggerPos + prefix.length + stripped.length + suffix.length;
+      prefix + leaf + suffix;
+    promptInput.cursorPos = triggerPos + prefix.length + leaf.length + suffix.length;
     // Trigger callbacks that the base handler normally fires
     (promptInput as any)._onValueChanged();
     if (promptInput.onChange) promptInput.onChange(promptInput.value);
@@ -144,8 +246,8 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
         f.replace(/^[📁📄]\s*/, "") === stripped
       );
       selectedFiles.push({
-        display: displayMatch ?? stripped,
-        stripped,
+        display: displayMatch ?? leaf,
+        stripped: leaf,
         chipAddedAt: Date.now(),
       });
     }
@@ -158,10 +260,19 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
     const tag = selectedFiles[index];
     if (!tag) return;
 
+    // Count how many previous entries share the same stripped value
+    let nth = 0;
+    for (let i = 0; i < index; i++) {
+      if (selectedFiles[i].stripped === tag.stripped) nth++;
+    }
+
+    // Splice from state first to avoid double-removal when onChange is triggered
+    selectedFiles.splice(index, 1);
+
     // Find the @-mention in the textarea value and remove it
     const val = promptInput.value;
     const searchStr = `@${tag.stripped}`;
-    const atIdx = val.indexOf(searchStr);
+    const atIdx = findNthOccurrence(val, searchStr, nth);
     if (atIdx >= 0) {
       const endIdx = atIdx + searchStr.length;
       // Remove up to 2 trailing spaces (the ones added by selectItem)
@@ -172,9 +283,10 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
       promptInput.cursorPos = atIdx;
       (promptInput as any)._onValueChanged();
       if (promptInput.onChange) promptInput.onChange(promptInput.value);
+    } else {
+      // Just refresh the UI if text wasn't found (e.g. manually edited)
+      (promptInput as any)._onValueChanged();
     }
-
-    selectedFiles.splice(index, 1);
   }
 
   // ── Inline chip rendering inside the textarea ──────────────
@@ -245,8 +357,8 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
       const lineStart = (promptInput as any)._lineStart(lineIdx) as number;
       const col = charPos - lineStart;
 
-      // Need room for ✕ + space + @-mention text
-      if (col + 2 + searchStr.length > textW) continue;
+      // Need room for @-mention text + space + ✕
+      if (col + searchStr.length + 2 > textW) continue;
 
       const screenX = contentRect.x + col;
       const screenY = contentRect.y + (lineIdx - scrollY);
@@ -255,39 +367,39 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
       const age = Date.now() - tag.chipAddedAt;
       const fade = Math.min(1, age / FADE_DURATION);
 
-      const xBg = lerpColor(theme.appBg, theme.secondaryBg, fade);
+      const xBg = lerpColor(theme.appBg, theme.elevatedBg, fade);
       const txtBg = lerpColor(theme.appBg, theme.elevatedBg, fade);
       const xFg = lerpColor(theme.text, theme.highlight, fade);
 
-      // Render ✕ at the beginning of the chip
-      buf.set(screenX, screenY, {
-        char: "✕",
-        fg: xFg,
-        bg: xBg,
-        bold: true,
-      });
-
-      // Separator space after ✕
-      buf.set(screenX + 1, screenY, {
-        char: " ",
-        fg: null,
-        bg: xBg,
-      });
-
       // Overlay chip background on the @-mention text
       for (let i = 0; i < searchStr.length; i++) {
-        buf.set(screenX + 2 + i, screenY, {
+        buf.set(screenX + i, screenY, {
           char: searchStr[i],
           fg: theme.text,
           bg: txtBg,
         });
       }
 
-      // Clickable area covers ✕ + space + @-mention text + trailing space
+      // Separator space before ✕
+      buf.set(screenX + searchStr.length, screenY, {
+        char: " ",
+        fg: null,
+        bg: xBg,
+      });
+
+      // Render ✕ at the end of the chip
+      buf.set(screenX + searchStr.length + 1, screenY, {
+        char: "✕",
+        fg: xFg,
+        bg: xBg,
+        bold: true,
+      });
+
+      // Clickable area covers @-mention text + space + ✕ + trailing space
       chipRects.push({
         x: screenX,
         y: screenY,
-        width: 2 + searchStr.length + 1,
+        width: searchStr.length + 2 + 1,
         index: ti,
       });
     }
@@ -310,15 +422,111 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
     origOnMouse?.(col, row, action, button);
   };
 
-  // ── onChange — close dropdown whenever input becomes empty ──
+  // ── onChange — close dropdown and sync chips ───────────────
   promptInput.onChange = (val: string) => {
     if (!val && triggerType) {
       closeDropdown();
+    }
+
+    // Sync selectedFiles: remove any tags that are no longer in the text.
+    // We iterate backwards to safely splice while checking occurrences.
+    for (let i = selectedFiles.length - 1; i >= 0; i--) {
+      const tag = selectedFiles[i];
+      const searchStr = `@${tag.stripped}`;
+      let count = 0;
+      for (let j = 0; j <= i; j++) {
+        if (selectedFiles[j].stripped === tag.stripped) count++;
+      }
+      if (findNthOccurrence(val, searchStr, count - 1) < 0) {
+        selectedFiles.splice(i, 1);
+      }
     }
   };
 
   // ── onKeyPress hook ────────────────────────────────────────
   promptInput.onKeyPress = (key, modifiers, state) => {
+    // ── Paste burst detection ────────────────────────────────
+    const burstResult = (pasteBurstHandler.onKeyPress as any).call(
+      promptInput,
+      key,
+      modifiers,
+      state,
+    );
+    if (burstResult) return burstResult;
+
+    // ── Model dropdown navigation & filter ───────────────────
+    if (modelListOverlay) {
+      if (key === "ArrowDown") {
+        const items = modelListOverlay.items;
+        if (selectedModelIndex < items.length - 1) {
+          selectedModelIndex++;
+          modelListOverlay.selectedIndex = selectedModelIndex;
+          modelListOverlay.clampScroll();
+        }
+        return { consumed: true };
+      }
+      if (key === "ArrowUp") {
+        if (selectedModelIndex > 0) {
+          selectedModelIndex--;
+          modelListOverlay.selectedIndex = selectedModelIndex;
+          modelListOverlay.clampScroll();
+        }
+        return { consumed: true };
+      }
+      if (key === "Enter") {
+        const items = modelListOverlay.items;
+        if (selectedModelIndex < items.length && items.length > 0) {
+          selectModel(items[selectedModelIndex]);
+          return { consumed: true };
+        }
+        // No matching models — consume Enter (don't fall through to base handler)
+        return { consumed: true };
+      }
+      if (key === "Escape") {
+        app.removeOverlay(modelListOverlay);
+        modelListOverlay = null;
+        return { consumed: true };
+      }
+      if (key === "Backspace") {
+        if (modelFilter.length > 0) {
+          modelFilter = modelFilter.slice(0, -1);
+          // Update textarea to show the filter
+          promptInput.value = modelFilter;
+          promptInput.cursorPos = modelFilter.length;
+          (promptInput as any)._onValueChanged();
+          if (promptInput.onChange) promptInput.onChange(promptInput.value);
+          // Filter the model list
+          const filtered = modelFilter
+            ? MODELS.filter((m) => m.toLowerCase().includes(modelFilter.toLowerCase()))
+            : [...MODELS];
+          modelListOverlay.items = filtered;
+          modelListOverlay.selectedIndex = 0;
+          selectedModelIndex = 0;
+          modelListOverlay.clampScroll();
+        }
+        // When filter is already empty, Backspace is a no-op (Escape closes the dropdown)
+        return { consumed: true };
+      }
+      // Printable characters — filter the model list
+      const isPrintable = !modifiers.ctrl && !modifiers.alt && key.length === 1;
+      if (isPrintable) {
+        modelFilter += key;
+        promptInput.value = modelFilter;
+        promptInput.cursorPos = modelFilter.length;
+        (promptInput as any)._onValueChanged();
+        if (promptInput.onChange) promptInput.onChange(promptInput.value);
+        // Filter and update the dropdown
+        const filtered = MODELS.filter((m) =>
+          m.toLowerCase().includes(modelFilter.toLowerCase())
+        );
+        modelListOverlay.items = filtered;
+        modelListOverlay.selectedIndex = 0;
+        selectedModelIndex = 0;
+        modelListOverlay.clampScroll();
+        return { consumed: true };
+      }
+    }
+
     // ── Close dropdown if input is already empty ───────────
     if (triggerType && state.value.length === 0) {
       closeDropdown();
@@ -438,86 +646,8 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
       return undefined;
     }
 
-    // ── Delete entire @-mention block on Backspace (anywhere within the block) ──
-    if (key === "Backspace" && !triggerType && state.cursorPos > 0) {
-      const mention = findAtMentionAt(state.value, state.cursorPos - 1);
-      if (mention) {
-        const tagIdx = selectedFiles.findIndex((f) => f.stripped === mention.stripped);
-        if (tagIdx >= 0) {
-          selectedFiles.splice(tagIdx, 1);
-        }
-        // Remove up to 2 trailing spaces (the ones added by selectItem)
-        let endPos = mention.endIdx;
-        if (state.value[endPos] === " ") endPos++;
-        if (state.value[endPos] === " ") endPos++;
-        // Apply changes directly and consume the event to prevent the default Backspace handler from firing
-        promptInput.value = state.value.slice(0, mention.atIdx) + state.value.slice(endPos);
-        promptInput.cursorPos = mention.atIdx;
-        (promptInput as any)._onValueChanged();
-        if (promptInput.onChange) promptInput.onChange(promptInput.value);
-        return { consumed: true };
-      }
-    }
-
-    // ── Delete entire @-mention block on Delete (cursor within or at start of block) ──
-    if (key === "Delete" && !triggerType && state.cursorPos < state.value.length) {
-      let mention = findAtMentionAt(state.value, state.cursorPos);
-      // If cursor is right on the @, detect the block by looking from the next char
-      if (!mention && state.value[state.cursorPos] === "@") {
-        mention = findAtMentionAt(state.value, state.cursorPos + 1);
-      }
-      if (mention) {
-        const tagIdx = selectedFiles.findIndex((f) => f.stripped === mention.stripped);
-        if (tagIdx >= 0) {
-          selectedFiles.splice(tagIdx, 1);
-        }
-        // Remove up to 2 trailing spaces (the ones added by selectItem)
-        let endPos = mention.endIdx;
-        if (state.value[endPos] === " ") endPos++;
-        if (state.value[endPos] === " ") endPos++;
-        // Apply changes directly and consume the event to prevent the default Delete handler from firing
-        promptInput.value = state.value.slice(0, mention.atIdx) + state.value.slice(endPos);
-        promptInput.cursorPos = mention.atIdx;
-        (promptInput as any)._onValueChanged();
-        if (promptInput.onChange) promptInput.onChange(promptInput.value);
-        return { consumed: true };
-      }
-    }
-
     return undefined;
   };
-
-  /** Find an @-mention block in val at the given position.
-   *  pos should be the index of the character being removed:
-   *    - For Backspace: cursorPos - 1
-   *    - For Delete:    cursorPos
-   *  Returns null if there's no @-mention block at pos. */
-  function findAtMentionAt(val: string, pos: number): { atIdx: number; endIdx: number; stripped: string } | null {
-    if (pos < 0 || pos >= val.length) return null;
-
-    // Scan backwards from pos to find '@'
-    let atIdx = -1;
-    for (let i = pos; i >= 0; i--) {
-      if (val[i] === "@") { atIdx = i; break; }
-      if (val[i] === " " || val[i] === "\n") break;
-    }
-    if (atIdx < 0) return null;
-
-    // Find end of the @-mention block (space, newline, or end of string)
-    let endIdx = atIdx + 1;
-    while (endIdx < val.length && val[endIdx] !== " " && val[endIdx] !== "\n") {
-      endIdx++;
-    }
-
-    // pos must be within the block or at the @ itself
-    if (pos < atIdx || pos >= endIdx) return null;
-
-    return {
-      atIdx,
-      endIdx,
-      stripped: val.slice(atIdx + 1, endIdx),
-    };
-  }
 
   function getFilteredItems(
     type: "/" | "@",
@@ -543,7 +673,8 @@ function setupPromptInput(promptInput: TextArea, app: App): void {
 export function buildApp(): App {
   const root = Box.col("root");
 
-  const { mainUI, promptInput } = buildMainUI();
+  const modelState = { current: "claude-sonnet-4" };
+  const { mainUI, promptInput } = buildMainUI(modelState);
 
   const splash = new Box("splash");
   splash.focusable = true;
@@ -586,7 +717,7 @@ export function buildApp(): App {
   const app = new App(root, { mouse: true });
 
   // Wire up slash commands and file mentions on the prompt textarea
-  setupPromptInput(promptInput, app);
+  setupPromptInput(promptInput, app, modelState);
 
 
   splash.onKey = () => {
@@ -597,7 +728,7 @@ export function buildApp(): App {
   return app;
 }
 
-function buildExecutionInfo(): Box {
+function buildExecutionInfo(modelState: { current: string }): Box {
   const panel = Box.col("execution-info");
   panel.style.border = "rounded";
   panel.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
@@ -613,7 +744,7 @@ function buildExecutionInfo(): Box {
   const modelBox = new Box("model");
   modelBox.height = { fixed: 1 };
   modelBox.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "Model: claude-sonnet-4", 0, theme.text);
+    paintText(buf, rect, `Model: ${modelState.current}`, 0, theme.text);
   };
 
   const toolBox = new Box("tool");
@@ -643,12 +774,12 @@ function buildExecutionInfo(): Box {
   return panel;
 }
 
-function buildMainUI(): { mainUI: Box; promptInput: TextArea; executionInfo: Box } {
+function buildMainUI(modelState: { current: string }): { mainUI: Box; promptInput: TextArea; executionInfo: Box } {
   const mainCol = Box.col("main-ui");
 
   const mainRow = Box.row("main-row");
   const chatArea = buildChatArea();
-  const executionInfo = buildExecutionInfo();
+  const executionInfo = buildExecutionInfo(modelState);
   const splitter = new Splitter("horizontal", chatArea, executionInfo, {
     initialSplit: "75%",
     minB: 50,

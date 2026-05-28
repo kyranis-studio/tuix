@@ -69,27 +69,30 @@ Tab between widgets, type in the input, and click (or press Enter on) the button
 
 3. **🛡️ Burst Protection**
    - Automatic detection of terminal pastes and fast input bursts via `InputPrimitive.createPasteBurstHandler()` (counts **lines**, not characters).
-   - Replaces large bursts with interactive markers `copied text N [L line]` — Backspace/Delete removes the entire block at once.
-   - Multi-line pastes are detected as single bursts when `trackEnter: true` is set.
+   - Replaces large bursts with **atomic** interactive markers `copied text N [L line]` — treat markers as single units for navigation and deletion.
 
-4. **🎨 CodeEditor with Syntax Highlighting**
+4. **⚛️ Atomic Ranges**
+   - Treat complex text blocks as a single character for cursor movement and deletion.
+   - Built-in support for paste markers, with custom hooks (`getCustomAtomicRanges`) for @-mentions, #hashtags, and more.
+
+5. **🎨 CodeEditor with Syntax Highlighting**
    - Regex-based tokenizer supporting TypeScript/JavaScript with 7 token types (keywords, strings, comments, numbers, types, functions, decorators).
    - Customisable colour palette inspired by VS Code Dark+.
    - Builds on `TextArea` — full cursor, selection, clipboard, and scrollbar support.
 
-5. **🎨 Customizable Scrollbar**
+6. **🎨 Customizable Scrollbar**
    - Vertical and horizontal scrollbars with arrow indicators (↑/↓/◄/►) that dim at scroll limits.
    - Fully customizable characters for track, thumb, and arrows via `style.scrollbar`.
    - Alt+Wheel flips mouse wheel to horizontal scrolling.
 
-6. **Reactive Flex-Like Layout Engine**
+7. **Reactive Flex-Like Layout Engine**
    - **Main-axis Flows**: Support for both `row` and `column` directions.
    - **Cross-axis Alignment**: `start`, `center`, `end`, and `stretch` support.
    - **Main-axis Justification**: `start`, `center`, `end`, `space-between`, and `space-around`.
    - **Multi-dimensional Spacing**: Precise control over margins, paddings, gutters, and borders (Rounded, Single, Double, Bold, None).
    - **Auto-scrolling Containers**: When children overflow the viewport, a scrollbar appears automatically with arrow indicators (↑/↓/◄/►) and customizable characters. Arrow keys, PageUp, PageDown, and mouse wheel scroll from any focused widget inside the container. Alt+Wheel flips to horizontal scroll.
 
-7. **📊 Real-time Diff Viewer**
+8. **📊 Real-time Diff Viewer**
    - Unified and side-by-side diff views with colour-coded additions (green) and deletions (red).
    - LCS-based line diff algorithm with 3-line context hunks.
    - Customisable `DiffTheme` for per-token colour overrides.
@@ -135,7 +138,7 @@ Detailed guides and API references for every part of the library:
 
 ## Component Overview
 
-   - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, the `onKeyPress` hook, and `createPasteBurstHandler()` for burst protection.
+   - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, the `onKeyPress` hook, `createPasteBurstHandler()` for burst protection, and the **Atomic Ranges** system for treating text blocks as single units.
    - [**`TextInput`**](docs/text_input.md): Single-line text input with overflow scrolling (`...` ellipsis at boundaries), cursor, Home/End/arrow navigation, character insertion, block cursor, and placeholder. Fully multi-byte aware.
    - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
    - [**`PasswordInput`**](docs/password_input.md): Password input masking all characters as `*` with clipboard copy blocked.

@@ -665,8 +665,22 @@ const pasteInput = new TextInput("Input", "Right-click here to paste from clipbo
 
 const copyOnSelectInput = new TextInput("Input", "", "Select me — auto-copies ✓", undefined, true, true, "✧ Copied!");
 
+const chipInput = new TextInput("Input", "", "Hello @world! Welcome to #tuix with atomic #chips and @mentions.");
+chipInput.getCustomAtomicRanges = () => {
+  const ranges: Array<{ start: number; end: number }> = [];
+  const val = chipInput.value;
+  // Match @mentions and #hashtags
+  const matches = val.matchAll(/[@#][\w-]+/g);
+  for (const m of matches) {
+    if (m.index !== undefined) {
+      ranges.push({ start: m.index, end: m.index + m[0].length });
+    }
+  }
+  return ranges;
+};
+
 const cpHint = new Box("cp-hint");
-cpHint.height = { fixed: 3 };
+cpHint.height = { fixed: 4 };
 cpHint.onPaint = (_buf, rect, theme) => {
   paintText(
     _buf,
@@ -685,8 +699,15 @@ cpHint.onPaint = (_buf, rect, theme) => {
   paintText(
     _buf,
     rect,
-    "  Paste threshold — fast paste (Ctrl+Shift+V or right-click) > threshold inserts bold marker, edit/delete.",
+    "  Atomic Ranges — markers/chips are treated as a single character for navigation/deletion.",
     2,
+    theme.muted,
+  );
+  paintText(
+    _buf,
+    rect,
+    "  Paste threshold — fast paste (Ctrl+Shift+V) > threshold inserts atomic bold marker.",
+    3,
     theme.muted,
   );
 };
@@ -708,6 +729,8 @@ textStatus.onPaint = (_buf, rect, theme) => {
 textScroll.add(
   lbl("TextInput (overflow scrolls with ...):"),
   longTextInput,
+  lbl("Atomic Chips (hashtags and @mentions jump/delete as a single unit):"),
+  chipInput,
   lbl("TextInput (standard):"),
   textInput,
   lbl("Autocomplete (dropdown mode):"),
@@ -716,7 +739,7 @@ textScroll.add(
   autoInline,
   lbl("TextArea (multi-line):"),
   textArea,
-  lbl("TextArea (burstThreshold=50 — paste >50 chars creates shaded paste markers):"),
+  lbl("TextArea (burstThreshold=50 — paste >50 chars creates atomic markers):"),
   pasteThreshTextArea,
   cpHint,
   lbl("Copy/Paste — select text with mouse (auto-copied) from here:"),

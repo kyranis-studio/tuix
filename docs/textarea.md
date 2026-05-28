@@ -39,7 +39,8 @@ const ta = new TextArea(
 ## Key Features
 
 - **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
-- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) and clipboard pastes via `InputPrimitive.createPasteBurstHandler()` (counts **lines**, not characters). Pastes exceeding the threshold are replaced by an interactive marker `copied text N [L line]` where `L` is the line count. Backspace/Delete removes the entire marker block at once.
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) and clipboard pastes via `InputPrimitive.createPasteBurstHandler()` (counts **lines**, not characters). Pastes exceeding the threshold are replaced by an interactive marker `copied text N [L line]` where `L` is the line count.
+- **⚛️ Atomic Ranges**: Treat blocks of text as a single unit for navigation and deletion. Paste markers are automatically atomic. Custom atomic ranges (like tokens or mentions) can be provided via `getCustomAtomicRanges`.
 - **🔌 Hook System**: The `onKeyPress` hook allows external control over every key event — used for slash commands, file mentions, auto-complete, and burst protection.
 - **📝 Multi-line Bursts**: Set `trackEnter: true` in `createPasteBurstHandler()` so newlines are tracked as part of input bursts. Multi-line terminal pastes are detected as a single burst and replaced by a single marker.
 - **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (line) selection.
@@ -54,10 +55,10 @@ const ta = new TextArea(
 |-----|--------|
 | Printable char | Insert at cursor (replaces selection if active) |
 | `Enter` | Newline at cursor |
-| `Backspace` | Delete character before cursor, or entire paste marker block at once |
-| `Delete` | Delete character after cursor, or entire paste marker block at once |
-| `ArrowLeft` / `ArrowRight` | Move cursor character-by-character |
-| `ArrowUp` / `ArrowDown` | Move cursor vertically (same column) |
+| `Backspace` | Delete char before cursor, or entire atomic block (if cursor is within or at end) |
+| `Delete` | Delete char after cursor, or entire atomic block (if cursor is within or at start) |
+| `ArrowLeft` / `ArrowRight` | Move cursor char-by-char, jumping over atomic blocks |
+| `ArrowUp` / `ArrowDown` | Move cursor vertically (same column), snapping to atomic boundaries |
 | `Home` | Start of line |
 | `End` | End of line |
 | `Ctrl+Home` | Start of text |
@@ -101,6 +102,31 @@ When a terminal paste burst or clipboard paste exceeds the threshold, it's repla
 
 ---
 
+## Atomic Ranges
+
+Atomic ranges are blocks of text that the widget treats as a single unit. When the cursor enters an atomic range (via keyboard navigation, vertical movement, or mouse click), it is snapped to the nearest boundary. `Backspace`, `Delete`, and `Arrow` keys move across the entire range in one step.
+
+### Custom Atomic Ranges
+
+You can define custom atomic ranges by providing a `getCustomAtomicRanges` callback. This is useful for features like user mentions or complex tokens.
+
+```typescript
+ta.getCustomAtomicRanges = () => {
+  const ranges: Array<{ start: number; end: number }> = [];
+  const val = ta.value;
+  // Example: treat all @mentions as atomic
+  const matches = val.matchAll(/@[\w-]+/g);
+  for (const m of matches) {
+    if (m.index !== undefined) {
+      ranges.push({ start: m.index, end: m.index + m[0].length });
+    }
+  }
+  return ranges;
+};
+```
+
+---
+
 ## Properties
 
 ```typescript
@@ -110,6 +136,7 @@ ta.cursorPos;                 // Global cursor position (string index)
 ta.minRows;                   // Minimum visible rows (default 3)
 ta.maxLines;                  // Maximum visible rows (null = unlimited)
 ta.pasteShades;               // Color palette for paste markers (null = defaults)
+ta.getCustomAtomicRanges;      // () => Array<{start: number, end: number}> hook
 ta.onChange;                  // (val: string) => void
 ta.onKeyPress;                // KeyPressHandler hook — intercept key events
 ta.clipboardPasteHandler;     // Handler for clipboard paste markers

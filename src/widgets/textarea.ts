@@ -85,8 +85,9 @@ export class TextArea extends InputPrimitive {
     const col = this._cursorCol();
     const row = this._cursorRow();
     if (row > 0) {
-      this.cursorPos =
+      const pos =
         this._lineStart(row - 1) + Math.min(col, this._lineLength(row - 1));
+      this.cursorPos = this._snapToAtomicRange(pos);
     }
   }
 
@@ -94,8 +95,9 @@ export class TextArea extends InputPrimitive {
     const col = this._cursorCol();
     const row = this._cursorRow();
     if (row < this._rowCount() - 1) {
-      this.cursorPos =
+      const pos =
         this._lineStart(row + 1) + Math.min(col, this._lineLength(row + 1));
+      this.cursorPos = this._snapToAtomicRange(pos);
     }
   }
 
@@ -207,10 +209,12 @@ export class TextArea extends InputPrimitive {
       const selMax = selActive
         ? Math.max(this._selStart, this._selEnd)
         : -1;
-      const pasteRanges = this._findPasteRanges();
-      const inPasteRange = (idx: number) =>
-        pasteRanges.some((r) => idx >= r.start && idx < r.end);
-      const pasteShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+      const atomicRanges = this._findAtomicRanges();
+      const inAtomicRange = (idx: number) =>
+        atomicRanges.some((r) => idx >= r.start && idx < r.end);
+      const atomicShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
+        // Only paste markers have shades by default
+        const pasteRanges = this._findPasteRanges();
         for (const r of pasteRanges) {
           if (idx >= r.start && idx < r.end) return this.getPasteShade(r.pasteIndex);
         }
@@ -227,7 +231,7 @@ export class TextArea extends InputPrimitive {
             selActive && charIdx >= selMin && charIdx < selMax;
           const isCur =
             isFocused && lineIdx === cursorRow && col === cursorCol;
-          const isMarker = !inSel && !isCur && inPasteRange(charIdx);
+          const isAtomic = !inSel && !isCur && inAtomicRange(charIdx);
 
           if (col < line.length) {
             const ch = this._getDisplayChar(line[col]);
@@ -251,8 +255,8 @@ export class TextArea extends InputPrimitive {
                 bg: theme.text,
                 bold: true,
               });
-            } else if (isMarker) {
-              const shade = pasteShadeAt(charIdx);
+            } else if (isAtomic) {
+              const shade = atomicShadeAt(charIdx);
               buf.set(rect.x + col, rect.y + row, {
                 char: ch,
                 fg: shade ?? theme.muted,
