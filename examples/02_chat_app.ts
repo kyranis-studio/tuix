@@ -4,6 +4,7 @@ import {
   Splitter,
   TextArea,
   Collapsible,
+  FloatingListBox,
   paintText,
 } from "../src/mod.ts";
 
@@ -16,10 +17,355 @@ const ASCII_LOGO = [
   " ╚═════╝  ╚═════╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝",
 ];
 
+function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): void {
+  // ── State for the slash/mention dropdown overlay ────────────
+  let triggerType: "/" | "@" | null = null;
+  let triggerPos = -1;
+  let overlay: FloatingListBox | null = null;
+  let filteredItems: string[] = [];
+  let selectedIndex = 0;
+  let files: string[] = [];
+  // ── Selected files for @-mention tags ────────────────
+  const selectedFiles: Array<{ display: string; stripped: string }> = [];
+
+  const COMMANDS = ["/new", "/help", "/clear", "/models"];
+
+  // ── Fake file listing for @ mentions ───────────────────────
+  const FAKE_FILES = [
+    "📁 src",
+    "📁 src/components",
+    "📁 src/utils",
+    "📁 docs",
+    "📁 tests",
+    "📄 src/main.ts",
+    "📄 src/app.ts",
+    "📄 src/components/button.tsx",
+    "📄 src/components/input.tsx",
+    "📄 src/utils/helpers.ts",
+    "📄 src/utils/validators.ts",
+    "📄 docs/README.md",
+    "📄 docs/guide.md",
+    "📄 tests/main.test.ts",
+    "📄 tests/helpers.test.ts",
+    "📄 package.json",
+    "📄 tsconfig.json",
+    "📄 .gitignore",
+  ];
+  files = FAKE_FILES;
+
+  // ── Dropdown helpers ────────────────────────────────────────
+  function closeDropdown(): void {
+    if (overlay) {
+      app.removeOverlay(overlay);
+      overlay = null;
+    }
+    triggerType = null;
+    triggerPos = -1;
+    filteredItems = [];
+    selectedIndex = 0;
+  }
+
+  function showDropdown(items: string[]): void {
+    // Close existing overlay
+    if (overlay) {
+      app.removeOverlay(overlay);
+      overlay = null;
+    }
+
+    const list = new FloatingListBox(items, selectedIndex);
+    list.maxVisible = 8;
+    list.focusable = false; // TextArea retains keyboard focus
+
+    list.onItemSelect = (item: string) => {
+      selectItem(item);
+    };
+    list.removeFn = () => {
+      app.removeOverlay(list);
+      overlay = null;
+      triggerType = null;
+    };
+
+    const maxItemWidth = Math.max(...items.map((s) => s.length));
+    const listWidth = Math.max(maxItemWidth + 4, promptInput.rect.width);
+    list.width = { fixed: listWidth };
+    list.height = { fixed: Math.min(items.length, 8) + 2 };
+
+    app.showOverlay(list, {
+      modal: false,
+      autoDismiss: true,
+      triggerRect: {
+        x: promptInput.rect.x,
+        y: fileTagsBar.rect.y,
+        width: promptInput.rect.width,
+        height: promptInput.rect.y + promptInput.rect.height - fileTagsBar.rect.y,
+      },
+      reposition: () => {
+        list.positionRelativeTo(promptInput.rect);
+      },
+      onClose: () => {
+        overlay = null;
+        triggerType = null;
+      },
+    });
+    list.positionRelativeTo(promptInput.rect);
+    overlay = list;
+  }
+
+  function selectItem(item: string): void {
+    // Strip icon prefix for @ mentions
+    const stripped = item.replace(/^[📁📄]\s*/, "");
+    // Preserve @ prefix for file mentions so Backspace can detect the block
+    const prefix = triggerType === "@" ? "@" : "";
+    // Replace everything from triggerPos with the selected item
+    promptInput.value =
+      promptInput.value.slice(0, triggerPos) +
+      prefix + stripped;
+    promptInput.cursorPos = triggerPos + prefix.length + stripped.length;
+    // Trigger callbacks that the base handler normally fires
+    (promptInput as any)._onValueChanged();
+    if (promptInput.onChange) promptInput.onChange(promptInput.value);
+
+    // Add to file tags BEFORE closeDropdown() clears filteredItems
+    if (triggerType === "@") {
+      const displayMatch = filteredItems.find((f) =>
+        f.replace(/^[📁📄]\s*/, "") === stripped
+      );
+      selectedFiles.push({
+        display: displayMatch ?? stripped,
+        stripped,
+      });
+      updateFileTagsBar();
+    }
+
+    closeDropdown();
+  }
+
+  // ── File tags bar (show selected files with x to remove) ────
+  const fileTagXPositions: number[] = [];
+
+  function removeFileTag(index: number): void {
+    const file = selectedFiles[index];
+    if (!file) return;
+    selectedFiles.splice(index, 1);
+    // Remove the @mention from the prompt value
+    const atPattern = `@${file.stripped}`;
+    const val = promptInput.value;
+    const atIdx = val.indexOf(atPattern);
+    if (atIdx >= 0) {
+      promptInput.value = val.slice(0, atIdx) + val.slice(atIdx + atPattern.length);
+      promptInput.cursorPos = Math.min(atIdx, promptInput.value.length);
+      (promptInput as any)._onValueChanged();
+      if (promptInput.onChange) promptInput.onChange(promptInput.value);
+    }
+    updateFileTagsBar();
+  }
+
+  function updateFileTagsBar(): void {
+    fileTagsBar.height.fixed = selectedFiles.length > 0 ? 1 : 0;
+  }
+
+  fileTagsBar.onPaint = (buf, rect, theme) => {
+    fileTagXPositions.length = 0;
+    if (selectedFiles.length === 0) return;
+    // Fill background
+    buf.fill(rect.x, rect.y, rect.width, rect.height, {
+      char: " ",
+      bg: theme.secondaryBg,
+      fg: null,
+    });
+    // Paint tags
+    let x = rect.x;
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const tag = ` ${selectedFiles[i].display} ✕`;
+      const chars = [...tag];
+      for (let ci = 0; ci < chars.length; ci++) {
+        buf.set(x + ci, rect.y, {
+          char: chars[ci],
+          fg: ci === chars.length - 1 ? theme.highlight : theme.text,
+          bg: theme.secondaryBg,
+          bold: ci === chars.length - 1,
+        });
+      }
+      fileTagXPositions.push(x + chars.length - 1);
+      x += chars.length + 1; // tag width + separator
+      if (x >= rect.x + rect.width) break;
+    }
+  };
+
+  fileTagsBar.onMouse = (col, row, action, button) => {
+    if (action === "press" && button === 0 && selectedFiles.length > 0) {
+      for (let i = 0; i < fileTagXPositions.length; i++) {
+        if (col === fileTagXPositions[i]) {
+          removeFileTag(i);
+          return;
+        }
+      }
+    }
+  };
+
+  // ── onKeyPress hook ────────────────────────────────────────
+  promptInput.onKeyPress = (key, modifiers, state) => {
+    // ── Dropdown navigation (only when overlay is open) ─────
+    if (overlay) {
+      if (key === "ArrowDown") {
+        if (selectedIndex < filteredItems.length - 1) {
+          selectedIndex++;
+          overlay.selectedIndex = selectedIndex;
+          overlay.clampScroll();
+        }
+        return { consumed: true };
+      }
+      if (key === "ArrowUp") {
+        if (selectedIndex > 0) {
+          selectedIndex--;
+          overlay.selectedIndex = selectedIndex;
+          overlay.clampScroll();
+        }
+        return { consumed: true };
+      }
+      if (key === "Enter") {
+        if (filteredItems.length > 0 && selectedIndex < filteredItems.length) {
+          selectItem(filteredItems[selectedIndex]);
+          return { consumed: true };
+        }
+        closeDropdown();
+        return undefined;
+      }
+      if (key === "Escape") {
+        closeDropdown();
+        return { consumed: true };
+      }
+      if (key === " " || key === "Tab") {
+        closeDropdown();
+        return undefined; // Let the key be inserted normally
+      }
+    }
+
+    // ── Trigger activation ───────────────────────────────────
+    const isPrintable = !modifiers.ctrl && !modifiers.alt && key.length === 1;
+
+    if (isPrintable && key === "/") {
+      triggerType = "/";
+      triggerPos = state.cursorPos;
+      filteredItems = COMMANDS;
+      selectedIndex = 0;
+      showDropdown(COMMANDS);
+      return undefined; // Let "/" be inserted
+    }
+
+    if (isPrintable && key === "@") {
+      triggerType = "@";
+      triggerPos = state.cursorPos;
+      filteredItems = files.slice(0, 50);
+      selectedIndex = 0;
+      showDropdown(filteredItems);
+      return undefined; // Let "@" be inserted
+    }
+
+    // ── Filter suggestions as user types ─────────────────────
+    if (triggerType && !overlay) {
+      // Dropdown was closed (no matches) — check if we should re-open
+      if (isPrintable) {
+        const newQuery = state.value.slice(triggerPos) + key;
+        const items = getFilteredItems(triggerType, newQuery);
+        if (items.length > 0) {
+          filteredItems = items;
+          selectedIndex = 0;
+          showDropdown(items);
+        }
+        return undefined;
+      }
+    }
+
+    if (triggerType && overlay && isPrintable) {
+      // Compute the text after the trigger after this key is inserted
+      const newQuery =
+        state.value.slice(triggerPos, state.cursorPos) +
+        key +
+        state.value.slice(state.cursorPos);
+      const items = getFilteredItems(triggerType, newQuery);
+      if (items.length > 0) {
+        filteredItems = items;
+        selectedIndex = 0;
+        showDropdown(items);
+      } else {
+        closeDropdown();
+      }
+      return undefined;
+    }
+
+    if (key === "Backspace" && triggerType) {
+      if (state.cursorPos <= triggerPos + 1) {
+        // Deleting the trigger character itself
+        closeDropdown();
+        return undefined;
+      }
+      // Re-filter after backspace
+      if (state.cursorPos > 0) {
+        const before = state.value.slice(0, state.cursorPos);
+        const chars = [...before];
+        chars.pop();
+        const newBefore = chars.join("");
+        const newValue = newBefore + state.value.slice(state.cursorPos);
+        const newQuery = newValue.slice(triggerPos);
+        const items = getFilteredItems(triggerType, newQuery);
+        if (items.length > 0) {
+          filteredItems = items;
+          selectedIndex = 0;
+          showDropdown(items);
+        } else {
+          closeDropdown();
+        }
+      }
+      return undefined;
+    }
+
+    // ── Delete entire @-mention block on Backspace ──────────────
+    if (key === "Backspace" && state.cursorPos > 0) {
+      const val = state.value;
+      const cur = state.cursorPos;
+      // Scan backwards from cursor for '@' with no spaces/newlines in between
+      let atIdx = -1;
+      for (let i = cur - 1; i >= 0; i--) {
+        if (val[i] === "@") { atIdx = i; break; }
+        if (val[i] === " " || val[i] === "\n") break;
+      }
+      if (atIdx >= 0 && cur > atIdx) {
+        return {
+          value: val.slice(0, atIdx) + val.slice(cur),
+          cursorPos: atIdx,
+        };
+      }
+    }
+
+    return undefined;
+  };
+
+  function getFilteredItems(
+    type: "/" | "@",
+    query: string,
+  ): string[] {
+    if (type === "/") {
+      const search = query.slice(1).toLowerCase(); // Remove "/" prefix
+      return COMMANDS.filter((c) => c.includes(search));
+    }
+    if (type === "@") {
+      const search = query.slice(1).toLowerCase(); // Remove "@" prefix
+      return files
+        .filter((f) => {
+          const name = f.replace(/^[📁📄]\s*/, "").toLowerCase();
+          return name.includes(search);
+        })
+        .slice(0, 50);
+    }
+    return [];
+  }
+}
+
 export function buildApp(): App {
   const root = Box.col("root");
 
-  const mainUI = buildMainUI();
+  const { mainUI, promptInput, fileTagsBar } = buildMainUI();
 
   const splash = new Box("splash");
   splash.focusable = true;
@@ -61,6 +407,9 @@ export function buildApp(): App {
 
   const app = new App(root, { mouse: true });
 
+  // Wire up slash commands and file mentions on the prompt textarea
+  setupPromptInput(promptInput, app, fileTagsBar);
+
   splash.onKey = () => {
     root.children = [mainUI];
     app.focusManager?.focusFirst();
@@ -69,7 +418,7 @@ export function buildApp(): App {
   return app;
 }
 
-function buildMainUI(): Box {
+function buildMainUI(): { mainUI: Box; promptInput: TextArea; fileTagsBar: Box } {
   const mainCol = Box.col("main-ui");
 
   const mainRow = Box.row("main-row");
@@ -81,12 +430,18 @@ function buildMainUI(): Box {
   });
   mainRow.add(splitter);
 
-  const bottomBar = Box.row("bottom-bar");
-  bottomBar.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
+  const bottomBar = Box.col("bottom-bar");
+  bottomBar.style.padding = { top: 0, right: 1, bottom: 1, left: 1 };
+  bottomBar.style.gutter = 0;
+
+  const fileTagsBar = new Box("file-tags");
+  fileTagsBar.height = { fixed: 0 };
+  fileTagsBar.width = { grow: 1 };
+
   const promptInput = new TextArea("Prompt", "Type a message...");
   promptInput.tabIndex = 0;
 
-  bottomBar.add(promptInput);
+  bottomBar.add(fileTagsBar, promptInput);
 
   const mainSplitter = new Splitter("vertical", mainRow, bottomBar, {
     initialSplit: "85%",
@@ -95,7 +450,7 @@ function buildMainUI(): Box {
   });
 
   mainCol.add(mainSplitter);
-  return mainCol;
+  return { mainUI: mainCol, promptInput, fileTagsBar };
 }
 
 function buildChatArea(): Box {

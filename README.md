@@ -68,9 +68,9 @@ Tab between widgets, type in the input, and click (or press Enter on) the button
    - Character-aware cursor navigation, backspace, and deletion.
 
 3. **🛡️ Burst Protection**
-   - Automatic detection of terminal pastes and fast input bursts via `burstThreshold` (counts **chars**, not lines).
-   - Replaces large bursts with interactive markers to maintain UI performance and prevent buffer overflow.
-   - Multi-line pastes are detected as single bursts in `TextArea`.
+   - Automatic detection of terminal pastes and fast input bursts via `InputPrimitive.createPasteBurstHandler()` (counts **lines**, not characters).
+   - Replaces large bursts with interactive markers `copied text N [L line]` — Backspace/Delete removes the entire block at once.
+   - Multi-line pastes are detected as single bursts when `trackEnter: true` is set.
 
 4. **🎨 CodeEditor with Syntax Highlighting**
    - Regex-based tokenizer supporting TypeScript/JavaScript with 7 token types (keywords, strings, comments, numbers, types, functions, decorators).
@@ -135,9 +135,11 @@ Detailed guides and API references for every part of the library:
 
 ## Component Overview
 
-   - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, and `burstThreshold` protection.
+   - [**`InputPrimitive`**](docs/text_input.md): Shared base class for text inputs providing selection, clipboard, double/triple-click word/line selection, selection deletion, character-aware navigation, the `onKeyPress` hook, and `createPasteBurstHandler()` for burst protection.
    - [**`TextInput`**](docs/text_input.md): Single-line text input with overflow scrolling (`...` ellipsis at boundaries), cursor, Home/End/arrow navigation, character insertion, block cursor, and placeholder. Fully multi-byte aware.
    - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
+   - [**`PasswordInput`**](docs/password_input.md): Password input masking all characters as `*` with clipboard copy blocked.
+   - [**`FloatingListBox`**](docs/floating_list.md): Overlay dropdown list for autocomplete, command palettes, and file mention pickers.
    - [**`CodeEditor`**](docs/code_editor.md): Syntax-highlighted code editor built on TextArea. Regex-based tokenizer colours keywords, strings, comments, numbers, types, functions, and decorators. Customisable colour palette.
    - [**`DiffViewer`**](docs/diff_viewer.md): Unified and side-by-side diff viewer with colour-highlighted additions/deletions, LCS-based diff computation, and customisable `DiffTheme`.
    - [**`Button`**](docs/button.md): Clickable button with 5 styles (default, small, large, ghost, outline), keyboard/mouse support, toggle, and flash state.

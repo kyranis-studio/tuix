@@ -4,9 +4,10 @@ export type { ButtonStyle } from "./button.ts";
 export { Checkbox } from "./checkbox.ts";
 
 export { InputPrimitive } from "./input_primitive.ts";
-export type { AppOverlayRef } from "./input_primitive.ts";
+export type { AppOverlayRef, KeyPressHandler, KeyPressResult } from "./input_primitive.ts";
 
 export { TextInput } from "./text_input.ts";
+export { PasswordInput } from "./password_input.ts";
 
 export { ListBox } from "./listbox.ts";
 export type { ListBoxItem } from "./listbox.ts";

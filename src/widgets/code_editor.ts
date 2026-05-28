@@ -258,8 +258,7 @@ export class CodeEditor extends TextArea {
     onChange?: (val: string) => void,
     language = "typescript",
   ) {
-    // maxLines = null → unlimited; burstThreshold high → no paste markers
-    super(label, placeholder, value, onChange, undefined, false, false, "Copied!", 9999);
+    super(label, placeholder, value, onChange, undefined, false, false, "Copied!");
     this.language = language;
 
     // Re-attach onPaint with syntax highlighting

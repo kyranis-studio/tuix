@@ -9,6 +9,25 @@ export type AppOverlayRef = {
   removeOverlay: (box: Box) => void;
 };
 
+/** Result returned by a KeyPressHandler to control input behavior. */
+export type KeyPressResult = {
+  /** New value for the input (replaces current value). */
+  value?: string;
+  /** New cursor position. */
+  cursorPos?: number;
+  /** If true, the key event is consumed and no further processing occurs. */
+  consumed?: boolean;
+};
+
+/** Handler invoked on every key press before the default processing.
+ *  Return a KeyPressResult to modify the value, cursor position, or consume the event entirely.
+ *  Return undefined/void to let the default processing take effect. */
+export type KeyPressHandler = (
+  key: string,
+  modifiers: { ctrl: boolean; alt: boolean; shift: boolean },
+  state: { value: string; cursorPos: number },
+) => KeyPressResult | void;
+
 export abstract class InputPrimitive extends Box {
   value = "";
   placeholder = "";
@@ -18,10 +37,15 @@ export abstract class InputPrimitive extends Box {
   copyOnSelect: boolean;
   notifyOnCopy: boolean;
   copyNotificationMessage: string;
-  burstThreshold: number | null = null;
+
+  /** External hook fired on each key press. Allows modifying value, cursor, or blocking input. */
+  onKeyPress: KeyPressHandler | null = null;
+
+  /** Handler for clipboard paste operations (set by createPasteBurstHandler).
+   *  Called from _pasteAtCursor() after text is inserted. */
+  clipboardPasteHandler: ((widget: InputPrimitive, insertPos: number, text: string) => void) | null = null;
 
   protected _appRef: AppOverlayRef | null = null;
-  private _pasteCount = 0;
 
   /** Instance-level paste shade palette (overrides static default if set). */
   pasteShades: Array<{ r: number; g: number; b: number }> | null = null;
@@ -45,19 +69,128 @@ export abstract class InputPrimitive extends Box {
     return palette[(index - 1) % palette.length];
   }
 
-  // Burst tracking — detect terminal paste via fast-arriving key events
-  private _burstPos = -1;
-  private _burstText = "";
-  private _lastKeyTime = 0;
-  private _burstReplaced = false;
-  private _burstTimer: number | null = null;
-  private static _BURST_MS = 80;
+  /** Create a KeyPressHandler that detects terminal paste bursts (fast-arriving key events)
+   *  and replaces them with colored paste markers. Use with `widget.onKeyPress = ...`.
+   *
+   *  Also returns a `handleClipboardPaste` helper for clipboard paste operations.
+   */
+  static createPasteBurstHandler(config?: {
+    threshold?: number;
+    trackEnter?: boolean;
+  }): {
+    onKeyPress: KeyPressHandler;
+    /** Apply a paste marker after clipboard paste. Call after inserting text into the widget. */
+    handleClipboardPaste: (widget: InputPrimitive, insertPos: number, text: string) => void;
+  } {
+    const threshold = config?.threshold ?? 50;
+    const trackEnter = config?.trackEnter ?? false;
+    const BURST_MS = 80;
+
+    let burstPos = -1;
+    let burstText = "";
+    let lastKeyTime = 0;
+    let burstReplaced = false;
+    let burstTimer: number | null = null;
+    let pasteCount = 0;
+
+    function finalizeBurst(widget: InputPrimitive): void {
+      if (burstTimer !== null) {
+        clearTimeout(burstTimer);
+        burstTimer = null;
+      }
+      if (burstPos < 0) return;
+
+      if (!burstReplaced && burstText.length > threshold) {
+        pasteCount++;
+        const lineCount = burstText.split("\n").length;
+        const marker = `copied text ${pasteCount} [${lineCount} line]`;
+        const valBefore = widget.value;
+        const actualText = valBefore.slice(burstPos, burstPos + burstText.length);
+        if (actualText === burstText) {
+          widget.value =
+            valBefore.slice(0, burstPos) +
+            marker +
+            valBefore.slice(burstPos + burstText.length);
+          widget.cursorPos = burstPos + marker.length;
+          burstText = marker;
+          burstReplaced = true;
+          widget._onValueChanged();
+          if (widget.onChange) widget.onChange(widget.value);
+        }
+      }
+      burstPos = -1;
+      burstText = "";
+    }
+
+    function scheduleFinalize(widget: InputPrimitive): void {
+      if (burstTimer) clearTimeout(burstTimer);
+      burstTimer = setTimeout(() => {
+        finalizeBurst(widget);
+        burstTimer = null;
+      }, BURST_MS);
+    }
+
+    const handler: KeyPressHandler = function(
+      this: InputPrimitive,
+      key,
+      modifiers,
+      state,
+    ) {
+      const isPrintable = !modifiers.ctrl && !modifiers.alt && key.length === 1;
+      const shouldTrack = isPrintable || (trackEnter && key === "Enter");
+
+      if (!shouldTrack) {
+        finalizeBurst(this);
+        return;
+      }
+
+      if (burstTimer !== null) {
+        clearTimeout(burstTimer);
+        burstTimer = null;
+      }
+
+      const now = Date.now();
+      const inBurst = burstPos >= 0 &&
+        now - lastKeyTime < BURST_MS &&
+        state.cursorPos === burstPos + burstText.length;
+
+      if (!inBurst) {
+        finalizeBurst(this);
+        burstPos = state.cursorPos;
+        burstText = key === "Enter" ? "\n" : key;
+        burstReplaced = false;
+      } else {
+        burstText += key === "Enter" ? "\n" : key;
+      }
+      lastKeyTime = now;
+
+      scheduleFinalize(this);
+      return; // Let default processing continue
+    };
+
+    function handleClipboardPaste(
+      widget: InputPrimitive,
+      insertPos: number,
+      text: string,
+    ): void {
+      if (text.length > threshold) {
+        pasteCount++;
+        const lineCount = text.split("\n").length;
+        const marker = `copied text ${pasteCount} [${lineCount} line]`;
+        widget.value =
+          widget.value.slice(0, insertPos) +
+          marker +
+          widget.value.slice(insertPos + text.length);
+        widget.cursorPos = insertPos + marker.length;
+      }
+    }
+
+    return { onKeyPress: handler, handleClipboardPaste };
+  }
 
   // Selection state for mouse drag-to-select
   protected _selStart = -1;
   protected _selEnd = -1;
-
-  protected _trackEnterInBurst = false;
 
   // Double/triple click tracking
   private _lastClickTime = 0;
@@ -105,11 +238,6 @@ export abstract class InputPrimitive extends Box {
     modifiers: { ctrl: boolean; alt: boolean; shift: boolean },
   ): void {
     const isPrintable = this._isPrintable(key, modifiers);
-    const shouldTrackBurst = isPrintable || (this._trackEnterInBurst && key === "Enter");
-
-    if (!shouldTrackBurst) {
-      this._finalizeBurst();
-    }
 
     // ── Selection deletion ──
     if (this._hasSelection()) {
@@ -123,7 +251,6 @@ export abstract class InputPrimitive extends Box {
         this.value = this.value.slice(0, start) + key + this.value.slice(end);
         this.cursorPos = start + key.length;
         this._clearSelection();
-        this._trackPasteBurst(key);
         this._onValueChanged();
         if (this.onChange) this.onChange(this.value);
         return;
@@ -131,6 +258,23 @@ export abstract class InputPrimitive extends Box {
     }
 
     this._clearSelection();
+
+    // ── External onKeyPress hook ──
+    if (this.onKeyPress) {
+      const result = this.onKeyPress(key, modifiers, {
+        value: this.value,
+        cursorPos: this.cursorPos,
+      });
+      if (result) {
+        if (result.consumed) return;
+        if (result.value !== undefined) {
+          this.value = result.value;
+        }
+        if (result.cursorPos !== undefined) {
+          this.cursorPos = result.cursorPos;
+        }
+      }
+    }
 
     if (this._onBeforeKey(key, modifiers)) return;
 
@@ -219,70 +363,9 @@ export abstract class InputPrimitive extends Box {
         key +
         this.value.slice(this.cursorPos);
       this.cursorPos += key.length;
-      this._trackPasteBurst(key);
       this._onValueChanged();
       if (this.onChange) this.onChange(this.value);
     }
-  }
-
-  protected _trackPasteBurst(key: string): void {
-    if (this.burstThreshold === null) return;
-
-    if (this._burstTimer) {
-      clearTimeout(this._burstTimer);
-      this._burstTimer = null;
-    }
-
-    const now = Date.now();
-    const inBurst = this._burstPos >= 0 &&
-      now - this._lastKeyTime < InputPrimitive._BURST_MS &&
-      this.cursorPos === this._burstPos + this._burstText.length + key.length;
-
-    if (!inBurst) {
-      this._finalizeBurst();
-      this._burstPos = this.cursorPos - key.length;
-      this._burstText = key;
-      this._burstReplaced = false;
-    } else {
-      this._burstText += key;
-    }
-    this._lastKeyTime = now;
-
-    this._burstTimer = setTimeout(() => {
-      this._finalizeBurst();
-      this._burstTimer = null;
-    }, InputPrimitive._BURST_MS);
-  }
-
-  private _finalizeBurst(): void {
-    if (this._burstTimer) {
-      clearTimeout(this._burstTimer);
-      this._burstTimer = null;
-    }
-    if (this.burstThreshold === null || this._burstPos < 0) return;
-
-    if (!this._burstReplaced && this._burstText.length > this.burstThreshold) {
-      this._pasteCount++;
-      const marker = `copied text ${this._pasteCount} [${this._burstText.length} chars]`;
-      const valBefore = this.value;
-
-      const actualText = valBefore.slice(
-        this._burstPos,
-        this._burstPos + this._burstText.length,
-      );
-      if (actualText === this._burstText) {
-        this.value = valBefore.slice(0, this._burstPos) +
-          marker +
-          valBefore.slice(this._burstPos + this._burstText.length);
-        this.cursorPos = this._burstPos + marker.length;
-        this._burstText = marker;
-        this._burstReplaced = true;
-        this._onValueChanged();
-        if (this.onChange) this.onChange(this.value);
-      }
-    }
-    this._burstPos = -1;
-    this._burstText = "";
   }
 
   protected _isPrintable(key: string, modifiers: { ctrl: boolean; alt: boolean; shift: boolean }): boolean {
@@ -346,8 +429,6 @@ export abstract class InputPrimitive extends Box {
     const p = this.style.padding;
     const contentX = this.rect.x + bOff + p.left;
     const contentY = this.rect.y + bOff + p.top;
-
-    this._finalizeBurst();
 
     if (button === 2 && action === "release") {
       this._pasteAtCursor();
@@ -429,7 +510,7 @@ export abstract class InputPrimitive extends Box {
     if (this.onChange) this.onChange(this.value);
   }
 
-  private _autoCopySelection(): void {
+  protected _autoCopySelection(): void {
     const start = Math.min(this._selStart, this._selEnd);
     const end = Math.max(this._selStart, this._selEnd);
     const selected = this.value.slice(start, end);
@@ -501,14 +582,8 @@ export abstract class InputPrimitive extends Box {
         this.value.slice(insertPos);
       this.cursorPos = insertPos + text.length;
 
-      if (this.burstThreshold !== null && text.length > this.burstThreshold) {
-        this._pasteCount++;
-        const marker = `copied text ${this._pasteCount} [${text.length} chars]`;
-        this.value =
-          this.value.slice(0, insertPos) +
-          marker +
-          this.value.slice(insertPos + text.length);
-        this.cursorPos = insertPos + marker.length;
+      if (this.clipboardPasteHandler) {
+        this.clipboardPasteHandler(this, insertPos, text);
       }
 
       this._onValueChanged();
@@ -519,7 +594,7 @@ export abstract class InputPrimitive extends Box {
   /** Scan the value for paste marker blocks. */
   protected _findPasteRanges(): Array<{start: number; end: number; pasteIndex: number}> {
     const ranges: Array<{start: number; end: number; pasteIndex: number}> = [];
-    const re = /copied text (\d+) \[(\d+) chars]/g;
+    const re = /copied text (\d+) \[(\d+) line]/g;
     let match;
     while ((match = re.exec(this.value)) !== null) {
       ranges.push({
@@ -571,6 +646,12 @@ export abstract class InputPrimitive extends Box {
 
   /** Called after the value changes (for side effects like height sync). */
   protected _onValueChanged(): void {}
+
+  /** Return the display character for a given character from the input value.
+   *  Override in subclasses (e.g. PasswordInput) to mask the displayed text. */
+  protected _getDisplayChar(ch: string): string {
+    return ch;
+  }
 
   /** Subclasses must render their content here. */
   abstract renderContent(

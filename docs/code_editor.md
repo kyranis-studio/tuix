@@ -26,7 +26,7 @@ const editor = new CodeEditor(
 | `onChange` | `(val) => void` | `null` | Called on every value change |
 | `language` | `string` | `"typescript"` | Language for keyword sets |
 
-Paste markers are disabled by default (`burstThreshold = 9999`) since the editor is designed for code editing.
+Paste markers use the hook-based `createPasteBurstHandler` system rather than a constructor parameter.
 
 ---
 

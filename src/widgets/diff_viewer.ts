@@ -612,8 +612,7 @@ export class DiffViewer extends TextArea {
     onChange?: (val: string) => void,
     maxLines?: number,
   ) {
-    // burstThreshold high → no paste markers
-    super(label, placeholder, value, onChange, maxLines ?? undefined, false, false, "Copied!", 9999);
+    super(label, placeholder, value, onChange, maxLines ?? undefined, false, false, "Copied!");
     this._parseContent();
 
     // Override onPaint with diff-aware rendering

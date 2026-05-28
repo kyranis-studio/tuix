@@ -16,7 +16,6 @@ export class TextArea extends InputPrimitive {
     copyOnSelect = false,
     notifyOnCopy = false,
     copyNotificationMessage = "Copied!",
-    burstThreshold?: number,
   ) {
     super(
       label,
@@ -28,8 +27,6 @@ export class TextArea extends InputPrimitive {
       copyNotificationMessage,
     );
     this.maxLines = maxLines ?? null;
-    this.burstThreshold = burstThreshold ?? null;
-    this._trackEnterInBurst = true;
     this.cursorPos = value.length;
 
     this._syncHeight();
@@ -56,7 +53,6 @@ export class TextArea extends InputPrimitive {
       "\n" +
       this.value.slice(this.cursorPos);
     this.cursorPos++;
-    this._trackPasteBurst("\n");
     this._syncHeight();
     if (this.onChange) this.onChange(this.value);
   }
@@ -234,22 +230,23 @@ export class TextArea extends InputPrimitive {
           const isMarker = !inSel && !isCur && inPasteRange(charIdx);
 
           if (col < line.length) {
+            const ch = this._getDisplayChar(line[col]);
             if (inSel && isCur) {
               buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
+                char: ch,
                 fg: bg,
                 bg: theme.text,
                 bold: true,
               });
             } else if (inSel) {
               buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
+                char: ch,
                 fg: theme.appBg,
                 bg: theme.highlight,
               });
             } else if (isCur) {
               buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
+                char: ch,
                 fg: bg,
                 bg: theme.text,
                 bold: true,
@@ -257,14 +254,14 @@ export class TextArea extends InputPrimitive {
             } else if (isMarker) {
               const shade = pasteShadeAt(charIdx);
               buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
+                char: ch,
                 fg: shade ?? theme.muted,
                 bg,
                 bold: true,
               });
             } else {
               buf.set(rect.x + col, rect.y + row, {
-                char: line[col],
+                char: ch,
                 fg: theme.text,
                 bg,
               });

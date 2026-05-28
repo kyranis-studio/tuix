@@ -20,7 +20,6 @@ const ta = new TextArea(
   true,                        // copyOnSelect
   true,                        // notifyOnCopy
   "✓ Copied!",                 // copy notification message
-  200,                         // burstThreshold — replace bursts >200 chars
 );
 ```
 
@@ -34,15 +33,15 @@ const ta = new TextArea(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy selected text |
 | `notifyOnCopy` | `boolean` | `false` | Show toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
-| `burstThreshold` | `number` | `null` | Max input burst lines (null = no limit) |
 
 ---
 
 ## Key Features
 
 - **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
-- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold` (counts **lines**, not characters). If a burst exceeds the threshold, it's replaced by an interactive marker `copied text N[L ]` where `L` is the line count.
-- **📝 Multi-line Bursts**: In `TextArea`, newlines are tracked as part of input bursts. This means a multi-line paste from the terminal is detected as a single burst and replaced by a single marker.
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) and clipboard pastes via `InputPrimitive.createPasteBurstHandler()` (counts **lines**, not characters). Pastes exceeding the threshold are replaced by an interactive marker `copied text N [L line]` where `L` is the line count. Backspace/Delete removes the entire marker block at once.
+- **🔌 Hook System**: The `onKeyPress` hook allows external control over every key event — used for slash commands, file mentions, auto-complete, and burst protection.
+- **📝 Multi-line Bursts**: Set `trackEnter: true` in `createPasteBurstHandler()` so newlines are tracked as part of input bursts. Multi-line terminal pastes are detected as a single burst and replaced by a single marker.
 - **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (line) selection.
 
 ---
@@ -54,9 +53,9 @@ const ta = new TextArea(
 | Key | Action |
 |-----|--------|
 | Printable char | Insert at cursor (replaces selection if active) |
-| `Enter` | Newline at cursor (tracked in bursts) |
-| `Backspace` | Delete character before cursor (or delete selection) |
-| `Delete` | Delete character after cursor (or delete selection) |
+| `Enter` | Newline at cursor |
+| `Backspace` | Delete character before cursor, or entire paste marker block at once |
+| `Delete` | Delete character after cursor, or entire paste marker block at once |
 | `ArrowLeft` / `ArrowRight` | Move cursor character-by-character |
 | `ArrowUp` / `ArrowDown` | Move cursor vertically (same column) |
 | `Home` | Start of line |
@@ -82,25 +81,38 @@ const ta = new TextArea(
 
 ## Burst Protection
 
-When `burstThreshold` is set, input arriving in a fast burst (like a terminal paste) that exceeds the threshold (counted in **lines**) is replaced by an inline `copied text N[L ]` marker where `L` is the number of lines. This prevents the UI from freezing or lagging when handling extremely large volumes of text. These markers are interactive:
+Burst protection is no longer a constructor parameter. Use the static `InputPrimitive.createPasteBurstHandler()` factory with `trackEnter: true`:
 
-- They are rendered in **bold** to distinguish them from regular text.
-- They can be deleted as a single unit using Backspace (at the end) or Delete (at the start).
-- You can freely type text between or beside them.
+```typescript
+const handler = InputPrimitive.createPasteBurstHandler({
+  threshold: 50,
+  trackEnter: true,   // track newlines as part of the burst
+});
+
+myTextArea.onKeyPress = handler.onKeyPress;
+myTextArea.clipboardPasteHandler = handler.handleClipboardPaste;
+```
+
+When a terminal paste burst or clipboard paste exceeds the threshold, it's replaced by an inline `copied text N [L line]` marker. These markers are interactive:
+
+- Rendered in **bold** with cycling colors.
+- Backspace at the end of a marker or Delete at its start removes the entire block at once.
+- Backspace/Delete also removes the block when triggered on the paste marker text.
 
 ---
 
 ## Properties
 
 ```typescript
-ta.value;              // Full text content (\n-separated)
-ta.placeholder;        // Placeholder text
-ta.cursorPos;          // Global cursor position (string index)
-ta.minRows;            // Minimum visible rows (default 3)
-ta.maxLines;           // Maximum visible rows (null = unlimited)
-ta.burstThreshold;     // Max burst length (null = no limit)
-ta.pasteShades;        // Color palette for paste markers (null = defaults)
-ta.onChange;           // (val: string) => void
+ta.value;                     // Full text content (\n-separated)
+ta.placeholder;               // Placeholder text
+ta.cursorPos;                 // Global cursor position (string index)
+ta.minRows;                   // Minimum visible rows (default 3)
+ta.maxLines;                  // Maximum visible rows (null = unlimited)
+ta.pasteShades;               // Color palette for paste markers (null = defaults)
+ta.onChange;                  // (val: string) => void
+ta.onKeyPress;                // KeyPressHandler hook — intercept key events
+ta.clipboardPasteHandler;     // Handler for clipboard paste markers
 ``` The height auto-adjusts to content up to `maxLines`. A scrollbar is rendered in the rightmost column when content exceeds visible rows.
 
 ### Scrollbar Customization

@@ -1,6 +1,6 @@
 # TextInput
 
-A single-line text input field with cursor, text selection, clipboard copy/paste, placeholder support, multi-byte/emoji support, burst protection, and overflow scrolling.
+A single-line text input field with cursor, text selection, clipboard copy/paste, placeholder support, multi-byte/emoji support, and overflow scrolling.
 
 ```typescript
 import { TextInput } from "jsr:@kyranis-studio/tuix";
@@ -19,7 +19,6 @@ const input = new TextInput(
   true,                      // copyOnSelect — auto-copy selected text
   true,                      // notifyOnCopy — show "Copied!" toast
   "✓ Copied!",               // custom copy notification message
-  50,                        // burstThreshold — replace large pastes with marker
 );
 ```
 
@@ -32,14 +31,14 @@ const input = new TextInput(
 | `copyOnSelect` | `boolean` | `false` | Auto-copy to clipboard on selection |
 | `notifyOnCopy` | `boolean` | `false` | Show notification toast on copy |
 | `copyNotificationMessage` | `string` | `"Copied!"` | Notification text |
-| `burstThreshold` | `number` | `null` | Max input burst lines (null = no limit) |
 
 ---
 
 ## Key Features
 
 - **🚀 Multi-byte Support**: Robustly handles UTF-8 characters, including emojis. Navigation and deletion operations are character-aware (i.e., you won't split a surrogate pair).
-- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) via `burstThreshold` (counts **lines**, not characters). If a burst exceeds the threshold, it's replaced by an interactive marker `copied text N[L ]` where `L` is the line count.
+- **🛡️ Burst Protection**: Detects fast-arriving input (like terminal pastes) and clipboard pastes via `InputPrimitive.createPasteBurstHandler()`. Pastes exceeding the threshold are replaced by an interactive marker `copied text N [L line]` where `L` is the line count. Backspace/Delete removes the entire marker block at once.
+- **🔌 Hook System**: The `onKeyPress` hook allows external control over every key event — modify values, reposition the cursor, or consume events entirely. Used internally for burst protection, auto-complete, slash commands, and file mentions.
 - **✨ Selection Handling**: Supports standard mouse selection, as well as double-click (word) and triple-click (entire text) selection.
 
 ---
@@ -87,14 +86,33 @@ When the text exceeds the available width:
 ## Properties
 
 ```typescript
-input.value;            // Current text
-input.placeholder;      // Placeholder text
-input.cursorPos;        // Cursor position (string index)
-input.burstThreshold;   // Current burst threshold
-input.copyOnSelect;     // Auto-copy on selection
-input.pasteShades;      // Color palette for paste markers (null = defaults)
-input.onChange;         // (val: string) => void
-input.onSubmit;         // (val: string) => void — Enter key
+input.value;                     // Current text
+input.placeholder;               // Placeholder text
+input.cursorPos;                 // Cursor position (string index)
+input.copyOnSelect;              // Auto-copy on selection
+input.pasteShades;               // Color palette for paste markers (null = defaults)
+input.onChange;                  // (val: string) => void
+input.onSubmit;                  // (val: string) => void — Enter key
+input.onKeyPress;                // KeyPressHandler hook — intercept key events
+input.clipboardPasteHandler;     // Handler for clipboard paste markers
 ```
 
 Selection is highlighted with `theme.highlight` background and `theme.appBg` foreground. The cursor renders as an inverted block over the character.
+
+---
+
+## Burst Protection (Paste Markers)
+
+Burst protection is no longer a constructor parameter. Use the static `InputPrimitive.createPasteBurstHandler()` factory to create a hook-based handler:
+
+```typescript
+const handler = InputPrimitive.createPasteBurstHandler({
+  threshold: 50,        // line/char count to trigger marker
+  trackEnter: true,     // track newlines as part of the burst
+});
+
+myInput.onKeyPress = handler.onKeyPress;
+myInput.clipboardPasteHandler = handler.handleClipboardPaste;
+```
+
+Paste markers are rendered in **bold** with cycling colors. Backspace at the end of a marker or Delete at its start removes the entire block at once.

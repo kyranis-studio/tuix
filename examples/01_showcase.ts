@@ -24,17 +24,18 @@ import {
   Tabs,
   RadioGroup,
   TextArea,
+  PasswordInput,
   Dropdown,
   ButtonGroup,
   ProgressBar,
   Dialog,
   Notification,
   FloatingWindow,
-
   Collapsible,
   CodeEditor,
   DiffViewer,
   SplitDiffViewer,
+  InputPrimitive,
   computeDiff,
   computeSplitDiff,
   paintCenteredText,
@@ -648,17 +649,16 @@ const longTextInput = new TextInput(
   "",
   "A very long text that overflows the input field width — use ArrowLeft/Right or Home/End to scroll through the content. The overflow shows ... at the start/end when text doesn't fit.",
 );
+const pasteBurstHandler = InputPrimitive.createPasteBurstHandler({ threshold: 50, trackEnter: true });
 const pasteThreshTextArea = new TextArea(
   "TextArea",
   "Paste >50 chars via terminal Ctrl+Shift+V to see marker...",
   "",
   undefined,
   3,
-  false,
-  false,
-  "Copied!",
-  50,
 );
+pasteThreshTextArea.onKeyPress = pasteBurstHandler.onKeyPress;
+pasteThreshTextArea.clipboardPasteHandler = pasteBurstHandler.handleClipboardPaste;
 
 const copyInput = new TextInput("Input", "", "Select text with mouse — auto-copies to clipboard");
 const pasteInput = new TextInput("Input", "Right-click here to paste from clipboard");
@@ -725,6 +725,8 @@ textScroll.add(
   pasteInput,
   lbl("Copy-on-select (TextInput with notifyOnCopy=true):"),
   copyOnSelectInput,
+  lbl("PasswordInput (characters masked, copy blocked):"),
+  new PasswordInput("Password", "Enter a password..."),
   textStatus,
 );
 textTab.add(textScroll);

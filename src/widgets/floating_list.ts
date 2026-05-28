@@ -53,8 +53,9 @@ export class FloatingListBox extends Box {
         if (itemIndex >= this.items.length) break;
         const item = this.items[itemIndex];
         const isCur = itemIndex === this.selectedIndex;
+        const itemChars = [...item];
         for (let col = 0; col < contentW; col++) {
-          const ch = col < item.length ? item[col] : " ";
+          const ch = col < itemChars.length ? itemChars[col] : " ";
           buf.set(rect.x + col, rect.y + i, {
             char: ch,
             fg: isCur ? theme.appBg : theme.text,

@@ -12,7 +12,6 @@ export class TextInput extends InputPrimitive {
     copyOnSelect = false,
     notifyOnCopy = false,
     copyNotificationMessage = "Copied!",
-    burstThreshold?: number,
   ) {
     super(
       label,
@@ -23,7 +22,6 @@ export class TextInput extends InputPrimitive {
       notifyOnCopy,
       copyNotificationMessage,
     );
-    this.burstThreshold = burstThreshold ?? null;
     this.height = { fixed: 3 };
 
     this.onFocus = () => {
@@ -118,7 +116,10 @@ export class TextInput extends InputPrimitive {
       const isMarker = !inSel && !isCursorHere && inPasteRange(charIdx);
 
       if (i < displayText.length) {
-        const ch = displayText[i];
+        const rawCh = displayText[i];
+        // Apply display char masking (e.g. PasswordInput shows "*")
+        const isEllipsis = (leftEllipsis && i < leftOffset) || (rightEllipsis && i >= maxW - 2);
+        const ch = isEllipsis ? rawCh : this._getDisplayChar(rawCh);
         if (inSel && isCursorHere) {
           buf.set(rect.x + i, rect.y, {
             char: ch,
