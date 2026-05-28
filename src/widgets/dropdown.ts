@@ -1,4 +1,4 @@
-import { Box } from "../layout.ts";
+import { Box, Rect } from "../layout.ts";
 import { FloatingListBox } from "./floating_list.ts";
 
 export class Dropdown extends Box {
@@ -10,7 +10,7 @@ export class Dropdown extends Box {
 
   private _listOverlay: FloatingListBox | null = null;
   private _appRef: {
-    showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+    showOverlay: (box: Box, opts?: { modal?: boolean; autoDismiss?: boolean; triggerRect?: Rect; reposition?: () => void; onClose?: () => void }) => void;
     removeOverlay: (box: Box) => void;
   } | null = null;
 
@@ -101,7 +101,7 @@ export class Dropdown extends Box {
   /** Reference to the App for showing/removing overlay lists. */
   set appRef(
     ref: {
-      showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+      showOverlay: (box: Box, opts?: { modal?: boolean; autoDismiss?: boolean; triggerRect?: Rect; reposition?: () => void; onClose?: () => void }) => void;
       removeOverlay: (box: Box) => void;
     } | null,
   ) {
@@ -121,8 +121,7 @@ export class Dropdown extends Box {
       this._select(index);
     };
     list.removeFn = () => {
-      this._listOverlay = null;
-      this.open = false;
+      this._appRef?.removeOverlay(list);
     };
 
     // Size the list
@@ -132,7 +131,18 @@ export class Dropdown extends Box {
     list.width = { fixed: listWidth };
     list.height = { fixed: itemCount + 2 };
 
-    this._appRef.showOverlay(list, { modal: false });
+    this._appRef.showOverlay(list, {
+      modal: false,
+      autoDismiss: true,
+      triggerRect: this.rect,
+      reposition: () => {
+        list.positionRelativeTo(this.rect);
+      },
+      onClose: () => {
+        this._listOverlay = null;
+        this.open = false;
+      },
+    });
     list.positionRelativeTo(this.rect);
     this._listOverlay = list;
   }

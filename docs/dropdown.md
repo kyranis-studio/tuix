@@ -41,7 +41,7 @@ const dropdown = new Dropdown(
 | `Enter` | Select focused item when open |
 | `Escape` / `Tab` | Close the list without selecting |
 
-Mouse click toggles the list open/closed. Click on an item in the list selects it.
+Mouse click toggles the list open/closed. Click on an item in the list selects it. The floating list auto-dismisses when clicking outside it.
 
 ---
 

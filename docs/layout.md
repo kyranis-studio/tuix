@@ -296,6 +296,20 @@ The `CellBuffer.fill()` method fills a rectangular area:
 buf.fill(x, y, width, height, { char: " ", bg: theme.panelBg, fg: null });
 ```
 
+### `isInsideRect(col, row, rect): boolean`
+
+Tests whether a terminal coordinate falls within a given rectangle:
+
+```typescript
+import { isInsideRect } from "jsr:@kyranis-studio/tuix";
+
+if (isInsideRect(col, row, someBox.rect)) {
+  // Coordinate is inside
+}
+```
+
+Used internally by `App` for auto-dismiss logic and mouse dispatch.
+
 ---
 
 ## Hit Testing

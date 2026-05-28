@@ -1,4 +1,4 @@
-import { Box } from "../layout.ts";
+import { Box, Rect } from "../layout.ts";
 import { FloatingListBox } from "./floating_list.ts";
 
 export type AutocompleteMode = "dropdown" | "inline";
@@ -21,7 +21,7 @@ export class Autocomplete extends Box {
   private _completion = "";
   private _listOverlay: FloatingListBox | null = null;
   private _appRef: {
-    showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+    showOverlay: (box: Box, opts?: { modal?: boolean; autoDismiss?: boolean; triggerRect?: Rect; reposition?: () => void; onClose?: () => void }) => void;
     removeOverlay: (box: Box) => void;
   } | null = null;
 
@@ -196,7 +196,7 @@ export class Autocomplete extends Box {
   /** Reference to the App for showing/removing overlay lists. */
   set appRef(
     ref: {
-      showOverlay: (box: Box, opts?: { modal?: boolean; onClose?: () => void }) => void;
+      showOverlay: (box: Box, opts?: { modal?: boolean; autoDismiss?: boolean; triggerRect?: Rect; reposition?: () => void; onClose?: () => void }) => void;
       removeOverlay: (box: Box) => void;
     } | null,
   ) {
@@ -259,8 +259,7 @@ export class Autocomplete extends Box {
       this._select(item);
     };
     list.removeFn = () => {
-      this._listOverlay = null;
-      this.dropdownOpen = false;
+      this._appRef?.removeOverlay(list);
     };
 
     // Size the list
@@ -270,7 +269,18 @@ export class Autocomplete extends Box {
     list.width = { fixed: listWidth };
     list.height = { fixed: itemCount + 2 };
 
-    this._appRef.showOverlay(list, { modal: false });
+    this._appRef.showOverlay(list, {
+      modal: false,
+      autoDismiss: true,
+      triggerRect: this.rect,
+      reposition: () => {
+        list.positionRelativeTo(this.rect);
+      },
+      onClose: () => {
+        this._listOverlay = null;
+        this.dropdownOpen = false;
+      },
+    });
     list.positionRelativeTo(this.rect);
     this._listOverlay = list;
   }

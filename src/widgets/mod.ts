@@ -1,5 +1,5 @@
 export { Button } from "./button.ts";
-export { SmallButton } from "./small_button.ts";
+export type { ButtonStyle } from "./button.ts";
 
 export { Checkbox } from "./checkbox.ts";
 

@@ -93,6 +93,9 @@ Overlays are floating widgets rendered on top of the main tree. The app manages 
 ```typescript
 app.showOverlay(dialogBox, {
   modal: true,
+  autoDismiss: true,
+  triggerRect: someRect,
+  reposition: () => list.positionRelativeTo(this.rect),
   onClose: () => console.log("dialog closed"),
 });
 ```
@@ -100,9 +103,14 @@ app.showOverlay(dialogBox, {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `modal` | `boolean` | `true` | If true, blocks mouse interaction with the main tree |
+| `autoDismiss` | `boolean` | — | If true, clicking outside the overlay (and outside `triggerRect`) auto-dismisses it |
+| `triggerRect` | `Rect` | — | Clicks within this rect are ignored by auto-dismiss (so clicking the trigger widget doesn't close it) |
+| `reposition` | `() => void` | — | Called on each `doLayout()` to reposition the overlay (e.g. after terminal resize) |
 | `onClose` | `() => void` | — | Called when the overlay is removed |
 
 The overlay is centered on screen by default. It's added to the app's focus root set, and the first focusable element inside it receives focus. Previous focus is saved so it can be restored when the overlay closes.
+
+> **Auto-dismiss**: When `autoDismiss` is `true`, a mouse click outside the overlay's own rectangle (and outside `triggerRect` if set) closes the overlay immediately and does **not** propagate to the main widget tree — preventing the trigger widget from re-opening the overlay.
 
 ### `removeOverlay(box)`
 
@@ -179,7 +187,7 @@ run()
         └── on stop: clearInterval, _cleanup()
 ```
 
-- `doLayout()` — calls `root.layout(fullScreenRect)` then re-layouts all overlays
+- `doLayout()` — calls `root.layout(fullScreenRect)` then re-layouts all overlays (calling each overlay's `reposition()` first if set)
 - `doRender()` — resizes the `Renderer` buffer if needed, calls `root.paint()`, paints overlays on top, then flushes the diff to stdout
 
 ---

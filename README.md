@@ -2,7 +2,7 @@
   <h1>🟦 tuix</h1>
   <p><strong>A lightweight, AI-first TUI component library for Deno 2</strong></p>
 
-[![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-orange.svg)](#)
+[![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-orange.svg)](#)
 [![Deno](https://img.shields.io/badge/Deno-2.7-black?logo=deno)](https://deno.com/)
 [![JSR](https://img.shields.io/badge/JSR-jsr.io-blue?logo=jsr)](https://jsr.io/@kyranis-studio/tuix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -115,7 +115,7 @@ Detailed guides and API references for every part of the library:
 - [**CodeEditor**](docs/code_editor.md) — Code editor with syntax highlighting (keywords, strings, comments, numbers, types, functions, decorators).
 - [**DiffViewer**](docs/diff_viewer.md) — Unified and side-by-side diff viewers with colour-highlighted additions/deletions.
 - [**Autocomplete**](docs/autocomplete.md) — Suggestion completion (dropdown/inline).
-- [**Button**](docs/button.md) & [**SmallButton**](docs/small_button.md) — Interactive buttons.
+- [**Button**](docs/button.md) (default, small, large, ghost, outline styles) — Interactive buttons.
 - [**ButtonGroup**](docs/button_group.md) — Segmented selection.
 - [**Checkbox**](docs/checkbox.md) & [**RadioGroup**](docs/radio.md) — Selection toggles.
 - [**Dropdown**](docs/dropdown.md) & [**ListBox**](docs/listbox.md) — List selection.
@@ -140,7 +140,7 @@ Detailed guides and API references for every part of the library:
    - [**`TextArea`**](docs/textarea.md): Multi-line text editor with dynamic height, vertical scrollbar, multi-line burst detection, and mouse positioning. Supports character-aware deletion of both individual characters and entire paste markers.
    - [**`CodeEditor`**](docs/code_editor.md): Syntax-highlighted code editor built on TextArea. Regex-based tokenizer colours keywords, strings, comments, numbers, types, functions, and decorators. Customisable colour palette.
    - [**`DiffViewer`**](docs/diff_viewer.md): Unified and side-by-side diff viewer with colour-highlighted additions/deletions, LCS-based diff computation, and customisable `DiffTheme`.
-   - [**`Button`**](docs/button.md): Focus-sensitive actionable button with keyboard support (`Space`/`Enter`) and mouse-click bindings. Supports `disabled` state with dimmed appearance and no interaction.
+   - [**`Button`**](docs/button.md): Clickable button with 5 styles (default, small, large, ghost, outline), keyboard/mouse support, toggle, and flash state.
    - [**`ButtonGroup`**](docs/button_group.md): Horizontal segmented control — multiple labeled options with single selection, arrow-key navigation, and mouse click.
    - [**`Checkbox`**](docs/checkbox.md): Toggle check/uncheck indicator box (`☑` vs `☐`) supporting key triggers and mouse clicks. Supports `disabled` state.
    - [**`Dropdown`**](docs/dropdown.md): Combo-box style selector — shows current selection with `▼` indicator, opens scrollable list on activation, arrow-key navigation, Enter to select, Escape to close.
@@ -164,7 +164,7 @@ tuix/
     widgets/            — Individual widget files
       mod.ts            — Widget barrel re-export
       input_primitive.ts — Shared input base (selection, clipboard, burst detection)
-      button.ts         — Clickable button
+      button.ts         — Button with 5 visual styles, toggle, and flash
       text_input.ts     — Single-line text input (multi-byte support)
       textarea.ts       — Multi-line text editor (burst protection)
       code_editor.ts    — Code editor with syntax highlighting
@@ -206,11 +206,11 @@ import { App, Box, Button, TextInput } from "jsr:@kyranis-studio/tuix";
 Execute the interactive showcase featuring all stateful widgets:
 
 ```bash
-deno run -A jsr:@kyranis-studio/tuix/examples/showcase
+deno run jsr:@kyranis-studio/tuix/examples/showcase
 ```
 
 Or run locally after cloning:
 
 ```bash
-deno run -A examples/01_showcase.ts
+deno run examples/01_showcase.ts
 ```

@@ -36,6 +36,10 @@ function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
+export function isInsideRect(col: number, row: number, r: Rect): boolean {
+  return col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height;
+}
+
 // ─── Sizing ───────────────────────────────────────────────────────────────────
 
 export interface SizeConstraint {

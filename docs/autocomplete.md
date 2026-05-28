@@ -37,7 +37,7 @@ auto.mode = "inline";    // Completes inline with ghost text after cursor
 
 ### Dropdown mode
 
-As the user types, the suggestion list filters based on the input (case-insensitive substring match). The floating list appears below the input when there are matching suggestions. Arrow keys navigate the list, Enter selects.
+As the user types, the suggestion list filters based on the input (case-insensitive substring match). The floating list appears below the input when there are matching suggestions. Arrow keys navigate the list, Enter selects. The floating list auto-dismisses when clicking outside it.
 
 ### Inline mode
 

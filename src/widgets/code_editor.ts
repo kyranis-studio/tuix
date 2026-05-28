@@ -297,10 +297,13 @@ export class CodeEditor extends TextArea {
     const isFocused = this.focused;
     const showPlaceholder = !this.value;
     const bg = theme.panelBg;
+    const gutterBg = theme.bg;
     const ch = rect.height;
     const totalRows = this._rowCount();
+    const gutterWidth = Math.max(3, String(totalRows).length + 1);
+    const contentX = rect.x + gutterWidth;
     const sbX = rect.x + rect.width - 1;
-    const cw = Math.max(0, rect.width - 1);
+    const cw = Math.max(0, rect.width - gutterWidth - 1);
 
     // Scrollbar chars
     const sb = this.style.scrollbar ?? {};
@@ -312,10 +315,17 @@ export class CodeEditor extends TextArea {
 
     const st = this.syntaxTheme;
 
-    // Clear text area
+    // Clear gutter + content area
     for (let row = 0; row < ch; row++) {
-      for (let col = 0; col < cw; col++) {
+      for (let col = 0; col < gutterWidth; col++) {
         buf.set(rect.x + col, rect.y + row, {
+          char: " ",
+          fg: theme.muted,
+          bg: gutterBg,
+        });
+      }
+      for (let col = 0; col < cw; col++) {
+        buf.set(contentX + col, rect.y + row, {
           char: " ",
           fg: theme.text,
           bg,
@@ -326,7 +336,7 @@ export class CodeEditor extends TextArea {
     if (showPlaceholder) {
       for (let col = 0; col < cw && col < this.placeholder.length; col++) {
         const isCur = isFocused && col === this.cursorPos;
-        buf.set(rect.x + col, rect.y, {
+        buf.set(contentX + col, rect.y, {
           char: this.placeholder[col],
           fg: isCur ? bg : theme.muted,
           bg: isCur ? theme.muted : bg,
@@ -338,7 +348,7 @@ export class CodeEditor extends TextArea {
         this.cursorPos < cw &&
         this.cursorPos >= this.placeholder.length
       ) {
-        buf.set(rect.x + this.cursorPos, rect.y, {
+        buf.set(contentX + this.cursorPos, rect.y, {
           char: " ",
           fg: bg,
           bg: theme.highlight,
@@ -382,6 +392,17 @@ export class CodeEditor extends TextArea {
         const lineIdx = this.scrollY + row;
         if (lineIdx >= lines.length) break;
         const line = lines[lineIdx];
+
+        // Draw line number in gutter
+        const lineNum = String(lineIdx + 1);
+        const numStartX = rect.x + gutterWidth - lineNum.length - 1;
+        for (let n = 0; n < lineNum.length; n++) {
+          buf.set(numStartX + n, rect.y + row, {
+            char: lineNum[n],
+            fg: theme.muted,
+            bg: gutterBg,
+          });
+        }
 
         // Tokenize this line
         const tokens = tokenizeLine(line, this.language);
@@ -428,20 +449,20 @@ export class CodeEditor extends TextArea {
           if (col < line.length) {
             const fg = syntaxFg ?? theme.text;
             if (inSel && isCur) {
-              buf.set(rect.x + col, rect.y + row, {
+              buf.set(contentX + col, rect.y + row, {
                 char: line[col],
                 fg: bg,
                 bg: theme.text,
                 bold: true,
               });
             } else if (inSel) {
-              buf.set(rect.x + col, rect.y + row, {
+              buf.set(contentX + col, rect.y + row, {
                 char: line[col],
                 fg: theme.bg,
                 bg: theme.highlight,
               });
             } else if (isCur) {
-              buf.set(rect.x + col, rect.y + row, {
+              buf.set(contentX + col, rect.y + row, {
                 char: line[col],
                 fg: bg,
                 bg: theme.text,
@@ -449,21 +470,21 @@ export class CodeEditor extends TextArea {
               });
             } else if (isMarker) {
               const shade = pasteShadeAt(charIdx);
-              buf.set(rect.x + col, rect.y + row, {
+              buf.set(contentX + col, rect.y + row, {
                 char: line[col],
                 fg: shade ?? theme.muted,
                 bg,
                 bold: true,
               });
             } else {
-              buf.set(rect.x + col, rect.y + row, {
+              buf.set(contentX + col, rect.y + row, {
                 char: line[col],
                 fg,
                 bg,
               });
             }
           } else if (isCur) {
-            buf.set(rect.x + col, rect.y + row, {
+            buf.set(contentX + col, rect.y + row, {
               char: " ",
               fg: bg,
               bg: theme.highlight,

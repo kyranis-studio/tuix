@@ -30,7 +30,7 @@ import {
   Dialog,
   Notification,
   FloatingWindow,
-  SmallButton,
+
   Collapsible,
   CodeEditor,
   DiffViewer,
@@ -983,7 +983,7 @@ const btnToggle = new Button("Toggle Checkboxes", () => {
   chkOptionA = !chkOptionA;
   chkOptionB = !chkOptionB;
   chkOptionC = !chkOptionC;
-  btnToggle.toggled = !btnToggle.toggled;
+  btnToggle.toggle();
 });
 btnToggle.flashOnClick = false;
 const btnCount = new Button("Click Count", () => {
@@ -993,11 +993,11 @@ const btnDisabled = new Button("Locked");
 btnDisabled.setDisabled(true);
 btnRow.add(btnReset, btnToggle, btnCount, btnDisabled);
 
-const sbtnReset = new SmallButton("Reset", () => {
+const sbtnReset = Button.small("Reset", () => {
   clickCount = 0;
 });
-const sbtnFlash = new SmallButton("Flash Me");
-const sbtnLocked = new SmallButton("Locked");
+const sbtnFlash = Button.small("Flash Me");
+const sbtnLocked = Button.small("Locked");
 sbtnLocked.setDisabled(true);
 const smallBtns = Box.row("small-btns");
 smallBtns.style.gutter = 1;
@@ -1076,6 +1076,26 @@ smallBtnRow.style.gutter = 1;
 smallBtnRow.height = { fixed: 3 };
 smallBtnRow.add(lbl("SmallButtons:"), smallBtns);
 
+const sDefault = Button.withStyle("default", "Default");
+const sSmall = Button.withStyle("small", "Small");
+const sLarge = Button.withStyle("large", "Large");
+const sGhost = Button.withStyle("ghost", "Ghost");
+const sOutline = Button.withStyle("outline", "Outline");
+const sToggle = Button.withStyle("default", "Toggle me");
+sToggle.toggleOnClick = true;
+sToggle.flashOnClick = false;
+sToggle.onToggle = (v) => {
+  sToggle.label = v ? "Toggled ✓" : "Toggle me";
+};
+const styleBtns = Box.row("style-btns");
+styleBtns.style.gutter = 1;
+styleBtns.style.align = "center";
+styleBtns.add(sDefault, sSmall, sLarge, sGhost, sOutline, sToggle);
+const styleDemoRow = Box.col("style-demo-row");
+styleDemoRow.style.gutter = 1;
+styleDemoRow.height = { fixed: 7 };
+styleDemoRow.add(lbl("Button Styles:"), styleBtns);
+
 const dropdownRow = Box.col("dropdown-row");
 dropdownRow.style.gutter = 1;
 dropdownRow.height = { fixed: 5 };
@@ -1097,7 +1117,7 @@ const extraChk2 = new Checkbox("Auto-save", true);
 const extraChk3 = new Checkbox("Dark Mode", true);
 collapsibleDemo.add(extraChk1, extraChk2, extraChk3);
 
-uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, dropdownRow, collapsibleDemo);
+uiScroll.add(topRow, actionsRow, groupRow, smallBtnRow, styleDemoRow, dropdownRow, collapsibleDemo);
 
 uiTab.add(uiHeader, uiScroll, uiStatus);
 

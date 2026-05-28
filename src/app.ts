@@ -13,7 +13,7 @@ import {
   onResize,
   ansi,
 } from "./terminal.ts";
-import { Box, Rect } from "./layout.ts";
+import { Box, Rect, isInsideRect } from "./layout.ts";
 import { FocusManager } from "./focus.ts";
 import { readEvents, TuixEvent } from "./events.ts";
 import { Theme, defaultTheme } from "./theme.ts";
@@ -37,6 +37,12 @@ export interface OverlayEntry {
   box: Box;
   /** If true, blocks mouse interaction with the main tree */
   modal: boolean;
+  /** If true, clicking outside the overlay (and outside triggerRect) auto-dismisses it */
+  autoDismiss?: boolean;
+  /** When set, clicks within this rect won't trigger auto-dismiss */
+  triggerRect?: Rect;
+  /** Called during doLayout() to reposition the overlay (e.g. on resize) */
+  reposition?: () => void;
   /** Called when the overlay is removed */
   onClose?: () => void;
 }
@@ -98,7 +104,16 @@ export class App {
    * Show a floating widget as an overlay.
    * The overlay is rendered on top of the main tree and receives mouse events first.
    */
-  showOverlay(box: Box, options?: { modal?: boolean; onClose?: () => void }): void {
+  showOverlay(
+    box: Box,
+    options?: {
+      modal?: boolean;
+      autoDismiss?: boolean;
+      triggerRect?: Rect;
+      reposition?: () => void;
+      onClose?: () => void;
+    },
+  ): void {
     const { cols, rows } = getTermSize();
     const fullRect: Rect = { x: 0, y: 0, width: cols, height: rows };
     box.layout(fullRect);
@@ -111,6 +126,9 @@ export class App {
     this.overlays.push({
       box,
       modal: options?.modal ?? true,
+      autoDismiss: options?.autoDismiss,
+      triggerRect: options?.triggerRect,
+      reposition: options?.reposition,
       onClose: options?.onClose,
     });
     // Include overlays in focus manager's root set
@@ -173,8 +191,9 @@ export class App {
     const { cols, rows } = getTermSize();
     const fullRect: Rect = { x: 0, y: 0, width: cols, height: rows };
     this.root.layout(fullRect);
-    // Layout overlays
+    // Reposition + layout overlays
     for (const ov of this.overlays) {
+      ov.reposition?.();
       ov.box.layout(ov.box.rect);
     }
   }
@@ -442,6 +461,18 @@ export class App {
 
       // If a modal overlay is active, block clicks on main tree
       if (this.hasModalOverlay) return;
+
+      // Auto-dismiss: close topmost autoDismiss overlay if click is outside its triggerRect
+      if (this.overlays.length > 0) {
+        const top = this.overlays[this.overlays.length - 1];
+        if (top.autoDismiss) {
+          const inTrigger = top.triggerRect && isInsideRect(col, row, top.triggerRect);
+          if (!inTrigger) {
+            this.removeOverlay(top.box);
+            return;
+          }
+        }
+      }
 
       // Check for splitter hit
       const splitter = this._findSplitter(this.root, col, row);
