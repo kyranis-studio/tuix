@@ -191,8 +191,11 @@ export class CellBuffer {
     style: Partial<Cell> = {},
   ): void {
     const chars = [...text]; // handle multi-byte
-    for (let i = 0; i < chars.length; i++) {
-      this.set(x + i, y, { ...style, char: chars[i] });
+    let col = x;
+    for (const ch of chars) {
+      if (col >= this.cols) break;
+      this.set(col, y, { ...style, char: ch });
+      col += charWidth(ch);
     }
   }
 
@@ -215,11 +218,13 @@ export class CellBuffer {
 // ─── Character width ───────────────────────────────────────────────────────────
 
 export function charWidth(ch: string): number {
+  if (!ch) return 1;
   const code = ch.codePointAt(0) ?? ch.charCodeAt(0);
   if (code < 0x1100) return 1;
 
   if (
     (code >= 0x1100 && code <= 0x115F) || // Hangul Jamo
+    (code >= 0x2329 && code <= 0x232A) || // Angle brackets
     (code >= 0x2E80 && code <= 0x303E) || // CJK Radicals, Kangxi, Ideographic Description, CJK Symbols
     (code >= 0x3040 && code <= 0x33FF) || // Hiragana, Katakana, Bopomofo, Hangul Compat, Kanbun, Enclosed CJK, CJK Compat
     (code >= 0x3400 && code <= 0x4DBF) || // CJK Unified Extension A
@@ -234,14 +239,23 @@ export function charWidth(ch: string): number {
     (code >= 0xFFE0 && code <= 0xFFE6) || // Fullwidth Signs
     (code >= 0x1B000 && code <= 0x1B0FF) || // Kana Supplement
     (code >= 0x1B100 && code <= 0x1B12F) || // Kana Extended-A
-    (code >= 0x1F200 && code <= 0x1F2FF) || // Enclosed Ideographic Supplement
+    (code >= 0x1F000 && code <= 0x1F9FF) || // Emojis and miscellaneous symbols
     (code >= 0x20000 && code <= 0x2FFFD) || // CJK Unified Extension B+
-    (code >= 0x30000 && code <= 0x3FFFD)    // CJK Unified Extension I
+    (code >= 0x30000 && code <= 0x3FFFD) || // CJK Unified Extension I
+    code === 0x2726 // ✦ Black Four Pointed Star
   ) {
     return 2;
   }
 
   return 1;
+}
+
+export function stringWidth(text: string): number {
+  let width = 0;
+  for (const ch of [...text]) {
+    width += charWidth(ch);
+  }
+  return width;
 }
 
 // ─── Flusher ──────────────────────────────────────────────────────────────────

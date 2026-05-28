@@ -1198,12 +1198,10 @@ class SpinnerBox extends Box {
     this.onPaint = (buf, rect, theme) => {
       const ch = this._frames[spinnerTicks[this._idx] % this._frames.length];
       const text = ` ${ch}  ${spinLabel}`;
-      for (let i = 0; i < text.length && i < rect.width; i++)
-        buf.set(rect.x + i, rect.y, {
-          char: text[i],
-          fg: theme.highlight,
-          bg: defaultTheme.primaryBg,
-        });
+      buf.writeText(rect.x, rect.y, text, {
+        fg: theme.highlight,
+        bg: defaultTheme.primaryBg,
+      });
     };
   }
 }
@@ -1629,12 +1627,10 @@ statusBar.onPaint = (_buf, rect, theme) => {
   _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.appBg });
   const hint =
     " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Db-clk: word  |  Trpl-clk: line  |  Esc: close  |  Ctrl+C: quit";
-  for (let i = 0; i < hint.length && i < rect.width; i++)
-    _buf.set(rect.x + i, rect.y, {
-      char: hint[i],
-      fg: theme.muted,
-      bg: theme.appBg,
-    });
+  _buf.writeText(rect.x, rect.y, hint, {
+    fg: theme.muted,
+    bg: theme.appBg,
+  });
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -7,6 +7,7 @@ import {
   FloatingListBox,
   InputPrimitive,
   paintText,
+  stringWidth,
 } from "../src/mod.ts";
 
 // ── Fake file listing for @ mentions and file explorer ───────────
@@ -372,23 +373,22 @@ function setupPromptInput(promptInput: TextArea, app: App, modelState: { current
       const xFg = lerpColor(theme.text, theme.highlight, fade);
 
       // Overlay chip background on the @-mention text
-      for (let i = 0; i < searchStr.length; i++) {
-        buf.set(screenX + i, screenY, {
-          char: searchStr[i],
-          fg: theme.text,
-          bg: txtBg,
-        });
-      }
+      buf.writeText(screenX, screenY, searchStr, {
+        fg: theme.text,
+        bg: txtBg,
+      });
+
+      const strW = stringWidth(searchStr);
 
       // Separator space before ✕
-      buf.set(screenX + searchStr.length, screenY, {
+      buf.set(screenX + strW, screenY, {
         char: " ",
         fg: null,
         bg: xBg,
       });
 
       // Render ✕ at the end of the chip
-      buf.set(screenX + searchStr.length + 1, screenY, {
+      buf.set(screenX + strW + 1, screenY, {
         char: "✕",
         fg: xFg,
         bg: xBg,
@@ -399,7 +399,7 @@ function setupPromptInput(promptInput: TextArea, app: App, modelState: { current
       chipRects.push({
         x: screenX,
         y: screenY,
-        width: searchStr.length + 2 + 1,
+        width: strW + 2 + 1,
         index: ti,
       });
     }
@@ -690,26 +690,20 @@ export function buildApp(): App {
     const startY = rect.y + Math.floor((rect.height - logoHeight - 4) / 2);
 
     for (const line of ASCII_LOGO) {
-      const x = rect.x + Math.floor((rect.width - line.length) / 2);
+      const x = rect.x + Math.floor((rect.width - stringWidth(line)) / 2);
       const y = startY + ASCII_LOGO.indexOf(line);
-      for (let j = 0; j < line.length; j++) {
-        buf.set(x + j, y, { char: line[j], fg: theme.highlight, bold: true });
-      }
+      buf.writeText(x, y, line, { fg: theme.highlight, bold: true });
     }
 
     const versionY = startY + logoHeight + 1;
     const versionText = "Coder 0.1.0";
-    const versionX = rect.x + Math.floor((rect.width - versionText.length) / 2);
-    for (let j = 0; j < versionText.length; j++) {
-      buf.set(versionX + j, versionY, { char: versionText[j], fg: theme.text });
-    }
+    const versionX = rect.x + Math.floor((rect.width - stringWidth(versionText)) / 2);
+    buf.writeText(versionX, versionY, versionText, { fg: theme.text });
 
     const hintText = "Press any key to continue";
     const hintY = versionY + 2;
-    const hintX = rect.x + Math.floor((rect.width - hintText.length) / 2);
-    for (let j = 0; j < hintText.length; j++) {
-      buf.set(hintX + j, hintY, { char: hintText[j], fg: theme.muted });
-    }
+    const hintX = rect.x + Math.floor((rect.width - stringWidth(hintText)) / 2);
+    buf.writeText(hintX, hintY, hintText, { fg: theme.muted });
   };
 
   root.add(splash);
@@ -923,15 +917,12 @@ function createUserMsg(text: string): Box {
   label.height = { fixed: 1 };
   const userName = "  user   ";
   label.onPaint = (buf, rect, theme) => {
-    const x = rect.x + rect.width - userName.length;
-    for (let j = 0; j < userName.length; j++) {
-      buf.set(x + j, rect.y, {
-        char: userName[j],
-        fg: theme.appBg,
-        bg: theme.highlight,
-        bold: true,
-      });
-    }
+    const x = rect.x + rect.width - stringWidth(userName);
+    buf.writeText(x, rect.y, userName, {
+      fg: theme.appBg,
+      bg: theme.highlight,
+      bold: true,
+    });
   };
 
   const response = new Box("response");
@@ -982,14 +973,11 @@ function createAssistantMsg(text: string): Box {
   label.height = { fixed: 1 };
   const assistantName = " Assistant ";
   label.onPaint = (buf, rect, theme) => {
-    for (let j = 0; j < assistantName.length; j++) {
-      buf.set(rect.x + j, rect.y, {
-        char: assistantName[j],
-        fg: theme.appBg,
-        bg: theme.highlight,
-        bold: true,
-      });
-    }
+    buf.writeText(rect.x, rect.y, assistantName, {
+      fg: theme.appBg,
+      bg: theme.highlight,
+      bold: true,
+    });
   };
 
   const response = new Box("response");

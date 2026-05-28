@@ -33,7 +33,7 @@ export {
 } from "./theme.ts";
 export type { Theme, Color, BorderChars, BorderStyle } from "./theme.ts";
 
-export { getTermSize, ansi } from "./terminal.ts";
+export { getTermSize, ansi, charWidth, stringWidth } from "./terminal.ts";
 export type { TermSize, Cell } from "./terminal.ts";
 
 export type { TuixEvent, KeyEvent, MouseEvent, KeyModifiers } from "./events.ts";

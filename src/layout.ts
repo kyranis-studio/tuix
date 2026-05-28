@@ -20,7 +20,7 @@
  * The engine computes scrollMaxX / scrollMaxY for both axes.
  */
 
-import { CellBuffer } from "./terminal.ts";
+import { CellBuffer, charWidth, stringWidth } from "./terminal.ts";
 import { Theme, getBorderChars, BorderStyle } from "./theme.ts";
 
 // ─── Geometry ─────────────────────────────────────────────────────────────────
@@ -972,16 +972,20 @@ export function paintCenteredText(
   const startRow = rect.y + Math.floor((rect.height - lines.length) / 2);
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
-    const startCol = rect.x + Math.floor((rect.width - line.length) / 2);
-    for (let ci = 0; ci < line.length; ci++) {
-      if (startCol + ci >= rect.x && startCol + ci < rect.x + rect.width) {
-        buf.set(startCol + ci, startRow + li, {
-          char: line[ci],
+    const width = stringWidth(line);
+    const startCol = rect.x + Math.floor((rect.width - width) / 2);
+    let xOffset = 0;
+    for (const ch of [...line]) {
+      const col = startCol + xOffset;
+      if (col >= rect.x && col < rect.x + rect.width) {
+        buf.set(col, startRow + li, {
+          char: ch,
           fg,
           bg: bg ?? undefined,
           bold,
         });
       }
+      xOffset += charWidth(ch);
     }
   }
 }
@@ -996,7 +1000,11 @@ export function paintText(
 ): void {
   const y = rect.y + row;
   if (y < rect.y || y >= rect.y + rect.height) return;
-  for (let i = 0; i < text.length && i < rect.width; i++) {
-    buf.set(rect.x + i, y, { char: text[i], fg, bold });
+  let xOffset = 0;
+  for (const ch of [...text]) {
+    const col = rect.x + xOffset;
+    if (col >= rect.x + rect.width) break;
+    buf.set(col, y, { char: ch, fg, bold });
+    xOffset += charWidth(ch);
   }
 }
