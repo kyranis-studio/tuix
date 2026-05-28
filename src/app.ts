@@ -389,7 +389,7 @@ export class App {
   private _activeSplitter: Splitter | null = null;
 
   private _handleMouse(ev: import("./events.ts").MouseEvent): void {
-    const { action, col, row, button, wheelDelta } = ev;
+    const { action, col, row, button, wheelDelta, modifiers } = ev;
 
     // ── Handle active window drag ────────────────────────────────────────
     if (this._dragBox) {
@@ -455,7 +455,7 @@ export class App {
         // (parent boxes like titleBar may have the handler, not the deepest child)
         let target: Box | null = overlayHit;
         while (target && !target.onMouse) target = target.parent;
-        target?.onMouse?.(col, row, "press", 0);
+        target?.onMouse?.(col, row, "press", 0, modifiers);
         return;
       }
 
@@ -487,7 +487,7 @@ export class App {
       const hit = this.root.hitTest(col, row);
       if (hit && hit.focusable) this.focus.focusBox(hit);
       if (hit?.onMouse) {
-        hit.onMouse(col, row, "press", 0);
+        hit.onMouse(col, row, "press", 0, modifiers);
         this._mouseDragTarget = hit;
       }
       return;
@@ -510,7 +510,7 @@ export class App {
     if (action === "move") {
       // Text selection drag takes priority
       if (this._mouseDragTarget) {
-        this._mouseDragTarget.onMouse?.(col, row, "move", 0);
+        this._mouseDragTarget.onMouse?.(col, row, "move", 0, modifiers);
         return;
       }
       if (this._activeSplitter) {
@@ -526,7 +526,7 @@ export class App {
     if (action === "release") {
       // Text selection release takes priority
       if (this._mouseDragTarget) {
-        this._mouseDragTarget.onMouse?.(col, row, "release", 0);
+        this._mouseDragTarget.onMouse?.(col, row, "release", 0, modifiers);
         this._mouseDragTarget = null;
         return;
       }
@@ -537,10 +537,10 @@ export class App {
         // Walk up from hit to find nearest onMouse handler
         let target: Box | null = overlayHit;
         while (target && !target.onMouse) target = target.parent;
-        target?.onMouse?.(col, row, "release", button);
+        target?.onMouse?.(col, row, "release", button, modifiers);
       } else if (!this.hasModalOverlay) {
         const hit = this.root.hitTest(col, row);
-        if (hit?.onMouse) hit.onMouse(col, row, "release", button);
+        if (hit?.onMouse) hit.onMouse(col, row, "release", button, modifiers);
       }
       // Clear active splitter
       if (this._activeSplitter) {

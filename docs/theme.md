@@ -50,7 +50,7 @@ const bg = hex("#1E1E1E");
 
 | Theme | Export | Description |
 |-------|--------|-------------|
-| VS Code Dark+ | `vscodeDarkTheme` | Dark charcoal with yellow/gold highlights (default) |
+| Modern Dark | `modernDarkTheme` | Dark charcoal with yellow/gold highlights (default) |
 | Amber | `amberTheme` | Dark blue/purple with amber accents |
 | One Dark | `oneDarkTheme` | Atom One Dark palette with blue focus |
 | Solarized Dark | `solarizedDarkTheme` | Solarized Dark with cyan/blue |
@@ -59,8 +59,8 @@ const bg = hex("#1E1E1E");
 | Catppuccin | `catppuccinTheme` | Catppuccin Mocha with mauve/pink |
 
 ```typescript
-import { defaultTheme, vscodeDarkTheme, amberTheme, nordTheme } from "jsr:@kyranis-studio/tuix";
-// defaultTheme === vscodeDarkTheme
+import { defaultTheme, modernDarkTheme, amberTheme, nordTheme } from "jsr:@kyranis-studio/tuix";
+// defaultTheme === modernDarkTheme
 ```
 
 ---

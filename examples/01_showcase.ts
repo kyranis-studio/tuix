@@ -41,7 +41,7 @@ import {
   paintText,
   edgesAll,
   defaultTheme,
-  vscodeDarkTheme,
+  modernDarkTheme,
   amberTheme,
   oneDarkTheme,
   solarizedDarkTheme,
@@ -65,7 +65,7 @@ let selectedTheme = "VS Code Dark";
 let selectedAlign = "Left";
 
 const themeMap: Record<string, Theme> = {
-  "VS Code Dark": vscodeDarkTheme,
+  "VS Code Dark": modernDarkTheme,
   "Amber": amberTheme,
   "One Dark": oneDarkTheme,
   "Solarized Dark": solarizedDarkTheme,
@@ -958,6 +958,20 @@ const profileList = new ListBox(profiles, (item) => {
 profileList.selectedIndex = 0;
 profileList.height = { fixed: 8 };
 
+const multiTags: ListBoxItem[] = [
+  "typescript",
+  "deno",
+  "react",
+  "svelte",
+  "node",
+  { label: "legacy", disabled: true },
+  "python",
+];
+const tagList = new ListBox(multiTags);
+tagList.multiple = true;
+tagList.selectedIndices = new Set([0, 2]);
+tagList.height = { fixed: 8 };
+
 const radioGroup = new RadioGroup(
   "options",
   [
@@ -1058,12 +1072,16 @@ const listCol = Box.col("list-col");
 listCol.style.gutter = 1;
 listCol.add(lbl("Profiles ListBox:"), profileList);
 
+const multiCol = Box.col("multi-col");
+multiCol.style.gutter = 1;
+multiCol.add(lbl("Tags (multi-select):"), tagList);
+
 const topRow = Box.row("top-row");
 topRow.style.gutter = 2;
 topRow.height = {}; // hug — shrink-wrap to tallest child
 // When there's not enough height, the row will hug to its tallest column
 // content instead of collapsing to 0.
-topRow.add(chkCol, radioCol, listCol);
+topRow.add(chkCol, radioCol, listCol, multiCol);
 
 // Fixed-height control rows (hug height via fixed)
 const actionsRow = Box.col("actions-row");

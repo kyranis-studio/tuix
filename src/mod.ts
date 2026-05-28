@@ -17,7 +17,7 @@ export { Button, Checkbox, TextInput, ListBox, ProgressBar, Autocomplete, Tabs, 
 export type { AutocompleteMode, TabDefinition, ListBoxItem, DialogButton, NotificationType, ButtonStyle } from "./widgets/mod.ts";
 
 export {
-  vscodeDarkTheme,
+  modernDarkTheme,
   amberTheme,
   oneDarkTheme,
   solarizedDarkTheme,

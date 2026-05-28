@@ -97,9 +97,9 @@ export interface Theme {
   defaultBorder: BorderStyle;
 }
 
-// ─── VS Code Dark+ theme ──────────────────────────────────────────────────────
+// ─── Modern Dark theme (default) ───────────────────────────────────────────────
 //
-// Colors sourced from the official VS Code Dark+ / Dark Modern theme:
+// Colors sourced from a modern dark palette:
 //   appBg        #1E1E1E  editor.background
 //   primaryBg    #252526  sideBar.background / panel.background
 //   secondaryBg  #2A2D2E  slightly between primary and elevated
@@ -110,13 +110,13 @@ export interface Theme {
 //   disabledBg   #2D2D2D  disabled background tint
 //   text         #D4D4D4  editor.foreground
 //   muted        #6A6A6A  editorLineNumber.foreground (approx)
-//   highlight    #DCDCAA  → VS Code function yellow
+//   highlight    #DCDCAA  yellow highlight
 //   border       #3C3C3C  panel.border / editorGroup.border
 //   focusBorder  #FFD700  yellow glow when box is focused
 //   toolbarText  #DCDCAA  yellow on toolbar
 //   splitter     #FFD700  sash.hoverBorder — bright yellow drag handle
 
-export const vscodeDarkTheme: Theme = {
+export const modernDarkTheme: Theme = {
   appBg:        hex("#1E1E1E"),   // editor.background
   primaryBg:    hex("#252526"),   // sideBar.background
   secondaryBg:  hex("#2A2D2E"),   // between primary and elevated
@@ -261,12 +261,12 @@ export const catppuccinTheme: Theme = {
   defaultBorder: "rounded",
 };
 
-export const defaultTheme: Theme = vscodeDarkTheme;
+export const defaultTheme: Theme = modernDarkTheme;
 
 // ─── Theme registry ───────────────────────────────────────────────────────────
 
 const registry: Map<string, Theme> = new Map([
-  ["vscode-dark", vscodeDarkTheme],
+  ["modern-dark", modernDarkTheme],
   ["amber", amberTheme],
   ["one-dark", oneDarkTheme],
   ["solarized-dark", solarizedDarkTheme],
@@ -274,7 +274,7 @@ const registry: Map<string, Theme> = new Map([
   ["dracula", draculaTheme],
   ["catppuccin", catppuccinTheme],
 ]);
-let _active = vscodeDarkTheme;
+let _active = modernDarkTheme;
 
 export interface ThemeRegistryInterface {
   register(name: string, theme: Theme): void;

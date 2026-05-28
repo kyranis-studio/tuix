@@ -27,7 +27,7 @@ const app = new App(root, options);
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `root` | `Box` | — | Root of the widget tree |
-| `options.theme` | `Theme` | `vscodeDarkTheme` | Colors and border defaults |
+| `options.theme` | `Theme` | `modernDarkTheme` | Colors and border defaults |
 | `options.fps` | `number` | `30` | Render frames per second |
 | `options.mouse` | `boolean` | `true` | Enable SGR mouse reporting |
 
