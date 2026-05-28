@@ -9,7 +9,7 @@ export { Box, paintCenteredText, paintText, edgesZero, edgesAll, edgesXY } from 
 export type { Rect, SizeConstraint, Edges, BoxStyle, Direction, Align, Justify, Overflow, ScrollbarStyle } from "./layout.ts";
 
 export { Splitter } from "./splitter.ts";
-export type { SplitDirection } from "./splitter.ts";
+export type { SplitDirection, SplitterValue } from "./splitter.ts";
 
 export { FocusManager } from "./focus.ts";
 

@@ -7,6 +7,7 @@ import { CellBuffer } from "./terminal.ts";
 import { Theme, getBorderChars } from "./theme.ts";
 
 export type SplitDirection = "horizontal" | "vertical";
+export type SplitterValue = number | `${number}%`;
 
 export class Splitter extends Box {
   private _direction: SplitDirection;
@@ -17,23 +18,31 @@ export class Splitter extends Box {
   private _dragging = false;
   private _dragStart = 0;
   private _splitStart = 0;
+  private _initialSplit: SplitterValue;
+  private _minOptA: SplitterValue;
+  private _minOptB: SplitterValue;
   private _minA: number;
   private _minB: number;
   private _handleThickness = 1;
+  private _splitResolved = false;
 
   constructor(
     direction: SplitDirection,
     panelA: Box,
     panelB: Box,
-    opts: { initialSplit?: number; minA?: number; minB?: number } = {},
+    opts: { initialSplit?: SplitterValue; minA?: SplitterValue; minB?: SplitterValue } = {},
   ) {
     super("splitter");
     this._direction = direction;
     this._panelA = panelA;
     this._panelB = panelB;
-    this._splitPos = opts.initialSplit ?? 40;
-    this._minA = opts.minA ?? 5;
-    this._minB = opts.minB ?? 5;
+    this._initialSplit = opts.initialSplit ?? 40;
+    this._splitPos = typeof this._initialSplit === "number" ? this._initialSplit : 0;
+    this._splitResolved = typeof this._initialSplit === "number";
+    this._minOptA = opts.minA ?? 5;
+    this._minOptB = opts.minB ?? 5;
+    this._minA = typeof this._minOptA === "number" ? this._minOptA : 0;
+    this._minB = typeof this._minOptB === "number" ? this._minOptB : 0;
 
     // Splitter is a column (or row) container
     this.style.direction = direction === "horizontal" ? "row" : "column";
@@ -73,6 +82,15 @@ export class Splitter extends Box {
     this._dragging = false;
   }
 
+  private _resolveValue(v: SplitterValue, available: number): number {
+    if (typeof v === "string") {
+      const pct = parseInt(v);
+      if (isNaN(pct)) return 0;
+      return Math.floor(available * pct / 100);
+    }
+    return v;
+  }
+
   get isDragging(): boolean { return this._dragging; }
 
   /** Check if a terminal coordinate lands on the handle. */
@@ -96,7 +114,24 @@ export class Splitter extends Box {
 
     this.rect = { x: outerX, y: outerY, width: outerW, height: outerH };
 
-    if (this._direction === "horizontal") {
+    const isH = this._direction === "horizontal";
+    const available = isH ? outerW : outerH;
+
+    // Resolve percentage-based initial split on first layout
+    if (!this._splitResolved) {
+      this._splitPos = this._resolveValue(this._initialSplit, available);
+      this._splitResolved = true;
+    }
+
+    // Re-resolve min values each layout (percentage mins adapt to container)
+    this._minA = this._resolveValue(this._minOptA, available);
+    this._minB = this._resolveValue(this._minOptB, available);
+
+    // Clamp within valid range (block resize at min/max)
+    const maxA = available - this._minB - this._handleThickness;
+    this._splitPos = Math.max(this._minA, Math.min(this._splitPos, maxA));
+
+    if (isH) {
       const aW = this._splitPos;
       const bW = Math.max(0, outerW - aW - this._handleThickness);
       this._panelA.layout({ x: outerX, y: outerY, width: aW, height: outerH });

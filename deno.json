@@ -1,6 +1,6 @@
 {
   "name": "@kyranis-studio/tuix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "tasks": {
     "01_showcase": "deno run -A examples/01_showcase.ts"

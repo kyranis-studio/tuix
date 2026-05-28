@@ -243,17 +243,16 @@ The scrollbar is painted as a track (`│`/`─`) with a draggable thumb (`▌`/
 import { Splitter } from "jsr:@kyranis-studio/tuix";
 
 const split = new Splitter("horizontal", leftPanel, rightPanel, {
-  initialSplit: 40, // 40% for left panel
-  minA: 10,         // minimum left panel size
-  minB: 10,         // minimum right panel size
+  initialSplit: "40%", // 40% for left panel
+  minA: "10%",         // minimum left panel size
+  minB: "10%",         // minimum right panel size
 });
 ```
-
 | Parameter | Description |
 |-----------|-------------|
 | `direction` | `"horizontal"` or `"vertical"` |
-| `initialSplit` | Starting split position in characters |
-| `minA` / `minB` | Minimum size for each panel |
+| `initialSplit` | Starting split position — number (chars) or `"N%"` string |
+| `minA` / `minB` | Minimum size for each panel — number (chars) or `"N%"` string |
 
 Splitters are managed by the `App` — mouse press on the handle starts drag, mouse move resizes, release ends drag. The handle renders as `┃` (horizontal) or `━` (vertical) with a `◈` indicator at center.
 

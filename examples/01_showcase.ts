@@ -496,14 +496,14 @@ const rTopRight = makeResizePanel("  Editor", editorLines, 2);
 const rBottom = makeResizePanel("  Terminal Output", termLines, 3);
 
 const rHSplit = new Splitter("horizontal", rTopLeft, rTopRight, {
-  initialSplit: 30,
-  minA: 12,
-  minB: 12,
+  initialSplit: "30%",
+  minA: "10%",
+  minB: "10%",
 });
 const rVSplit = new Splitter("vertical", rHSplit, rBottom, {
-  initialSplit: 12,
-  minA: 8,
-  minB: 5,
+  initialSplit: "35%",
+  minA: "15%",
+  minB: "10%",
 });
 
 const resizableContent = Box.col("resize-content");
