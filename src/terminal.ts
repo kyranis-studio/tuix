@@ -241,8 +241,7 @@ export function charWidth(ch: string): number {
     (code >= 0x1B100 && code <= 0x1B12F) || // Kana Extended-A
     (code >= 0x1F000 && code <= 0x1F9FF) || // Emojis and miscellaneous symbols
     (code >= 0x20000 && code <= 0x2FFFD) || // CJK Unified Extension B+
-    (code >= 0x30000 && code <= 0x3FFFD) || // CJK Unified Extension I
-    code === 0x2726 // ✦ Black Four Pointed Star
+    (code >= 0x30000 && code <= 0x3FFFD)    // CJK Unified Extension I
   ) {
     return 2;
   }
@@ -351,11 +350,16 @@ export class Renderer {
 
         out += cell.char || " ";
 
-        // If the current character is wide, skip its trailing cells
+        // If the current character is wide, update trailing cells in 'prev'
+        // to reflect that they are now covered by this character and its background.
         const w = charWidth(cell.char);
         if (w > 1) {
           for (let i = 1; i < w && col + i < cols; i++) {
-            this.prev.set(col + i, row, this.curr.get(col + i, row));
+            const trailIdx = row * cols + (col + i);
+            this.prev.set(col + i, row, {
+              ...cell,
+              char: "\0", // Special marker for continuation cells
+            });
           }
           col += w - 1;
         }
