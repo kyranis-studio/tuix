@@ -2,7 +2,7 @@
   <h1>🟦 tuix</h1>
   <p><strong>A lightweight, AI-first TUI component library for Deno 2</strong></p>
 
-[![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-orange.svg)](#)
+[![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-orange.svg)](#)
 [![Deno](https://img.shields.io/badge/Deno-2.7-black?logo=deno)](https://deno.com/)
 [![JSR](https://img.shields.io/badge/JSR-jsr.io-blue?logo=jsr)](https://jsr.io/@kyranis-studio/tuix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
