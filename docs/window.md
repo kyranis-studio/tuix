@@ -51,7 +51,16 @@ win.contentBox.add(childWidget);
 ## Properties
 
 ```typescript
-win.contentBox;  // Box — add child widgets here
+win.contentBox;                    // Box — add child widgets here
+win.titleBarBg;                    // Color — title bar background (default: elevatedBg)
+win.closeHoverColor;               // Color — close button hover/focus (default: red)
+```
+
+Customize colors:
+
+```typescript
+win.closeHoverColor = { r: 200, g: 50, b: 50 };
+win.titleBarBg = { r: 30, g: 30, b: 50 };
 ```
 
 ## Methods

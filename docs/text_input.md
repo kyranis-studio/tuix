@@ -92,6 +92,7 @@ input.placeholder;      // Placeholder text
 input.cursorPos;        // Cursor position (string index)
 input.burstThreshold;   // Current burst threshold
 input.copyOnSelect;     // Auto-copy on selection
+input.pasteShades;      // Color palette for paste markers (null = defaults)
 input.onChange;         // (val: string) => void
 input.onSubmit;         // (val: string) => void — Enter key
 ```

@@ -104,7 +104,7 @@ export class TextInput extends InputPrimitive {
       pasteRanges.some((r) => idx >= r.start && idx < r.end);
     const pasteShadeAt = (idx: number): { r: number; g: number; b: number } | null => {
       for (const r of pasteRanges) {
-        if (idx >= r.start && idx < r.end) return InputPrimitive.getPasteShade(r.pasteIndex);
+        if (idx >= r.start && idx < r.end) return this.getPasteShade(r.pasteIndex);
       }
       return null;
     };

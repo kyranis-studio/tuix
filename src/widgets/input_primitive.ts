@@ -23,8 +23,11 @@ export abstract class InputPrimitive extends Box {
   protected _appRef: AppOverlayRef | null = null;
   private _pasteCount = 0;
 
+  /** Instance-level paste shade palette (overrides static default if set). */
+  pasteShades: Array<{ r: number; g: number; b: number }> | null = null;
+
   // Palette of foreground colors for paste marker shading (cycles)
-  private static _PASTE_SHADES: Array<{ r: number; g: number; b: number }> = [
+  private static _DEFAULT_PASTE_SHADES: Array<{ r: number; g: number; b: number }> = [
     { r: 160, g: 120, b: 255 },   // purple
     { r: 255, g: 170, b: 80 },    // orange
     { r: 80, g: 180, b: 255 },    // blue
@@ -35,9 +38,11 @@ export abstract class InputPrimitive extends Box {
     { r: 100, g: 220, b: 220 },   // teal
   ];
 
-  /** Get the shade color for a paste marker by its 1-based paste index. */
-  static getPasteShade(index: number): { r: number; g: number; b: number } {
-    return InputPrimitive._PASTE_SHADES[(index - 1) % InputPrimitive._PASTE_SHADES.length];
+  /** Get the shade color for a paste marker by its 1-based paste index.
+   *  Uses the instance-level `pasteShades` if set, otherwise falls back to the static default palette. */
+  getPasteShade(index: number): { r: number; g: number; b: number } {
+    const palette = this.pasteShades ?? InputPrimitive._DEFAULT_PASTE_SHADES;
+    return palette[(index - 1) % palette.length];
   }
 
   // Burst tracking — detect terminal paste via fast-arriving key events

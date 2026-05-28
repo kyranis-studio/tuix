@@ -66,8 +66,15 @@ The `show()` method starts the auto-dismiss timer and positions the notification
 ## Properties
 
 ```typescript
-notif.position;  // Get current position
-notif.removeFn;  // Set the removal function
+notif.position;          // Get current position
+notif.removeFn;          // Set the removal function
+notif.closeHoverColor;   // Color — close button hover/focus (default: red)
+```
+
+Customize the close button hover color:
+
+```typescript
+notif.closeHoverColor = { r: 200, g: 50, b: 50 };
 ```
 
 ## Methods

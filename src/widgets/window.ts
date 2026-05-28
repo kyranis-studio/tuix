@@ -12,7 +12,7 @@ import {
   Rect,
 } from "../layout.ts";
 import { CellBuffer } from "../terminal.ts";
-import { Theme, defaultTheme } from "../theme.ts";
+import { Color, Theme, defaultTheme } from "../theme.ts";
 
 /**
  * Creates a draggable floating window.
@@ -34,6 +34,10 @@ export class FloatingWindow extends Box {
     removeOverlay: (box: Box) => void;
   } | null = null;
   private _closeCb: (() => void) | null = null;
+  /** Background for the title bar (set to `elevatedBg` by default). */
+  titleBarBg: Color;
+  /** Color for the close button when hovered/focused. */
+  closeHoverColor: Color;
   private _titleBar: Box;
   private _closeBtn: Box;
 
@@ -50,6 +54,8 @@ export class FloatingWindow extends Box {
     super(title);
     this._title = title;
     this._closeCb = options?.onClose ?? null;
+    this.titleBarBg = defaultTheme.elevatedBg;
+    this.closeHoverColor = { r: 255, g: 80, b: 80 };
 
     const w = options?.width ?? 46;
     const h = options?.height ?? 16;
@@ -92,7 +98,7 @@ export class FloatingWindow extends Box {
         buf,
         rect,
         " [×] ",
-        hover ? { r: 255, g: 80, b: 80 } : theme.muted,
+        hover ? this.closeHoverColor : theme.muted,
         theme.elevatedBg,
         true,
       );

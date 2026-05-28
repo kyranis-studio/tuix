@@ -99,6 +99,7 @@ ta.cursorPos;          // Global cursor position (string index)
 ta.minRows;            // Minimum visible rows (default 3)
 ta.maxLines;           // Maximum visible rows (null = unlimited)
 ta.burstThreshold;     // Max burst length (null = no limit)
+ta.pasteShades;        // Color palette for paste markers (null = defaults)
 ta.onChange;           // (val: string) => void
 ``` The height auto-adjusts to content up to `maxLines`. A scrollbar is rendered in the rightmost column when content exceeds visible rows.
 

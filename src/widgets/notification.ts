@@ -9,9 +9,9 @@
  * to place them elsewhere. Click anywhere on the notification to dismiss.
  */
 
-import { Box, paintCenteredText, paintText, edgesAll, Rect } from "../layout.ts";
+import { Box, paintCenteredText, edgesAll } from "../layout.ts";
 import { CellBuffer, getTermSize } from "../terminal.ts";
-import { Theme, defaultTheme } from "../theme.ts";
+import { Color, Theme, defaultTheme } from "../theme.ts";
 
 export type NotificationType = "info" | "success" | "warn" | "error";
 
@@ -74,6 +74,9 @@ export class Notification extends Box {
   private _dismissed = false;
   private _removeFn: (() => void) | null = null;
 
+  /** Color for the close button when hovered/focused. */
+  closeHoverColor: Color;
+
   /**
    * @param message   Notification text to display
    * @param type      Visual style: "info" | "success" | "warn" | "error"
@@ -91,6 +94,7 @@ export class Notification extends Box {
     this._nType = type;
     this._duration = duration;
     this._position = position;
+    this.closeHoverColor = { r: 255, g: 80, b: 80 };
 
     const colors = COLORS[type];
     this.width = { fixed: 44 };
@@ -128,7 +132,7 @@ export class Notification extends Box {
       paintCenteredText(
         buf, rect,
         " Close ",
-        hover ? { r: 255, g: 80, b: 80 } : colors.accent,
+        hover ? this.closeHoverColor : colors.accent,
         defaultTheme.appBg,
         true,
       );

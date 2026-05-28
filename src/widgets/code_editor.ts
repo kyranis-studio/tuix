@@ -384,7 +384,7 @@ export class CodeEditor extends TextArea {
       ): Color | null => {
         for (const r of pasteRanges) {
           if (idx >= r.start && idx < r.end)
-            return InputPrimitive.getPasteShade(r.pasteIndex);
+            return this.getPasteShade(r.pasteIndex);
         }
         return null;
       };
