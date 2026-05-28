@@ -57,20 +57,20 @@ export class Button extends Box {
       let textFg: { r: number; g: number; b: number };
 
       if (isDisabled) {
-        borderColor = theme.disabled;
-        fillBg = theme.disabled;
+        borderColor = theme.disabledBg;
+        fillBg = theme.disabledBg;
         textFg = theme.muted;
       } else if (isFlash) {
-        borderColor = theme.focus;
-        fillBg = theme.focus;
-        textFg = theme.bg;
+        borderColor = theme.focusBg;
+        fillBg = theme.focusBg;
+        textFg = theme.appBg;
       } else if (isToggled) {
         borderColor = isFocused ? theme.focusBorder : theme.highlight;
         fillBg = theme.highlight;
-        textFg = theme.bg;
+        textFg = theme.appBg;
       } else {
         borderColor = isFocused ? theme.focusBorder : theme.border;
-        fillBg = this.style.border !== "none" ? theme.panelBg : theme.bg;
+        fillBg = this.style.border !== "none" ? theme.primaryBg : this.buttonStyle === "ghost" || this.buttonStyle === "small" ? theme.secondaryBg : theme.appBg;
         textFg = isFocused ? theme.highlight : theme.text;
       }
 
@@ -78,25 +78,25 @@ export class Button extends Box {
       const p = this.style.padding;
 
       // Fill border area with panelBg (or button bg for borderless)
-      const baseBg = this.style.border !== "none" ? theme.panelBg : fillBg;
+      const baseBg = this.style.border !== "none" ? theme.primaryBg : fillBg;
       buf.fill(r.x, r.y, r.width, r.height, { char: " ", fg: null, bg: baseBg });
 
       // Draw border
       if (hasBorder) {
         const chars = getBorderChars(this.style.border);
-        buf.set(r.x, r.y, { char: chars.topLeft, fg: borderColor, bg: theme.panelBg });
-        buf.set(r.x + r.width - 1, r.y, { char: chars.topRight, fg: borderColor, bg: theme.panelBg });
+        buf.set(r.x, r.y, { char: chars.topLeft, fg: borderColor, bg: theme.primaryBg });
+        buf.set(r.x + r.width - 1, r.y, { char: chars.topRight, fg: borderColor, bg: theme.primaryBg });
         for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
-          buf.set(col, r.y, { char: chars.horizontal, fg: borderColor, bg: theme.panelBg });
+          buf.set(col, r.y, { char: chars.horizontal, fg: borderColor, bg: theme.primaryBg });
         }
-        buf.set(r.x, r.y + r.height - 1, { char: chars.bottomLeft, fg: borderColor, bg: theme.panelBg });
-        buf.set(r.x + r.width - 1, r.y + r.height - 1, { char: chars.bottomRight, fg: borderColor, bg: theme.panelBg });
+        buf.set(r.x, r.y + r.height - 1, { char: chars.bottomLeft, fg: borderColor, bg: theme.primaryBg });
+        buf.set(r.x + r.width - 1, r.y + r.height - 1, { char: chars.bottomRight, fg: borderColor, bg: theme.primaryBg });
         for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
-          buf.set(col, r.y + r.height - 1, { char: chars.horizontal, fg: borderColor, bg: theme.panelBg });
+          buf.set(col, r.y + r.height - 1, { char: chars.horizontal, fg: borderColor, bg: theme.primaryBg });
         }
         for (let row = r.y + 1; row < r.y + r.height - 1; row++) {
-          buf.set(r.x, row, { char: chars.vertical, fg: borderColor, bg: theme.panelBg });
-          buf.set(r.x + r.width - 1, row, { char: chars.vertical, fg: borderColor, bg: theme.panelBg });
+          buf.set(r.x, row, { char: chars.vertical, fg: borderColor, bg: theme.primaryBg });
+          buf.set(r.x + r.width - 1, row, { char: chars.vertical, fg: borderColor, bg: theme.primaryBg });
         }
       }
 
@@ -112,7 +112,7 @@ export class Button extends Box {
       // Expand the flash fill across the entire button area for bordered styles
       // Flash: fill the entire button area (including border / padding gutters)
       if (isFlash) {
-        const flashFillBg = hasBorder ? fillBg : Button._blend(theme.focus, theme.panelBg, Button.FLASH_BLEND);
+        const flashFillBg = hasBorder ? fillBg : Button._blend(theme.focusBg, theme.primaryBg, Button.FLASH_BLEND);
         buf.fill(r.x, r.y, r.width, r.height, { char: " ", fg: null, bg: flashFillBg });
         if (hasBorder) {
           const chars = getBorderChars(this.style.border);
@@ -134,7 +134,7 @@ export class Button extends Box {
       }
 
       const contentRect = { x: cx, y: cy, width: cw, height: ch };
-      const labelBg = isFlash && !hasBorder ? Button._blend(theme.focus, theme.panelBg, Button.FLASH_BLEND) : fillBg;
+      const labelBg = isFlash && !hasBorder ? Button._blend(theme.focusBg, theme.primaryBg, Button.FLASH_BLEND) : fillBg;
       paintCenteredText(buf, contentRect, this.label, textFg, labelBg, isFocused || isToggled);
     };
   }

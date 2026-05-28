@@ -170,25 +170,25 @@ export class Splitter extends Box {
         buf.set(hCol, row, {
           char: handleChar,
           fg: handleColor,
-          bg: theme.bg,
+          bg: theme.appBg,
           bold: this._dragging,
         });
       }
       // Center drag indicator
       const midRow = r.y + Math.floor(r.height / 2);
-      buf.set(hCol, midRow, { char: "◈", fg: theme.highlight, bg: theme.bg, bold: true });
+      buf.set(hCol, midRow, { char: "◈", fg: theme.highlight, bg: theme.appBg, bold: true });
     } else {
       const hRow = r.y + this._splitPos;
       for (let col = r.x; col < r.x + r.width; col++) {
         buf.set(col, hRow, {
           char: handleChar,
           fg: handleColor,
-          bg: theme.bg,
+          bg: theme.appBg,
           bold: this._dragging,
         });
       }
       const midCol = r.x + Math.floor(r.width / 2);
-      buf.set(midCol, hRow, { char: "◈", fg: theme.highlight, bg: theme.bg, bold: true });
+      buf.set(midCol, hRow, { char: "◈", fg: theme.highlight, bg: theme.appBg, bold: true });
     }
   }
 }

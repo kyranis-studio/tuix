@@ -412,7 +412,7 @@ export class SplitDiffViewer extends Box {
     rect: Rect,
     theme: Theme,
   ): void {
-    const bg = theme.panelBg;
+    const bg = theme.primaryBg;
     const ch = rect.height;
     const w = rect.width;
 
@@ -678,7 +678,7 @@ export class DiffViewer extends TextArea {
   ): void {
     const isFocused = this.focused;
     const showPlaceholder = !this.value;
-    const bg = theme.panelBg;
+    const bg = theme.primaryBg;
     const ch = rect.height;
     const totalRows = this._lines().length;
     const sbX = rect.x + rect.width - 1;
@@ -804,7 +804,7 @@ export class DiffViewer extends TextArea {
             } else if (inSel) {
               buf.set(rect.x + col, rect.y + row, {
                 char: displayText[col],
-                fg: theme.bg,
+                fg: theme.appBg,
                 bg: theme.highlight,
               });
             } else if (isCur) {

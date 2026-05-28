@@ -29,11 +29,11 @@ Five built-in visual styles. Default is `"default"`.
 
 | Style | Height | Border | Padding | Rest-state fill |
 |-------|--------|--------|---------|----------------|
-| `default` | 3 | single | `{0,0,1,1}` | `panelBg` |
-| `small` | 1 | none | `{0,0,1,1}` | `bg` (darker) |
-| `large` | 5 | single | `{1,1,2,2}` | `panelBg` |
-| `ghost` | 3 | none | `{0,0,1,1}` | `bg` (darker) |
-| `outline` | 3 | single | `{0,0,1,1}` | `panelBg` |
+| `default` | 3 | single | `{0,0,1,1}` | `primaryBg` |
+| `small` | 1 | none | `{0,0,1,1}` | `secondaryBg` |
+| `large` | 5 | single | `{1,1,2,2}` | `primaryBg` |
+| `ghost` | 3 | none | `{0,0,1,1}` | `secondaryBg` |
+| `outline` | 3 | single | `{0,0,1,1}` | `primaryBg` |
 
 ### Static factories
 
@@ -57,13 +57,13 @@ btn.setButtonStyle("ghost");
 
 | State | Appearance | Interaction |
 |-------|-----------|-------------|
-| Default (bordered) | Single border, `panelBg` fill, `text`/`highlight` text | Click, focus |
-| Default (borderless) | `bg` fill, `text`/`highlight` text | Click, focus |
+| Default (bordered) | Single border, `primaryBg` fill, `text`/`highlight` text | Click, focus |
+| Default (borderless) | `appBg`/`secondaryBg` fill, `text`/`highlight` text | Click, focus |
 | Focused | Border switches to `focusBorder` (bordered); text bold + `highlight` | Keyboard Enter/Space |
-| Toggled | `highlight` fill with `bg` text; border → `focusBorder`/`highlight` | `btn.toggle()` or auto-toggle |
-| Disabled | `disabled` bg, `muted` text, no interaction | None |
-| Flash (bordered) | `focus` fill across entire button + border, `bg` text — pulses 150ms | `flashOnClick` auto-triggers |
-| Flash (borderless) | `focus` blended with `panelBg` (55/45) across entire button, `bg` text — pulses 150ms | `flashOnClick` auto-triggers |
+| Toggled | `highlight` fill with `appBg` text; border → `focusBorder`/`highlight` | `btn.toggle()` or auto-toggle |
+| Disabled | `disabledBg` bg, `muted` text, no interaction | None |
+| Flash (bordered) | `focusBg` fill across entire button + border, `appBg` text — pulses 150ms | `flashOnClick` auto-triggers |
+| Flash (borderless) | `focusBg` blended with `primaryBg` (55/45) across entire button, `appBg` text — pulses 150ms | `flashOnClick` auto-triggers |
 
 ---
 
@@ -115,7 +115,7 @@ btn.setButtonStyle("large"); // Switch visual style at runtime
 ## Flash
 
 Flash fires automatically on every click when `flashOnClick` is `true` (default).
-It paints a 150ms pulse of `theme.focus` across the entire button area.
+It paints a 150ms pulse of `theme.focusBg` across the entire button area.
 
-- **Bordered styles** (default, large, outline): full button area + border redrawn in `focus` color
-- **Borderless styles** (small, ghost): full button area filled with a subtle blend of `focus` and `panelBg`
+- **Bordered styles** (default, large, outline): full button area + border redrawn in `focusBg` color
+- **Borderless styles** (small, ghost): full button area filled with a subtle blend of `focusBg` and `primaryBg`

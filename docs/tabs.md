@@ -57,4 +57,4 @@ tabs.onTabChange;  // (index: number) => void
 
 ## Visual
 
-The active tab label has `highlight` background with `bg` text. Inactive tabs use `toolbarBg` background with `toolbarText`. The tab bar is a single row at the top of the widget's content area.
+The active tab label has `highlight` background with `appBg` text. Inactive tabs use `elevatedBg` background with `toolbarText`. The tab bar is a single row at the top of the widget's content area.

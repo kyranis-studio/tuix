@@ -27,7 +27,7 @@ export function buildApp(): App {
   splash.onPaint = (buf, rect, theme) => {
     buf.fill(rect.x, rect.y, rect.width, rect.height, {
       char: " ",
-      bg: theme.bg,
+      bg: theme.appBg,
       fg: null,
     });
 
@@ -220,7 +220,7 @@ function createUserMsg(text: string): Box {
     for (let j = 0; j < userName.length; j++) {
       buf.set(x + j, rect.y, {
         char: userName[j],
-        fg: theme.bg,
+        fg: theme.appBg,
         bg: theme.highlight,
         bold: true,
       });
@@ -255,8 +255,8 @@ function createUserMsg(text: string): Box {
             charIdx >= 0 &&
             charIdx < wrapped[lineIdx].length
               ? theme.text
-              : theme.disabled,
-          bg: theme.disabled,
+              : theme.disabledBg,
+          bg: theme.disabledBg,
         });
       }
     }
@@ -278,7 +278,7 @@ function createAssistantMsg(text: string): Box {
     for (let j = 0; j < assistantName.length; j++) {
       buf.set(rect.x + j, rect.y, {
         char: assistantName[j],
-        fg: theme.bg,
+        fg: theme.appBg,
         bg: theme.highlight,
         bold: true,
       });
@@ -313,8 +313,8 @@ function createAssistantMsg(text: string): Box {
             charIdx >= 0 &&
             charIdx < wrapped[lineIdx].length
               ? theme.text
-              : theme.disabled,
-          bg: theme.disabled,
+              : theme.disabledBg,
+          bg: theme.disabledBg,
         });
       }
     }

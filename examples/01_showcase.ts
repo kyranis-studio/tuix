@@ -87,7 +87,7 @@ const profiles: ListBoxItem[] = [
 
 const header = Box.row("hdr");
 header.height = { fixed: 3 };
-header.style.bg = defaultTheme.toolbarBg;
+header.style.bg = defaultTheme.elevatedBg;
 header.style.align = "center";
 header.style.padding = { top: 0, bottom: 0, left: 2, right: 1 };
 header.style.gutter = 0;
@@ -113,7 +113,7 @@ const themeDropdown = new Dropdown(
     const t = themeMap[val];
     if (t) {
       app.setTheme(t);
-      header.style.bg = t.toolbarBg;
+      header.style.bg = t.elevatedBg;
       titleBox.onPaint = (buf, rect, _theme) => {
         paintCenteredText(buf, rect, "✦  tuix Component Showcase  ✦", t.toolbarText, null, true);
       };
@@ -131,7 +131,7 @@ header.add(titleBox, themeDropdown);
 const layoutTab = Box.col("Layout");
 layoutTab.style.gutter = 1;
 layoutTab.style.overflow = "scroll";
-layoutTab.style.bg = defaultTheme.bg;
+layoutTab.style.bg = defaultTheme.appBg;
 
 // ─── Row 1: fixed + grow layout demo ────────────────────────────────────────
 
@@ -395,7 +395,7 @@ function makeResizePanel(
 ): Box {
   const container = new Box(panelLabel);
   container.style.border = "single";
-  container.style.bg = defaultTheme.panelBg;
+  container.style.bg = defaultTheme.primaryBg;
   container.focusable = true;
   container.tabIndex = tabIdx;
   // width/height default to grow:1 — fills splitter allocation
@@ -507,7 +507,7 @@ const rVSplit = new Splitter("vertical", rHSplit, rBottom, {
 });
 
 const resizableContent = Box.col("resize-content");
-resizableContent.style.bg = defaultTheme.bg;
+resizableContent.style.bg = defaultTheme.appBg;
 resizableContent.add(rVSplit);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -516,7 +516,7 @@ resizableContent.add(rVSplit);
 
 const shortcutTab = Box.col("Shortcuts");
 shortcutTab.style.gutter = 1;
-shortcutTab.style.bg = defaultTheme.bg;
+shortcutTab.style.bg = defaultTheme.appBg;
 
 function makeZone(zoneLabel: string, key: string, tabIdx: number): Box {
   const z = new Box(zoneLabel);
@@ -531,7 +531,7 @@ function makeZone(zoneLabel: string, key: string, tabIdx: number): Box {
       rect,
       `${zoneLabel}  [key: ${key}]`,
       theme.highlight,
-      theme.panelBg,
+      theme.primaryBg,
     );
   return z;
 }
@@ -549,12 +549,12 @@ zonesRow.add(zone1, zone2, zone3);
 const shortcutStatus = new Box("shortcut-status");
 shortcutStatus.height = { fixed: 3 };
 shortcutStatus.style.border = "single";
-shortcutStatus.style.bg = defaultTheme.bg;
+shortcutStatus.style.bg = defaultTheme.appBg;
 shortcutStatus.onPaint = (_buf, rect, theme) => {
   const text = shortcutTarget
     ? `  Last jump: ${shortcutTarget}`
     : "  Press 1, 2, or 3 to jump to a zone";
-  paintCenteredText(_buf, rect, text, theme.text, theme.bg);
+  paintCenteredText(_buf, rect, text, theme.text, theme.appBg);
 };
 shortcutTab.add(zonesRow, shortcutStatus);
 
@@ -573,7 +573,7 @@ reg("3", zone3);
 
 const textTab = Box.col("Text Input");
 textTab.style.gutter = 1;
-textTab.style.bg = defaultTheme.bg;
+textTab.style.bg = defaultTheme.appBg;
 // Wrap in a scrollable column so contents don't get clipped
 const textScroll = Box.col("text-scroll");
 textScroll.style.overflow = "auto";
@@ -735,7 +735,7 @@ textTab.add(textScroll);
 
 const codeTab = Box.col("Code");
 codeTab.style.gutter = 1;
-codeTab.style.bg = defaultTheme.bg;
+codeTab.style.bg = defaultTheme.appBg;
 
 // ─── CodeEditor (syntax highlighting) ───────────────────────────
 
@@ -747,7 +747,7 @@ codeHeader.onPaint = (buf, rect, theme) =>
     rect,
     "Syntax-highlighted Code Editor (TypeScript) — keywords · strings · comments · numbers · types",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 const demoCode = `import { App, Box, Button } from "../src/mod.ts";
@@ -843,7 +843,7 @@ unifiedHeader.onPaint = (buf, rect, theme) =>
     rect,
     "Unified Diff (green: + · red: -)",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 // ─── SplitDiffViewer (side-by-side diff view) ───────────────────
@@ -856,7 +856,7 @@ splitHeader.onPaint = (buf, rect, theme) =>
     rect,
     "Split Diff (original │ current)",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 // ─── Diff mode selector ────────────────────────────────────────────────
@@ -927,7 +927,7 @@ codeTab.add(codeRow);
 
 const uiTab = Box.col("UI Controls");
 uiTab.style.gutter = 1;
-uiTab.style.bg = defaultTheme.bg;
+uiTab.style.bg = defaultTheme.appBg;
 
 const uiHeader = new Box("ui-header");
 uiHeader.height = { fixed: 1 };
@@ -937,7 +937,7 @@ uiHeader.onPaint = (_buf, rect, theme) =>
     rect,
     "Checkboxes | Radio | ListBox — Actions — ButtonGroup — Sort",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 const chk1 = new Checkbox("Enable Feature A", chkOptionA, (v) => {
@@ -1030,7 +1030,7 @@ const sortDropdown = new Dropdown(
 
 const uiStatus = new Box("ui-status");
 uiStatus.height = { fixed: 3 };
-uiStatus.style.bg = defaultTheme.bg;
+uiStatus.style.bg = defaultTheme.appBg;
 uiStatus.onPaint = (_buf, rect, theme) => {
   const parts = [
     `A:${chkOptionA ? "Y" : "N"}`,
@@ -1159,7 +1159,7 @@ class SpinnerBox extends Box {
         buf.set(rect.x + i, rect.y, {
           char: text[i],
           fg: theme.highlight,
-          bg: defaultTheme.panelBg,
+          bg: defaultTheme.primaryBg,
         });
     };
   }
@@ -1186,7 +1186,7 @@ function makeMetricBar(
       buf.set(rect.x + i, rect.y, {
         char: i < filled ? "█" : "░",
         fg: i < filled ? color : theme.muted,
-        bg: defaultTheme.panelBg,
+        bg: defaultTheme.primaryBg,
       });
   };
   const pct = new Box(`${metricLabel}-pct`);
@@ -1212,7 +1212,7 @@ animLabel.onPaint = (_buf, rect, theme) =>
     rect,
     "  Animation Dashboard — spinners · metrics · progress · countdown",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 // ─── Left column ──────────────────────────────────────────────────────────────
@@ -1307,8 +1307,8 @@ cdDisplay.onPaint = (buf, rect, theme) => {
           const ch = pattern[row][col];
           buf.set(px, py, {
             char: ch === " " ? " " : "█",
-            fg: ch !== " " ? color : theme.panelBg,
-            bg: theme.panelBg,
+            fg: ch !== " " ? color : theme.primaryBg,
+            bg: theme.primaryBg,
             bold: true,
           });
         }
@@ -1377,7 +1377,7 @@ animBtnRow.add(autoAnimBtn, resetAnimBtn, jumpBtn);
 
 const animTab = Box.col("Animation");
 animTab.style.gutter = 1;
-animTab.style.bg = defaultTheme.bg;
+animTab.style.bg = defaultTheme.appBg;
 animTab.add(animLabel, contentRow, animBtnRow);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1386,7 +1386,7 @@ animTab.add(animLabel, contentRow, animBtnRow);
 
 const floatTab = Box.col("Floating");
 floatTab.style.gutter = 1;
-floatTab.style.bg = defaultTheme.bg;
+floatTab.style.bg = defaultTheme.appBg;
 
 let notifCount = 0;
 
@@ -1398,7 +1398,7 @@ floatLabel.onPaint = (_buf, rect, theme) =>
     rect,
     "  Floating Widgets — Dialogs · Notifications · Draggable Window  ",
     theme.muted,
-    theme.bg,
+    theme.appBg,
   );
 
 const floatCtl = Box.col("float-ctl");
@@ -1510,7 +1510,7 @@ function infoCard(title: string, lines: string[]): Box {
   const card = Box.col(`card-${title}`);
   card.style.border = "rounded";
   card.style.padding = edgesAll(1);
-  card.style.bg = defaultTheme.panelBg;
+  card.style.bg = defaultTheme.primaryBg;
   // width defaults to grow:1
   card.onPaint = (buf, rect, theme) =>
     paintText(buf, rect, ` ${title}`, 0, theme.highlight, true);
@@ -1581,16 +1581,16 @@ const tabs = new Tabs(
 
 const statusBar = new Box("status");
 statusBar.height = { fixed: 1 };
-statusBar.style.bg = defaultTheme.bg;
+statusBar.style.bg = defaultTheme.appBg;
 statusBar.onPaint = (_buf, rect, theme) => {
-  _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.bg });
+  _buf.fill(rect.x, rect.y, rect.width, 1, { char: " ", bg: theme.appBg });
   const hint =
     " Tab: focus  |  ←/→: tabs  |  ↑/↓: scroll  |  Ctrl+←/→: h-scroll  |  Db-clk: word  |  Trpl-clk: line  |  Esc: close  |  Ctrl+C: quit";
   for (let i = 0; i < hint.length && i < rect.width; i++)
     _buf.set(rect.x + i, rect.y, {
       char: hint[i],
       fg: theme.muted,
-      bg: theme.bg,
+      bg: theme.appBg,
     });
 };
 
@@ -1600,7 +1600,7 @@ statusBar.onPaint = (_buf, rect, theme) => {
 
 const root = Box.col("root");
 // height/width default to grow:1
-root.style.bg = defaultTheme.bg;
+root.style.bg = defaultTheme.appBg;
 root.add(header, tabs, statusBar);
 
 // ═══════════════════════════════════════════════════════════════════════════

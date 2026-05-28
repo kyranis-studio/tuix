@@ -8,18 +8,21 @@ The theme system (`src/theme.ts`) defines colors, border characters, and a regis
 
 ```typescript
 interface Theme {
-  bg: Color;          // Terminal background
-  panelBg: Color;     // Panel/container background
-  text: Color;        // Default foreground text
-  muted: Color;       // Secondary/muted text
-  highlight: Color;   // Accent/highlight color (yellow-ish)
-  focus: Color;       // Focus ring color
-  border: Color;      // Default border color
-  focusBorder: Color; // Border color when focused
-  disabled: Color;    // Disabled element tint
-  toolbarBg: Color;   // Header/toolbar background
-  toolbarText: Color; // Header/toolbar text
-  splitter: Color;    // Splitter drag handle color
+  appBg: Color;         // Application / default background
+  primaryBg: Color;     // Primary panel / container background
+  secondaryBg: Color;   // Secondary background (slightly distinct)
+  elevatedBg: Color;    // Elevated surface (toolbars, etc.)
+  inputBg: Color;       // Input field background
+  inputFocusBg: Color;  // Focused input field background
+  focusBg: Color;       // Focus indicator fill / outline for controls
+  disabledBg: Color;    // Disabled state background
+  text: Color;          // Default foreground text
+  muted: Color;         // Secondary / muted text
+  highlight: Color;     // Accent / highlight color
+  border: Color;        // Default border color
+  focusBorder: Color;   // Border color when focused
+  toolbarText: Color;   // Header / toolbar text
+  splitter: Color;      // Splitter drag handle color
   defaultBorder: BorderStyle; // Default border ("single", "double", etc.)
 }
 ```
@@ -120,18 +123,21 @@ BORDERS.single, BORDERS.double, BORDERS.rounded, BORDERS.bold, BORDERS.none
 import { Theme, hex } from "jsr:@kyranis-studio/tuix";
 
 const myTheme: Theme = {
-  bg:          hex("#000000"),
-  panelBg:     hex("#111111"),
-  text:        hex("#FFFFFF"),
-  muted:       hex("#666666"),
-  highlight:   hex("#FFD700"),
-  focus:       hex("#00FF00"),
-  border:      hex("#333333"),
-  focusBorder: hex("#00FF00"),
-  disabled:    hex("#222222"),
-  toolbarBg:   hex("#0A0A0A"),
-  toolbarText: hex("#FFD700"),
-  splitter:    hex("#00FF00"),
+  appBg:        hex("#000000"),
+  primaryBg:    hex("#111111"),
+  secondaryBg:  hex("#1A1A1A"),
+  elevatedBg:   hex("#0A0A0A"),
+  inputBg:      hex("#050505"),
+  inputFocusBg: hex("#111111"),
+  focusBg:      hex("#00FF00"),
+  disabledBg:   hex("#222222"),
+  text:         hex("#FFFFFF"),
+  muted:        hex("#666666"),
+  highlight:    hex("#FFD700"),
+  border:       hex("#333333"),
+  focusBorder:  hex("#00FF00"),
+  toolbarText:  hex("#FFD700"),
+  splitter:     hex("#00FF00"),
   defaultBorder: "rounded",
 };
 ```

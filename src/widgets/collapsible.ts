@@ -66,7 +66,7 @@ export class Collapsible extends Box {
         buf.set(rect.x + col, rect.y, {
           char: " ",
           fg: null,
-          bg: theme.panelBg,
+          bg: theme.primaryBg,
         });
       }
 
@@ -78,7 +78,7 @@ export class Collapsible extends Box {
           fg: isIndicator
             ? (isFocused ? theme.highlight : theme.muted)
             : (isFocused ? theme.highlight : theme.text),
-          bg: theme.panelBg,
+          bg: theme.primaryBg,
           bold: isFocused || isIndicator,
         });
       }

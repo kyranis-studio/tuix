@@ -53,7 +53,7 @@ chk.toggle();          // Toggle + fire onChange
 | Unchecked | `☐ Enable Feature` |
 | Checked | `☑ Enable Feature` (bold) |
 | Focused | Box character uses `highlight` color |
-| Disabled | All text in `muted`, bg in `disabled` |
+| Disabled | All text in `muted`, bg in `disabledBg` |
 
 ## Height
 

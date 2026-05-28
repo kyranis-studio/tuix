@@ -680,7 +680,7 @@ export class Box {
     const r = this.rect;
     if (r.width <= 0 || r.height <= 0) return;
 
-    const bg = this.style.bg ?? theme.panelBg;
+    const bg = this.style.bg ?? theme.primaryBg;
     const fg = this.style.fg ?? theme.text;
 
     // Fill background
@@ -854,11 +854,11 @@ export class Box {
 
       if (maxScroll <= 0) {
         for (let row = contentY; row < contentY + vh; row++) {
-          buf.set(col, row, { char: vTrack, fg: theme.muted, bg: theme.panelBg });
+          buf.set(col, row, { char: vTrack, fg: theme.muted, bg: theme.primaryBg });
         }
       } else if (availH <= 0) {
-        if (arrowTop) buf.set(col, contentY, { char: upArrow, fg: theme.muted, bg: theme.panelBg });
-        if (arrowBot) buf.set(col, contentY + vh - 1, { char: downArrow, fg: theme.muted, bg: theme.panelBg });
+        if (arrowTop) buf.set(col, contentY, { char: upArrow, fg: theme.muted, bg: theme.primaryBg });
+        if (arrowBot) buf.set(col, contentY + vh - 1, { char: downArrow, fg: theme.muted, bg: theme.primaryBg });
       } else {
         const totalContent = availH + maxScroll;
         const thumbH = Math.max(1, Math.floor((availH / totalContent) * availH));
@@ -867,17 +867,17 @@ export class Box {
         let row = contentY;
         if (arrowTop) {
           const canScrollUp = this.scrollY > 0;
-          buf.set(col, row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollUp });
+          buf.set(col, row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.primaryBg, bold: canScrollUp });
           row++;
         }
         for (let r = 0; r < availH; r++) {
           const isThumb = r >= thumbY && r < thumbY + thumbH;
-          buf.set(col, row, { char: isThumb ? vThumb : vTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.panelBg });
+          buf.set(col, row, { char: isThumb ? vThumb : vTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.primaryBg });
           row++;
         }
         if (arrowBot) {
           const canScrollDown = this.scrollY < maxScroll;
-          buf.set(col, row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollDown });
+          buf.set(col, row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.primaryBg, bold: canScrollDown });
         }
       }
     }
@@ -896,11 +896,11 @@ export class Box {
 
       if (maxScroll <= 0) {
         for (let col = contentX; col < contentX + hw; col++) {
-          buf.set(col, row, { char: hTrack, fg: theme.muted, bg: theme.panelBg });
+          buf.set(col, row, { char: hTrack, fg: theme.muted, bg: theme.primaryBg });
         }
       } else if (availW <= 0) {
-        if (arrowLeftEnd) buf.set(contentX, row, { char: leftArrow, fg: theme.muted, bg: theme.panelBg });
-        if (arrowRightEnd) buf.set(contentX + hw - 1, row, { char: rightArrow, fg: theme.muted, bg: theme.panelBg });
+        if (arrowLeftEnd) buf.set(contentX, row, { char: leftArrow, fg: theme.muted, bg: theme.primaryBg });
+        if (arrowRightEnd) buf.set(contentX + hw - 1, row, { char: rightArrow, fg: theme.muted, bg: theme.primaryBg });
       } else {
         const totalContent = availW + maxScroll;
         const thumbW = Math.max(1, Math.floor((availW / totalContent) * availW));
@@ -909,24 +909,24 @@ export class Box {
         let col = contentX;
         if (arrowLeftEnd) {
           const canScrollLeft = this.scrollX > 0;
-          buf.set(col, row, { char: leftArrow, fg: canScrollLeft ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollLeft });
+          buf.set(col, row, { char: leftArrow, fg: canScrollLeft ? theme.text : theme.muted, bg: theme.primaryBg, bold: canScrollLeft });
           col++;
         }
         for (let c = 0; c < availW; c++) {
           const isThumb = c >= thumbX && c < thumbX + thumbW;
-          buf.set(col, row, { char: isThumb ? hThumb : hTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.panelBg });
+          buf.set(col, row, { char: isThumb ? hThumb : hTrack, fg: isThumb ? theme.text : theme.muted, bg: theme.primaryBg });
           col++;
         }
         if (arrowRightEnd) {
           const canScrollRight = this.scrollX < maxScroll;
-          buf.set(col, row, { char: rightArrow, fg: canScrollRight ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollRight });
+          buf.set(col, row, { char: rightArrow, fg: canScrollRight ? theme.text : theme.muted, bg: theme.primaryBg, bold: canScrollRight });
         }
       }
     }
 
     // ── Corner cell ────────────────────────────────────────────────────────
     if (showBoth) {
-      buf.set(cornerCol, cornerRow, { char: "┘", fg: theme.muted, bg: theme.panelBg });
+      buf.set(cornerCol, cornerRow, { char: "┘", fg: theme.muted, bg: theme.primaryBg });
     }
   }
 

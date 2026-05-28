@@ -70,7 +70,7 @@ interface Cell {
 ```typescript
 const buf = new CellBuffer(cols, rows);
 
-buf.set(x, y, { char: "█", fg: theme.highlight, bg: theme.panelBg });
+buf.set(x, y, { char: "█", fg: theme.highlight, bg: theme.primaryBg });
 buf.get(x, y);                 // → Cell at (x, y)
 buf.fill(x, y, w, h, cell);    // Fill rectangle
 buf.writeText(x, y, "hello");  // Write text at position

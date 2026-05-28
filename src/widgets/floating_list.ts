@@ -57,8 +57,8 @@ export class FloatingListBox extends Box {
           const ch = col < item.length ? item[col] : " ";
           buf.set(rect.x + col, rect.y + i, {
             char: ch,
-            fg: isCur ? theme.bg : theme.text,
-            bg: isCur ? theme.highlight : theme.panelBg,
+            fg: isCur ? theme.appBg : theme.text,
+            bg: isCur ? theme.highlight : theme.secondaryBg,
             bold: isCur,
           });
         }
@@ -73,8 +73,8 @@ export class FloatingListBox extends Box {
         const availH = rowsAvailable - arrowSlots;
 
         if (availH <= 0) {
-          if (arrowTop) buf.set(sbX, rect.y, { char: upArrow, fg: theme.muted, bg: theme.panelBg });
-          if (arrowBot) buf.set(sbX, rect.y + rowsAvailable - 1, { char: downArrow, fg: theme.muted, bg: theme.panelBg });
+          if (arrowTop) buf.set(sbX, rect.y, { char: upArrow, fg: theme.muted, bg: theme.secondaryBg });
+          if (arrowBot) buf.set(sbX, rect.y + rowsAvailable - 1, { char: downArrow, fg: theme.muted, bg: theme.secondaryBg });
         } else {
           const totalContent = availH + maxScroll;
           const thumbH = Math.max(1, Math.floor((availH / totalContent) * availH));
@@ -83,7 +83,7 @@ export class FloatingListBox extends Box {
           let row = 0;
           if (arrowTop) {
             const canScrollUp = this.scrollY > 0;
-            buf.set(sbX, rect.y + row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollUp });
+            buf.set(sbX, rect.y + row, { char: upArrow, fg: canScrollUp ? theme.text : theme.muted, bg: theme.secondaryBg, bold: canScrollUp });
             row++;
           }
           for (let r = 0; r < availH; r++) {
@@ -91,13 +91,13 @@ export class FloatingListBox extends Box {
             buf.set(sbX, rect.y + row, {
               char: isThumb ? vThumb : vTrack,
               fg: isThumb ? theme.text : theme.muted,
-              bg: theme.panelBg,
+              bg: theme.secondaryBg,
             });
             row++;
           }
           if (arrowBot) {
             const canScrollDown = this.scrollY < maxScroll;
-            buf.set(sbX, rect.y + row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.panelBg, bold: canScrollDown });
+            buf.set(sbX, rect.y + row, { char: downArrow, fg: canScrollDown ? theme.text : theme.muted, bg: theme.secondaryBg, bold: canScrollDown });
           }
         }
       }

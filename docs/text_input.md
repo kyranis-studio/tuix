@@ -96,4 +96,4 @@ input.onChange;         // (val: string) => void
 input.onSubmit;         // (val: string) => void — Enter key
 ```
 
-Selection is highlighted with `theme.highlight` background and `theme.bg` foreground. The cursor renders as an inverted block over the character.
+Selection is highlighted with `theme.highlight` background and `theme.appBg` foreground. The cursor renders as an inverted block over the character.

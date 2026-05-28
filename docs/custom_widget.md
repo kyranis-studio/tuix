@@ -25,7 +25,7 @@ class MyWidget extends Box {
         buf.set(rect.x + i, rect.y, {
           char: "█",
           fg: theme.highlight,
-          bg: theme.panelBg,
+          bg: theme.primaryBg,
         });
       }
     };
@@ -66,7 +66,7 @@ The `rect` parameter is the **content area** — inside border and padding. Use 
 ```typescript
 this.onPaint = (buf, rect, theme) => {
   // rect.x, rect.y, rect.width, rect.height
-  buf.fill(rect.x, rect.y, rect.width, rect.height, { char: " ", bg: theme.panelBg });
+  buf.fill(rect.x, rect.y, rect.width, rect.height, { char: " ", bg: theme.primaryBg });
 };
 ```
 
@@ -114,16 +114,16 @@ class MyWidget extends Box {
 import { paintCenteredText, paintText } from "jsr:@kyranis-studio/tuix";
 
 // Centered text
-paintCenteredText(buf, rect, "Hello", theme.text, theme.bg, true);
+paintCenteredText(buf, rect, "Hello", theme.text, theme.appBg, true);
 
 // Text at specific row
 paintText(buf, rect, "Status: OK", 0, theme.highlight);
 
 // Fill background
-buf.fill(x, y, w, h, { char: " ", bg: theme.panelBg });
+buf.fill(x, y, w, h, { char: " ", bg: theme.primaryBg });
 
 // Draw individual cells
-buf.set(x, y, { char: "█", fg: theme.highlight, bg: theme.panelBg, bold: true });
+buf.set(x, y, { char: "█", fg: theme.highlight, bg: theme.primaryBg, bold: true });
 ```
 
 ---

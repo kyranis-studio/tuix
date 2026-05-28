@@ -42,7 +42,7 @@ export class Dropdown extends Box {
         buf.set(rect.x + i, rect.y, {
           char: text[i],
           fg,
-          bg: theme.panelBg,
+          bg: theme.primaryBg,
           bold: isFocused,
         });
       }

@@ -28,7 +28,7 @@ export class RadioButton extends Box {
 
       const dot = this.selected ? "•" : "○";
       const fg = isDisabled ? theme.muted : (isFocused ? theme.highlight : theme.text);
-      const bg = isDisabled ? theme.disabled : theme.panelBg;
+      const bg = isDisabled ? theme.disabledBg : theme.primaryBg;
       const text = ` ${dot} ${this.label}`;
       for (let i = 0; i < text.length && i < rect.width; i++) {
         buf.set(rect.x + i, rect.y, {

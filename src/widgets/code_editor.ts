@@ -297,8 +297,8 @@ export class CodeEditor extends TextArea {
   ): void {
     const isFocused = this.focused;
     const showPlaceholder = !this.value;
-    const bg = theme.panelBg;
-    const gutterBg = theme.bg;
+    const bg = theme.primaryBg;
+    const gutterBg = theme.appBg;
     const ch = rect.height;
     const totalRows = this._rowCount();
     const gutterWidth = Math.max(3, String(totalRows).length + 1);
@@ -459,7 +459,7 @@ export class CodeEditor extends TextArea {
             } else if (inSel) {
               buf.set(contentX + col, rect.y + row, {
                 char: line[col],
-                fg: theme.bg,
+                fg: theme.appBg,
                 bg: theme.highlight,
               });
             } else if (isCur) {

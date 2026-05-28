@@ -34,7 +34,7 @@ Paste markers are disabled by default (`burstThreshold = 9999`) since the editor
 
 - **🎨 Syntax Highlighting** — Regex-based tokenizer colours 7 token types: keywords, strings, comments, numbers, types, function calls, and decorators.
 - **🖌️ Custom Palette** — The `syntaxTheme` property lets you override colours per-token type.
-- **🔢 Line Number Gutter** — Each line is prefixed with a right-aligned line number on a `theme.bg` gutter background with `theme.muted` text. Gutter width adjusts to the digit count of the last line (minimum 3).
+- **🔢 Line Number Gutter** — Each line is prefixed with a right-aligned line number on a `theme.appBg` gutter background with `theme.muted` text. Gutter width adjusts to the digit count of the last line (minimum 3).
 - **⌨️ Full TextArea Feature Set** — Inherits cursor navigation, selection (word/line), clipboard, scrollbar, and multi-byte support from `TextArea`.
 - **📝 Language Support** — Built-in keyword sets for TypeScript and JavaScript (extensible via the `KEYWORDS` map).
 

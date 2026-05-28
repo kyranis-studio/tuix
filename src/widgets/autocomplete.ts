@@ -66,7 +66,7 @@ export class Autocomplete extends Box {
       const showPlaceholder = !this.value;
       const displayText = showPlaceholder ? this.placeholder : this.value;
       const fg = showPlaceholder ? theme.muted : theme.text;
-      const bg = theme.panelBg;
+      const bg = theme.primaryBg;
 
       for (let i = 0; i < rect.width; i++) {
         if (i < displayText.length) {

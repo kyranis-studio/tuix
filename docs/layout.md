@@ -270,7 +270,7 @@ box.onPaint = (buf, rect, theme) => {
   // rect: content area (inside border + padding)
   // theme: current Theme
   for (let i = 0; i < rect.width; i++) {
-    buf.set(rect.x + i, rect.y, { char: "█", fg: theme.highlight, bg: theme.bg });
+    buf.set(rect.x + i, rect.y, { char: "█", fg: theme.highlight, bg: theme.appBg });
   }
 };
 ```
@@ -281,7 +281,7 @@ box.onPaint = (buf, rect, theme) => {
 import { paintCenteredText, paintText } from "jsr:@kyranis-studio/tuix";
 
 // Centered text
-paintCenteredText(buf, rect, "Hello", theme.text, theme.bg, true);
+paintCenteredText(buf, rect, "Hello", theme.text, theme.appBg, true);
 
 // Text at a specific row
 paintText(buf, rect, "Status: OK", 0, theme.highlight);
@@ -292,7 +292,7 @@ paintText(buf, rect, "Status: OK", 0, theme.highlight);
 The `CellBuffer.fill()` method fills a rectangular area:
 
 ```typescript
-buf.fill(x, y, width, height, { char: " ", bg: theme.panelBg, fg: null });
+buf.fill(x, y, width, height, { char: " ", bg: theme.primaryBg, fg: null });
 ```
 
 ### `isInsideRect(col, row, rect): boolean`

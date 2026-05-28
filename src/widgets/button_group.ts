@@ -40,29 +40,29 @@ export class ButtonGroup extends Box {
 
       const chars = getBorderChars("single");
 
-      buf.fill(r.x, r.y, r.width, 3, { char: " ", fg: null, bg: theme.panelBg });
+      buf.fill(r.x, r.y, r.width, 3, { char: " ", fg: null, bg: theme.primaryBg });
 
       // top border
-      buf.set(r.x, r.y, { char: chars.topLeft, fg: theme.border, bg: theme.panelBg });
-      buf.set(r.x + r.width - 1, r.y, { char: chars.topRight, fg: theme.border, bg: theme.panelBg });
+      buf.set(r.x, r.y, { char: chars.topLeft, fg: theme.border, bg: theme.primaryBg });
+      buf.set(r.x + r.width - 1, r.y, { char: chars.topRight, fg: theme.border, bg: theme.primaryBg });
       for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
-        buf.set(col, r.y, { char: chars.horizontal, fg: theme.border, bg: theme.panelBg });
+        buf.set(col, r.y, { char: chars.horizontal, fg: theme.border, bg: theme.primaryBg });
       }
 
       // left/right vertical borders
-      buf.set(r.x, r.y + 1, { char: chars.vertical, fg: theme.border, bg: theme.panelBg });
-      buf.set(r.x + r.width - 1, r.y + 1, { char: chars.vertical, fg: theme.border, bg: theme.panelBg });
+      buf.set(r.x, r.y + 1, { char: chars.vertical, fg: theme.border, bg: theme.primaryBg });
+      buf.set(r.x + r.width - 1, r.y + 1, { char: chars.vertical, fg: theme.border, bg: theme.primaryBg });
 
       // bottom border — underline under focused option
       const underX = r.x + this.focusedIndex * (btnW + sepW);
       const underEnd = underX + btnW;
-      buf.set(r.x, r.y + 2, { char: chars.bottomLeft, fg: theme.border, bg: theme.panelBg });
-      buf.set(r.x + r.width - 1, r.y + 2, { char: chars.bottomRight, fg: theme.border, bg: theme.panelBg });
+      buf.set(r.x, r.y + 2, { char: chars.bottomLeft, fg: theme.border, bg: theme.primaryBg });
+      buf.set(r.x + r.width - 1, r.y + 2, { char: chars.bottomRight, fg: theme.border, bg: theme.primaryBg });
       for (let col = r.x + 1; col < r.x + r.width - 1; col++) {
         buf.set(col, r.y + 2, {
           char: chars.horizontal,
           fg: col >= underX && col < underEnd ? theme.highlight : theme.border,
-          bg: theme.panelBg,
+          bg: theme.primaryBg,
         });
       }
 
@@ -76,7 +76,7 @@ export class ButtonGroup extends Box {
           buf.set(x + col, r.y + 1, {
             char: col >= textOffset && col - textOffset < text.length ? text[col - textOffset] : " ",
             fg: isActive ? theme.highlight : theme.text,
-            bg: theme.panelBg,
+            bg: theme.primaryBg,
             bold: isActive,
           });
         }

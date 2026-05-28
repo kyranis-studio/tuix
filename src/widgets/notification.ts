@@ -26,7 +26,7 @@ export type NotificationPosition =
  * All use the VS Code Dark+ `panelBg` for background; only fg and accent
  * change per type to distinguish info/success/warn/error.
  */
-const PANEL_BG = defaultTheme.panelBg;
+const PANEL_BG = defaultTheme.elevatedBg;
 
 const COLORS: Record<
   NotificationType,
@@ -116,7 +116,7 @@ export class Notification extends Box {
       const text = this._message.length > rect.width - 2
         ? this._message.slice(0, rect.width - 5) + "..."
         : this._message;
-      paintCenteredText(buf, rect, text, colors.fg, colors.bg);
+      paintCenteredText(buf, rect, text, colors.fg, defaultTheme.appBg);
     };
     inner.add(msgBox);
 
@@ -129,7 +129,7 @@ export class Notification extends Box {
         buf, rect,
         " Close ",
         hover ? { r: 255, g: 80, b: 80 } : colors.accent,
-        colors.bg,
+        defaultTheme.appBg,
         true,
       );
     };

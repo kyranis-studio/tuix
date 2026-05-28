@@ -76,4 +76,4 @@ list.setDisabled(true);
 
 ## Visual
 
-Selected items are prefixed with `▶` and highlighted using `theme.highlight` (when focused) or `theme.border` (when unfocused). Disabled items use `theme.muted` on `theme.disabled` background.
+Selected items are prefixed with `▶` and highlighted using `theme.highlight` (when focused) or `theme.border` (when unfocused). Disabled items use `theme.muted` on `theme.disabledBg` background.

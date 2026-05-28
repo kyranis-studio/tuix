@@ -38,10 +38,10 @@ export class TextInput extends InputPrimitive {
   renderContent(buf: CellBuffer, rect: Rect, theme: Theme): void {
     const isFocused = this.focused;
     const showPlaceholder = !this.value;
+    const bg = isFocused ? theme.inputFocusBg : theme.inputBg;
 
     if (showPlaceholder) {
       const fg = theme.muted;
-      const bg = theme.panelBg;
       for (let i = 0; i < rect.width; i++) {
         const isCursorHere = isFocused && i === this.cursorPos;
         if (i < this.placeholder.length) {
@@ -122,20 +122,20 @@ export class TextInput extends InputPrimitive {
         if (inSel && isCursorHere) {
           buf.set(rect.x + i, rect.y, {
             char: ch,
-            fg: theme.panelBg,
+            fg: theme.primaryBg,
             bg: theme.text,
             bold: true,
           });
         } else if (inSel) {
           buf.set(rect.x + i, rect.y, {
             char: ch,
-            fg: theme.bg,
+            fg: theme.appBg,
             bg: theme.highlight,
           });
         } else if (isCursorHere) {
           buf.set(rect.x + i, rect.y, {
             char: ch,
-            fg: theme.panelBg,
+            fg: theme.primaryBg,
             bg: theme.text,
             bold: true,
           });
@@ -144,27 +144,27 @@ export class TextInput extends InputPrimitive {
           buf.set(rect.x + i, rect.y, {
             char: ch,
             fg: shade ?? theme.muted,
-            bg: theme.panelBg,
+            bg,
             bold: true,
           });
         } else {
           buf.set(rect.x + i, rect.y, {
             char: ch,
             fg: theme.text,
-            bg: theme.panelBg,
+            bg,
           });
         }
       } else if (isCursorHere) {
         buf.set(rect.x + i, rect.y, {
           char: " ",
-          fg: theme.panelBg,
+          fg: theme.primaryBg,
           bg: theme.highlight,
         });
       } else {
         buf.set(rect.x + i, rect.y, {
           char: " ",
           fg: theme.text,
-          bg: theme.panelBg,
+          bg,
         });
       }
     }

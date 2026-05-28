@@ -5,7 +5,12 @@
  * and contains a content area. Use with `app.showOverlay(window, { modal: false })`.
  */
 
-import { Box, paintCenteredText, paintText, edgesAll, Rect } from "../layout.ts";
+import {
+  Box,
+  paintCenteredText,
+  edgesAll,
+  Rect,
+} from "../layout.ts";
 import { CellBuffer } from "../terminal.ts";
 import { Theme, defaultTheme } from "../theme.ts";
 
@@ -24,7 +29,10 @@ export class FloatingWindow extends Box {
   readonly contentBox: Box;
 
   private _title: string;
-  private _appRef: { startDrag: (box: Box, col: number, row: number) => void; removeOverlay: (box: Box) => void } | null = null;
+  private _appRef: {
+    startDrag: (box: Box, col: number, row: number) => void;
+    removeOverlay: (box: Box) => void;
+  } | null = null;
   private _closeCb: (() => void) | null = null;
   private _titleBar: Box;
   private _closeBtn: Box;
@@ -50,7 +58,7 @@ export class FloatingWindow extends Box {
     this.height = { fixed: h };
     this.style.border = "rounded";
     this.style.padding = edgesAll(0);
-    this.style.bg = defaultTheme.panelBg;
+    this.style.bg = defaultTheme.elevatedBg;
 
     // ─── Layout ─────────────────────────────────────────────────────────
     const col = Box.col("win-col");
@@ -62,13 +70,16 @@ export class FloatingWindow extends Box {
     titleBar.height = { fixed: 1 };
     titleBar.style.gutter = 0;
     titleBar.style.align = "center";
-    titleBar.style.bg = defaultTheme.toolbarBg;
+    titleBar.style.bg = defaultTheme.elevatedBg;
 
     const titleLabel = new Box("win-title");
     titleLabel.width = { grow: 1 };
     titleLabel.onPaint = (buf, rect, theme) => {
       const text = ` ${this._title} `;
-      paintText(buf, rect, text, 0, theme.highlight, true);
+      for (let i = 0; i < rect.width; i++) {
+        const ch = i < text.length ? text[i] : " ";
+        buf.set(rect.x + i, rect.y, { char: ch, fg: theme.highlight, bg: theme.elevatedBg, bold: i < text.length });
+      }
     };
     titleBar.add(titleLabel);
 
@@ -77,7 +88,14 @@ export class FloatingWindow extends Box {
     closeBtn.width = { fixed: 4 };
     closeBtn.onPaint = (buf, rect, theme) => {
       const hover = this._closeBtn.focused;
-      paintCenteredText(buf, rect, " [×] ", hover ? { r: 255, g: 80, b: 80 } : theme.muted, titleBar.style.bg!, true);
+      paintCenteredText(
+        buf,
+        rect,
+        " [×] ",
+        hover ? { r: 255, g: 80, b: 80 } : theme.muted,
+        theme.elevatedBg,
+        true,
+      );
     };
     closeBtn.focusable = true;
     closeBtn.tabIndex = 9997;
@@ -111,7 +129,10 @@ export class FloatingWindow extends Box {
    * Connect the window to an App-like controller.
    * Called automatically by showOverlay if the App provides these methods.
    */
-  set appRef(ref: { startDrag: (box: Box, col: number, row: number) => void; removeOverlay: (box: Box) => void }) {
+  set appRef(ref: {
+    startDrag: (box: Box, col: number, row: number) => void;
+    removeOverlay: (box: Box) => void;
+  }) {
     this._appRef = ref;
   }
 
@@ -127,7 +148,9 @@ export class FloatingWindow extends Box {
 
   private _hitCloseBtn(col: number, row: number): boolean {
     const r = this._closeBtn.rect;
-    return col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height;
+    return (
+      col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+    );
   }
 
   /** Override paint to draw a separator line under the title bar */
@@ -141,8 +164,19 @@ export class FloatingWindow extends Box {
     // Draw a dim separator line across the width (between title bar and content)
     for (let col = r.x + bOff; col < r.x + r.width - bOff; col++) {
       const existing = buf.get(col, sepY);
-      if (existing && (existing.char === "─" || existing.char === "│" || existing.char === "┌" || existing.char === "┐")) continue;
-      buf.set(col, sepY, { char: "─", fg: theme.border, bg: this.style.bg ?? undefined });
+      if (
+        existing &&
+        (existing.char === "─" ||
+          existing.char === "│" ||
+          existing.char === "┌" ||
+          existing.char === "┐")
+      )
+        continue;
+      buf.set(col, sepY, {
+        char: "─",
+        fg: theme.border,
+        bg: this.style.bg ?? undefined,
+      });
     }
   }
 }

@@ -22,7 +22,7 @@ export class Checkbox extends Box {
       const boxChar = this.checked ? "☑" : "☐";
       const boxColor = isDisabled ? theme.muted : (isFocused ? theme.highlight : theme.muted);
       const textColor = isDisabled ? theme.muted : theme.text;
-      const bg = isDisabled ? theme.disabled : theme.panelBg;
+      const bg = isDisabled ? theme.disabledBg : theme.primaryBg;
 
       const indicator = `${boxChar} ${this.label}`;
 

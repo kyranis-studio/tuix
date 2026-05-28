@@ -10,7 +10,7 @@ export class ProgressBar extends Box {
     this.height = { fixed: 1 };
 
     this.onPaint = (buf, rect, theme) => {
-      const bg = theme.panelBg;
+      const bg = theme.primaryBg;
       const labelSpace = 8;
       const barWidth = Math.max(0, rect.width - labelSpace);
       const filledWidth = Math.floor(this._progress * barWidth);

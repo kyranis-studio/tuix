@@ -54,7 +54,7 @@ export class Dialog extends Box {
     this.height = { fixed: dialogH };
     this.style.border = "double";
     this.style.padding = edgesAll(1);
-    this.style.bg = defaultTheme.panelBg; // match VS Code Dark+ panel background
+    this.style.bg = defaultTheme.primaryBg; // match VS Code Dark+ panel background
 
     // Build button row
     const btnRow = Box.row("dialog-btns");

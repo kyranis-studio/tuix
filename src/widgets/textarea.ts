@@ -144,7 +144,7 @@ export class TextArea extends InputPrimitive {
   renderContent(buf: CellBuffer, rect: Rect, theme: Theme): void {
     const isFocused = this.focused;
     const showPlaceholder = !this.value;
-    const bg = theme.panelBg;
+    const bg = isFocused ? theme.inputFocusBg : theme.inputBg;
     const ch = rect.height;
     const totalRows = this._rowCount();
     const sbX = rect.x + rect.width - 1;
@@ -244,7 +244,7 @@ export class TextArea extends InputPrimitive {
             } else if (inSel) {
               buf.set(rect.x + col, rect.y + row, {
                 char: line[col],
-                fg: theme.bg,
+                fg: theme.appBg,
                 bg: theme.highlight,
               });
             } else if (isCur) {

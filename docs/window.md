@@ -63,7 +63,7 @@ win.close();     // Programmatically close
 ## Visual
 
 - Rounded border
-- Title bar row with `toolbarBg` background and `highlight` title text
+- Title bar row with `elevatedBg` background and `highlight` title text
 - Dim separator line between title bar and content
 - `[×]` close button turns red on hover/focus
 - Content area accepts any child widgets
