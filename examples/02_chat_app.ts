@@ -8,6 +8,28 @@ import {
   paintText,
 } from "../src/mod.ts";
 
+// ── Fake file listing for @ mentions and file explorer ───────────
+const FAKE_FILES = [
+  "📁 src",
+  "📁 src/components",
+  "📁 src/utils",
+  "📁 docs",
+  "📁 tests",
+  "📄 src/main.ts",
+  "📄 src/app.ts",
+  "📄 src/components/button.tsx",
+  "📄 src/components/input.tsx",
+  "📄 src/utils/helpers.ts",
+  "📄 src/utils/validators.ts",
+  "📄 docs/README.md",
+  "📄 docs/guide.md",
+  "📄 tests/main.test.ts",
+  "📄 tests/helpers.test.ts",
+  "📄 package.json",
+  "📄 tsconfig.json",
+  "📄 .gitignore",
+];
+
 const ASCII_LOGO = [
   " ██████╗  ██████╗  ██████╗  ███████╗ ██████╗",
   "██╔════╝ ██╔═══██╗ ██╔══██╗ ██╔════╝ ██╔══██║",
@@ -17,7 +39,7 @@ const ASCII_LOGO = [
   " ╚═════╝  ╚═════╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝",
 ];
 
-function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): void {
+function setupPromptInput(promptInput: TextArea, app: App): void {
   // ── State for the slash/mention dropdown overlay ────────────
   let triggerType: "/" | "@" | null = null;
   let triggerPos = -1;
@@ -26,31 +48,22 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
   let selectedIndex = 0;
   let files: string[] = [];
   // ── Selected files for @-mention tags ────────────────
-  const selectedFiles: Array<{ display: string; stripped: string }> = [];
+  // Each entry tracks when it was added so we can fade in via RGB blending
+  const FADE_DURATION = 150; // ms
+  const selectedFiles: Array<{ display: string; stripped: string; chipAddedAt: number }> = [];
+
+  // Linear interpolation between two RGB colors by fraction t (0..1)
+  function lerpColor(a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }, t: number): { r: number; g: number; b: number } {
+    const clamped = Math.max(0, Math.min(1, t));
+    return {
+      r: Math.round(a.r + (b.r - a.r) * clamped),
+      g: Math.round(a.g + (b.g - a.g) * clamped),
+      b: Math.round(a.b + (b.b - a.b) * clamped),
+    };
+  }
 
   const COMMANDS = ["/new", "/help", "/clear", "/models"];
 
-  // ── Fake file listing for @ mentions ───────────────────────
-  const FAKE_FILES = [
-    "📁 src",
-    "📁 src/components",
-    "📁 src/utils",
-    "📁 docs",
-    "📁 tests",
-    "📄 src/main.ts",
-    "📄 src/app.ts",
-    "📄 src/components/button.tsx",
-    "📄 src/components/input.tsx",
-    "📄 src/utils/helpers.ts",
-    "📄 src/utils/validators.ts",
-    "📄 docs/README.md",
-    "📄 docs/guide.md",
-    "📄 tests/main.test.ts",
-    "📄 tests/helpers.test.ts",
-    "📄 package.json",
-    "📄 tsconfig.json",
-    "📄 .gitignore",
-  ];
   files = FAKE_FILES;
 
   // ── Dropdown helpers ────────────────────────────────────────
@@ -66,9 +79,11 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
   }
 
   function showDropdown(items: string[]): void {
-    // Close existing overlay
+    // Close existing overlay — but preserve triggerType since onClose nulls it
     if (overlay) {
+      const savedType = triggerType;
       app.removeOverlay(overlay);
+      triggerType = savedType;
       overlay = null;
     }
 
@@ -85,20 +100,16 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
       triggerType = null;
     };
 
-    const maxItemWidth = Math.max(...items.map((s) => s.length));
+    const maxItemWidth = items.length > 0 ? Math.max(...items.map((s) => s.length)) : 0;
     const listWidth = Math.max(maxItemWidth + 4, promptInput.rect.width);
     list.width = { fixed: listWidth };
-    list.height = { fixed: Math.min(items.length, 8) + 2 };
+    const visRows = items.length > 0 ? Math.min(items.length, 8) : 1;
+    list.height = { fixed: visRows + 2 };
 
     app.showOverlay(list, {
       modal: false,
       autoDismiss: true,
-      triggerRect: {
-        x: promptInput.rect.x,
-        y: fileTagsBar.rect.y,
-        width: promptInput.rect.width,
-        height: promptInput.rect.y + promptInput.rect.height - fileTagsBar.rect.y,
-      },
+      triggerRect: promptInput.rect,
       reposition: () => {
         list.positionRelativeTo(promptInput.rect);
       },
@@ -116,11 +127,13 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
     const stripped = item.replace(/^[📁📄]\s*/, "");
     // Preserve @ prefix for file mentions so Backspace can detect the block
     const prefix = triggerType === "@" ? "@" : "";
+    // Append two spaces after the chip so the cursor is clearly visible past the chip
+    const suffix = triggerType === "@" ? "  " : "";
     // Replace everything from triggerPos with the selected item
     promptInput.value =
       promptInput.value.slice(0, triggerPos) +
-      prefix + stripped;
-    promptInput.cursorPos = triggerPos + prefix.length + stripped.length;
+      prefix + stripped + suffix;
+    promptInput.cursorPos = triggerPos + prefix.length + stripped.length + suffix.length;
     // Trigger callbacks that the base handler normally fires
     (promptInput as any)._onValueChanged();
     if (promptInput.onChange) promptInput.onChange(promptInput.value);
@@ -133,78 +146,184 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
       selectedFiles.push({
         display: displayMatch ?? stripped,
         stripped,
+        chipAddedAt: Date.now(),
       });
-      updateFileTagsBar();
     }
 
     closeDropdown();
   }
 
-  // ── File tags bar (show selected files with x to remove) ────
-  const fileTagXPositions: number[] = [];
-
+  // ── Remove a file tag by index (chip click or keyboard) ──
   function removeFileTag(index: number): void {
-    const file = selectedFiles[index];
-    if (!file) return;
-    selectedFiles.splice(index, 1);
-    // Remove the @mention from the prompt value
-    const atPattern = `@${file.stripped}`;
+    const tag = selectedFiles[index];
+    if (!tag) return;
+
+    // Find the @-mention in the textarea value and remove it
     const val = promptInput.value;
-    const atIdx = val.indexOf(atPattern);
+    const searchStr = `@${tag.stripped}`;
+    const atIdx = val.indexOf(searchStr);
     if (atIdx >= 0) {
-      promptInput.value = val.slice(0, atIdx) + val.slice(atIdx + atPattern.length);
-      promptInput.cursorPos = Math.min(atIdx, promptInput.value.length);
+      const endIdx = atIdx + searchStr.length;
+      // Remove up to 2 trailing spaces (the ones added by selectItem)
+      let afterEnd = endIdx;
+      if (val[afterEnd] === " ") afterEnd++;
+      if (val[afterEnd] === " ") afterEnd++;
+      promptInput.value = val.slice(0, atIdx) + val.slice(afterEnd);
+      promptInput.cursorPos = atIdx;
       (promptInput as any)._onValueChanged();
       if (promptInput.onChange) promptInput.onChange(promptInput.value);
     }
-    updateFileTagsBar();
+
+    selectedFiles.splice(index, 1);
   }
 
-  function updateFileTagsBar(): void {
-    fileTagsBar.height.fixed = selectedFiles.length > 0 ? 1 : 0;
+  // ── Inline chip rendering inside the textarea ──────────────
+  // Store chip hit rects for mouse click detection (screen coordinates)
+  const chipRects: Array<{ x: number; y: number; width: number; index: number }> = [];
+
+  // Save a bound reference to the original renderContent
+  const renderContent = promptInput.renderContent.bind(promptInput);
+
+  // Helper: find the nth occurrence of search in text
+  function findNthOccurrence(text: string, search: string, n: number): number {
+    let pos = 0;
+    let count = 0;
+    while ((pos = text.indexOf(search, pos)) >= 0) {
+      if (count === n) return pos;
+      count++;
+      pos += search.length;
+    }
+    return -1;
   }
 
-  fileTagsBar.onPaint = (buf, rect, theme) => {
-    fileTagXPositions.length = 0;
+  // Helper: which line does character position pos fall on?
+  function rowFromPos(val: string, pos: number): number {
+    return val.slice(0, pos).split("\n").length - 1;
+  }
+
+  // Override onPaint: normal text first, then overlay chip styling on @-mention blocks
+  promptInput.onPaint = (buf, rect, theme) => {
+    const hasBorder = promptInput.style.border !== "none";
+    const bOff = hasBorder ? 1 : 0;
+    const p = promptInput.style.padding;
+
+    // Compute the padded content rect (accounting for border + padding)
+    const contentRect = {
+      x: rect.x + bOff + p.left,
+      y: rect.y + bOff + p.top,
+      width: Math.max(0, rect.width - bOff * 2 - p.left - p.right),
+      height: Math.max(0, rect.height - bOff * 2 - p.top - p.bottom),
+    };
+
+    // Step 1: render normal text content into the padded content rect
+    renderContent(buf, contentRect, theme);
+
+    // Step 2: overlay chip styling on @-mention text ranges (like burstThreshold paste markers)
+    chipRects.length = 0;
     if (selectedFiles.length === 0) return;
-    // Fill background
-    buf.fill(rect.x, rect.y, rect.width, rect.height, {
-      char: " ",
-      bg: theme.secondaryBg,
-      fg: null,
-    });
-    // Paint tags
-    let x = rect.x;
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const tag = ` ${selectedFiles[i].display} ✕`;
-      const chars = [...tag];
-      for (let ci = 0; ci < chars.length; ci++) {
-        buf.set(x + ci, rect.y, {
-          char: chars[ci],
-          fg: ci === chars.length - 1 ? theme.highlight : theme.text,
-          bg: theme.secondaryBg,
-          bold: ci === chars.length - 1,
+
+    const textW = contentRect.width - 1; // one column for scrollbar
+    const scrollY = promptInput.scrollY;
+    const val = promptInput.value;
+
+    for (let ti = 0; ti < selectedFiles.length; ti++) {
+      const tag = selectedFiles[ti];
+      const searchStr = `@${tag.stripped}`;
+
+      // Count how many previous entries share the same stripped value
+      let nth = 0;
+      for (let i = 0; i < ti; i++) {
+        if (selectedFiles[i].stripped === tag.stripped) nth++;
+      }
+
+      const charPos = findNthOccurrence(val, searchStr, nth);
+      if (charPos < 0) continue;
+
+      const lineIdx = rowFromPos(val, charPos);
+      if (lineIdx < scrollY || lineIdx >= scrollY + contentRect.height) continue;
+
+      const lineStart = (promptInput as any)._lineStart(lineIdx) as number;
+      const col = charPos - lineStart;
+
+      // Need room for ✕ + space + @-mention text
+      if (col + 2 + searchStr.length > textW) continue;
+
+      const screenX = contentRect.x + col;
+      const screenY = contentRect.y + (lineIdx - scrollY);
+
+      // ── Fade-in: blend from appBg to chip colors over ~150ms ──
+      const age = Date.now() - tag.chipAddedAt;
+      const fade = Math.min(1, age / FADE_DURATION);
+
+      const xBg = lerpColor(theme.appBg, theme.secondaryBg, fade);
+      const txtBg = lerpColor(theme.appBg, theme.elevatedBg, fade);
+      const xFg = lerpColor(theme.text, theme.highlight, fade);
+
+      // Render ✕ at the beginning of the chip
+      buf.set(screenX, screenY, {
+        char: "✕",
+        fg: xFg,
+        bg: xBg,
+        bold: true,
+      });
+
+      // Separator space after ✕
+      buf.set(screenX + 1, screenY, {
+        char: " ",
+        fg: null,
+        bg: xBg,
+      });
+
+      // Overlay chip background on the @-mention text
+      for (let i = 0; i < searchStr.length; i++) {
+        buf.set(screenX + 2 + i, screenY, {
+          char: searchStr[i],
+          fg: theme.text,
+          bg: txtBg,
         });
       }
-      fileTagXPositions.push(x + chars.length - 1);
-      x += chars.length + 1; // tag width + separator
-      if (x >= rect.x + rect.width) break;
+
+      // Clickable area covers ✕ + space + @-mention text + trailing space
+      chipRects.push({
+        x: screenX,
+        y: screenY,
+        width: 2 + searchStr.length + 1,
+        index: ti,
+      });
     }
   };
 
-  fileTagsBar.onMouse = (col, row, action, button) => {
-    if (action === "press" && button === 0 && selectedFiles.length > 0) {
-      for (let i = 0; i < fileTagXPositions.length; i++) {
-        if (col === fileTagXPositions[i]) {
-          removeFileTag(i);
-          return;
+  // ── Intercept mouse clicks for chip removal ────────────────
+  const origOnMouse = promptInput.onMouse;
+  promptInput.onMouse = (col, row, action, button) => {
+    if (selectedFiles.length > 0 && action === "press" && button === 0) {
+      // Check if click is on a chip rect (any row)
+      for (const cr of chipRects) {
+        if (row === cr.y && col >= cr.x && col < cr.x + cr.width) {
+          removeFileTag(cr.index);
+          return; // Consumed by chip
         }
       }
+    }
+
+    // Otherwise delegate to the textarea's mouse handler
+    origOnMouse?.(col, row, action, button);
+  };
+
+  // ── onChange — close dropdown whenever input becomes empty ──
+  promptInput.onChange = (val: string) => {
+    if (!val && triggerType) {
+      closeDropdown();
     }
   };
 
   // ── onKeyPress hook ────────────────────────────────────────
   promptInput.onKeyPress = (key, modifiers, state) => {
+    // ── Close dropdown if input is already empty ───────────
+    if (triggerType && state.value.length === 0) {
+      closeDropdown();
+    }
+
     // ── Dropdown navigation (only when overlay is open) ─────
     if (overlay) {
       if (key === "ArrowDown") {
@@ -244,7 +363,7 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
     // ── Trigger activation ───────────────────────────────────
     const isPrintable = !modifiers.ctrl && !modifiers.alt && key.length === 1;
 
-    if (isPrintable && key === "/") {
+    if (state.value.length === 0 && isPrintable && key === "/") {
       triggerType = "/";
       triggerPos = state.cursorPos;
       filteredItems = COMMANDS;
@@ -254,6 +373,8 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
     }
 
     if (isPrintable && key === "@") {
+      // Don't re-trigger if user types @ inside an existing @mention
+      if (triggerType === "@") return undefined;
       triggerType = "@";
       triggerPos = state.cursorPos;
       filteredItems = files.slice(0, 50);
@@ -284,13 +405,9 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
         key +
         state.value.slice(state.cursorPos);
       const items = getFilteredItems(triggerType, newQuery);
-      if (items.length > 0) {
-        filteredItems = items;
-        selectedIndex = 0;
-        showDropdown(items);
-      } else {
-        closeDropdown();
-      }
+      filteredItems = items;
+      selectedIndex = 0;
+      showDropdown(items);
       return undefined;
     }
 
@@ -307,39 +424,100 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
         chars.pop();
         const newBefore = chars.join("");
         const newValue = newBefore + state.value.slice(state.cursorPos);
+        // If the value becomes empty, close the dropdown
+        if (newValue.length === 0) {
+          closeDropdown();
+          return undefined;
+        }
         const newQuery = newValue.slice(triggerPos);
         const items = getFilteredItems(triggerType, newQuery);
-        if (items.length > 0) {
-          filteredItems = items;
-          selectedIndex = 0;
-          showDropdown(items);
-        } else {
-          closeDropdown();
-        }
+        filteredItems = items;
+        selectedIndex = 0;
+        showDropdown(items);
       }
       return undefined;
     }
 
-    // ── Delete entire @-mention block on Backspace ──────────────
-    if (key === "Backspace" && state.cursorPos > 0) {
-      const val = state.value;
-      const cur = state.cursorPos;
-      // Scan backwards from cursor for '@' with no spaces/newlines in between
-      let atIdx = -1;
-      for (let i = cur - 1; i >= 0; i--) {
-        if (val[i] === "@") { atIdx = i; break; }
-        if (val[i] === " " || val[i] === "\n") break;
+    // ── Delete entire @-mention block on Backspace (anywhere within the block) ──
+    if (key === "Backspace" && !triggerType && state.cursorPos > 0) {
+      const mention = findAtMentionAt(state.value, state.cursorPos - 1);
+      if (mention) {
+        const tagIdx = selectedFiles.findIndex((f) => f.stripped === mention.stripped);
+        if (tagIdx >= 0) {
+          selectedFiles.splice(tagIdx, 1);
+        }
+        // Remove up to 2 trailing spaces (the ones added by selectItem)
+        let endPos = mention.endIdx;
+        if (state.value[endPos] === " ") endPos++;
+        if (state.value[endPos] === " ") endPos++;
+        // Apply changes directly and consume the event to prevent the default Backspace handler from firing
+        promptInput.value = state.value.slice(0, mention.atIdx) + state.value.slice(endPos);
+        promptInput.cursorPos = mention.atIdx;
+        (promptInput as any)._onValueChanged();
+        if (promptInput.onChange) promptInput.onChange(promptInput.value);
+        return { consumed: true };
       }
-      if (atIdx >= 0 && cur > atIdx) {
-        return {
-          value: val.slice(0, atIdx) + val.slice(cur),
-          cursorPos: atIdx,
-        };
+    }
+
+    // ── Delete entire @-mention block on Delete (cursor within or at start of block) ──
+    if (key === "Delete" && !triggerType && state.cursorPos < state.value.length) {
+      let mention = findAtMentionAt(state.value, state.cursorPos);
+      // If cursor is right on the @, detect the block by looking from the next char
+      if (!mention && state.value[state.cursorPos] === "@") {
+        mention = findAtMentionAt(state.value, state.cursorPos + 1);
+      }
+      if (mention) {
+        const tagIdx = selectedFiles.findIndex((f) => f.stripped === mention.stripped);
+        if (tagIdx >= 0) {
+          selectedFiles.splice(tagIdx, 1);
+        }
+        // Remove up to 2 trailing spaces (the ones added by selectItem)
+        let endPos = mention.endIdx;
+        if (state.value[endPos] === " ") endPos++;
+        if (state.value[endPos] === " ") endPos++;
+        // Apply changes directly and consume the event to prevent the default Delete handler from firing
+        promptInput.value = state.value.slice(0, mention.atIdx) + state.value.slice(endPos);
+        promptInput.cursorPos = mention.atIdx;
+        (promptInput as any)._onValueChanged();
+        if (promptInput.onChange) promptInput.onChange(promptInput.value);
+        return { consumed: true };
       }
     }
 
     return undefined;
   };
+
+  /** Find an @-mention block in val at the given position.
+   *  pos should be the index of the character being removed:
+   *    - For Backspace: cursorPos - 1
+   *    - For Delete:    cursorPos
+   *  Returns null if there's no @-mention block at pos. */
+  function findAtMentionAt(val: string, pos: number): { atIdx: number; endIdx: number; stripped: string } | null {
+    if (pos < 0 || pos >= val.length) return null;
+
+    // Scan backwards from pos to find '@'
+    let atIdx = -1;
+    for (let i = pos; i >= 0; i--) {
+      if (val[i] === "@") { atIdx = i; break; }
+      if (val[i] === " " || val[i] === "\n") break;
+    }
+    if (atIdx < 0) return null;
+
+    // Find end of the @-mention block (space, newline, or end of string)
+    let endIdx = atIdx + 1;
+    while (endIdx < val.length && val[endIdx] !== " " && val[endIdx] !== "\n") {
+      endIdx++;
+    }
+
+    // pos must be within the block or at the @ itself
+    if (pos < atIdx || pos >= endIdx) return null;
+
+    return {
+      atIdx,
+      endIdx,
+      stripped: val.slice(atIdx + 1, endIdx),
+    };
+  }
 
   function getFilteredItems(
     type: "/" | "@",
@@ -365,7 +543,7 @@ function setupPromptInput(promptInput: TextArea, app: App, fileTagsBar: Box): vo
 export function buildApp(): App {
   const root = Box.col("root");
 
-  const { mainUI, promptInput, fileTagsBar } = buildMainUI();
+  const { mainUI, promptInput } = buildMainUI();
 
   const splash = new Box("splash");
   splash.focusable = true;
@@ -408,7 +586,8 @@ export function buildApp(): App {
   const app = new App(root, { mouse: true });
 
   // Wire up slash commands and file mentions on the prompt textarea
-  setupPromptInput(promptInput, app, fileTagsBar);
+  setupPromptInput(promptInput, app);
+
 
   splash.onKey = () => {
     root.children = [mainUI];
@@ -418,13 +597,59 @@ export function buildApp(): App {
   return app;
 }
 
-function buildMainUI(): { mainUI: Box; promptInput: TextArea; fileTagsBar: Box } {
+function buildExecutionInfo(): Box {
+  const panel = Box.col("execution-info");
+  panel.style.border = "rounded";
+  panel.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
+  panel.style.gutter = 1;
+
+  const appId = new Box("app-id");
+  appId.height = { fixed: 3 };
+  appId.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, "Coder 0.1.0", 0, theme.highlight, true);
+    paintText(buf, rect, "AI Code Assistant", 1, theme.muted);
+  };
+
+  const modelBox = new Box("model");
+  modelBox.height = { fixed: 1 };
+  modelBox.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, "Model: claude-sonnet-4", 0, theme.text);
+  };
+
+  const toolBox = new Box("tool");
+  toolBox.height = { fixed: 1 };
+  toolBox.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, "Tool: idle", 0, theme.muted);
+  };
+
+  const todoBox = new Box("todo");
+  todoBox.style.border = "rounded";
+  todoBox.style.overflow = "auto";
+  todoBox.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
+  todoBox.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, "☑ Implement sorting function", 0, theme.text);
+    paintText(buf, rect, "☐ Add tests", 1, theme.muted);
+    paintText(buf, rect, "☐ Update documentation", 2, theme.muted);
+    paintText(buf, rect, "☐ Review PR", 3, theme.muted);
+  };
+
+  const indicator = new Box("indicator");
+  indicator.height = { fixed: 1 };
+  indicator.onPaint = (buf, rect, theme) => {
+    paintText(buf, rect, "✦ AI ready", 0, theme.muted);
+  };
+
+  panel.add(appId, modelBox, toolBox, todoBox, indicator);
+  return panel;
+}
+
+function buildMainUI(): { mainUI: Box; promptInput: TextArea; executionInfo: Box } {
   const mainCol = Box.col("main-ui");
 
   const mainRow = Box.row("main-row");
   const chatArea = buildChatArea();
-  const rightPanel = buildExecutionInfo();
-  const splitter = new Splitter("horizontal", chatArea, rightPanel, {
+  const executionInfo = buildExecutionInfo();
+  const splitter = new Splitter("horizontal", chatArea, executionInfo, {
     initialSplit: "75%",
     minB: 50,
   });
@@ -434,14 +659,10 @@ function buildMainUI(): { mainUI: Box; promptInput: TextArea; fileTagsBar: Box }
   bottomBar.style.padding = { top: 0, right: 1, bottom: 1, left: 1 };
   bottomBar.style.gutter = 0;
 
-  const fileTagsBar = new Box("file-tags");
-  fileTagsBar.height = { fixed: 0 };
-  fileTagsBar.width = { grow: 1 };
-
   const promptInput = new TextArea("Prompt", "Type a message...");
   promptInput.tabIndex = 0;
 
-  bottomBar.add(fileTagsBar, promptInput);
+  bottomBar.add(promptInput);
 
   const mainSplitter = new Splitter("vertical", mainRow, bottomBar, {
     initialSplit: "85%",
@@ -450,7 +671,7 @@ function buildMainUI(): { mainUI: Box; promptInput: TextArea; fileTagsBar: Box }
   });
 
   mainCol.add(mainSplitter);
-  return { mainUI: mainCol, promptInput, fileTagsBar };
+  return { mainUI: mainCol, promptInput, executionInfo };
 }
 
 function buildChatArea(): Box {
@@ -677,52 +898,6 @@ function createAssistantMsg(text: string): Box {
 
   msg.add(label, response);
   return msg;
-}
-
-function buildExecutionInfo(): Box {
-  const panel = Box.col("execution-info");
-  panel.style.border = "rounded";
-  panel.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
-  panel.style.gutter = 1;
-
-  const appId = new Box("app-id");
-  appId.height = { fixed: 3 };
-  appId.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "Coder 0.1.0", 0, theme.highlight, true);
-    paintText(buf, rect, "AI Code Assistant", 1, theme.muted);
-  };
-
-  const modelBox = new Box("model");
-  modelBox.height = { fixed: 1 };
-  modelBox.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "Model: claude-sonnet-4", 0, theme.text);
-  };
-
-  const toolBox = new Box("tool");
-  toolBox.height = { fixed: 1 };
-  toolBox.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "Tool: idle", 0, theme.muted);
-  };
-
-  const todoBox = new Box("todo");
-  todoBox.style.border = "rounded";
-  todoBox.style.overflow = "auto";
-  todoBox.style.padding = { top: 1, right: 1, bottom: 1, left: 1 };
-  todoBox.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "☑ Implement sorting function", 0, theme.text);
-    paintText(buf, rect, "☐ Add tests", 1, theme.muted);
-    paintText(buf, rect, "☐ Update documentation", 2, theme.muted);
-    paintText(buf, rect, "☐ Review PR", 3, theme.muted);
-  };
-
-  const indicator = new Box("indicator");
-  indicator.height = { fixed: 1 };
-  indicator.onPaint = (buf, rect, theme) => {
-    paintText(buf, rect, "✦ AI ready", 0, theme.muted);
-  };
-
-  panel.add(appId, modelBox, toolBox, todoBox, indicator);
-  return panel;
 }
 
 if (import.meta.main) {

@@ -13,6 +13,7 @@
 import { Box } from "../layout.ts";
 import type { CellBuffer } from "../terminal.ts";
 import type { Theme } from "../theme.ts";
+import { ThemeRegistry } from "../theme.ts";
 
 export class Collapsible extends Box {
   /** Whether the section is currently collapsed (content hidden). */
@@ -62,13 +63,11 @@ export class Collapsible extends Box {
       const text = ` ${indicator}  ${label}`;
 
       // Fill the header row background
-      for (let col = 0; col < rect.width; col++) {
-        buf.set(rect.x + col, rect.y, {
-          char: " ",
-          fg: null,
-          bg: theme.primaryBg,
-        });
-      }
+      buf.fill(rect.x, rect.y, rect.width, 1, {
+        char: " ",
+        fg: null,
+        bg: theme.elevatedBg,
+      });
 
       // Draw the indicator and label
       for (let i = 0; i < text.length && i < rect.width; i++) {
@@ -78,7 +77,7 @@ export class Collapsible extends Box {
           fg: isIndicator
             ? (isFocused ? theme.highlight : theme.muted)
             : (isFocused ? theme.highlight : theme.text),
-          bg: theme.primaryBg,
+          bg: theme.elevatedBg,
           bold: isFocused || isIndicator,
         });
       }
@@ -103,9 +102,19 @@ export class Collapsible extends Box {
     // ─── Content wrapper ─────────────────────────────────────────────────
     const content = Box.col(`content-${label}`);
     content.style.gutter = 1;
-    content.style.padding = { top: 1, bottom: 0, left: 1, right: 1 };
+    content.style.border = "single";
+    content.style.bg = ThemeRegistry.active.secondaryBg;
+    content.style.padding = { top: 0, bottom: 0, left: 1, right: 1 };
     content.width = { grow: 1 };
     content.height = collapsed ? { fixed: 0 } : {}; // hug when expanded
+
+    content.onPaint = (buf, rect, theme) => {
+      buf.fill(rect.x, rect.y, rect.width, rect.height, {
+        char: " ",
+        fg: null,
+        bg: theme.secondaryBg,
+      });
+    };
 
     this.contentBox = content;
 

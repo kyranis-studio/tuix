@@ -66,3 +66,5 @@ section.collapse();    // Collapse to hide content
 - Collapsed: `▶ Advanced Options` — content hidden
 - Expanded: `▼ Advanced Options` — content visible below header
 - Focused header uses `theme.highlight` for the indicator and text
+- Header background uses `theme.elevatedBg`
+- Content area has a `single` border and `theme.secondaryBg` background

@@ -86,6 +86,7 @@ list.style.scrollbar = {
 list.items;                  // string[] — the item list
 list.selectedIndex;          // Currently selected index
 list.maxVisible;             // Max visible items before scroll (default 8)
+list.emptyMessage;           // Text shown when items is empty (default "  No matches  ")
 list.onItemSelect;           // (item: string, index: number) => void
 list.removeFn;               // () => void — called to remove the overlay
 list.clampScroll();          // Ensure selected index is visible

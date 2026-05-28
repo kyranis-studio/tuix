@@ -55,6 +55,8 @@ chk.toggle();          // Toggle + fire onChange
 | Focused | Box character uses `highlight` color |
 | Disabled | All text in `muted`, bg in `disabledBg` |
 
+The background fills the full content row width using `theme.secondaryBg`.
+
 ## Height
 
 Fixed height of 1 row, no border.

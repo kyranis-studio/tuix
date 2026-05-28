@@ -98,3 +98,5 @@ list.setDisabled(true);
 **Single-select:** The selected item is prefixed with `▶` and highlighted using `theme.highlight` (when focused) or `theme.border` (when unfocused).
 
 **Multi-select:** The focused item is prefixed with `▸`. Selected items show a `✓` suffix. Disabled items use `theme.muted` on `theme.disabledBg` background.
+
+The background uses `theme.secondaryBg` and fills the full content width.

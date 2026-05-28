@@ -32,7 +32,7 @@ export class ListBox extends Box {
     this.onPaint = (buf, rect, theme) => {
       const isDisabled = this.disabled;
       const isFocused = this.focused && !isDisabled;
-      const bg = theme.primaryBg;
+      const bg = theme.secondaryBg;
       const visibleCount = rect.height;
 
       let scrollOffset = 0;

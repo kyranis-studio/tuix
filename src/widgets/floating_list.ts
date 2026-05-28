@@ -11,6 +11,8 @@ export class FloatingListBox extends Box {
   items: string[] = [];
   selectedIndex = 0;
   maxVisible = 8;
+  /** Placeholder rendered when items is empty */
+  emptyMessage = "  No matches  ";
 
   /** Called when the user selects an item */
   onItemSelect: ((item: string, index: number) => void) | null = null;
@@ -48,20 +50,36 @@ export class FloatingListBox extends Box {
       const upArrow = sb.arrowUp ?? "↑";
       const downArrow = sb.arrowDown ?? "↓";
 
-      for (let i = 0; i < rowsAvailable; i++) {
-        const itemIndex = i + this.scrollY;
-        if (itemIndex >= this.items.length) break;
-        const item = this.items[itemIndex];
-        const isCur = itemIndex === this.selectedIndex;
-        const itemChars = [...item];
+      if (this.items.length === 0) {
+        // Show empty message
+        const msg = this.emptyMessage;
+        const msgChars = [...msg];
+        const startX = rect.x + Math.max(0, Math.floor((contentW - msgChars.length) / 2));
         for (let col = 0; col < contentW; col++) {
-          const ch = col < itemChars.length ? itemChars[col] : " ";
-          buf.set(rect.x + col, rect.y + i, {
+          const mi = col - (startX - rect.x);
+          const ch = mi >= 0 && mi < msgChars.length ? msgChars[mi] : " ";
+          buf.set(rect.x + col, rect.y, {
             char: ch,
-            fg: isCur ? theme.appBg : theme.text,
-            bg: isCur ? theme.highlight : theme.secondaryBg,
-            bold: isCur,
+            fg: mi >= 0 && mi < msgChars.length ? theme.muted : theme.secondaryBg,
+            bg: theme.secondaryBg,
           });
+        }
+      } else {
+        for (let i = 0; i < rowsAvailable; i++) {
+          const itemIndex = i + this.scrollY;
+          if (itemIndex >= this.items.length) break;
+          const item = this.items[itemIndex];
+          const isCur = itemIndex === this.selectedIndex;
+          const itemChars = [...item];
+          for (let col = 0; col < contentW; col++) {
+            const ch = col < itemChars.length ? itemChars[col] : " ";
+            buf.set(rect.x + col, rect.y + i, {
+              char: ch,
+              fg: isCur ? theme.appBg : theme.text,
+              bg: isCur ? theme.highlight : theme.secondaryBg,
+              bold: isCur,
+            });
+          }
         }
       }
 
