@@ -106,6 +106,20 @@ The flush optimises by:
 - Tracking the previous fg/bg/bold/dim/underline state to avoid redundant sequences
 - Using `ansi.moveTo()` to jump between changed cells
 - Skipping identical cells entirely
+- Handling wide characters (CJK, fullwidth, etc.) — trailing cells are skipped and stale glyph remnants are cleared
+
+---
+
+## Character Width
+
+```typescript
+import { charWidth } from "jsr:@kyranis-studio/tuix";
+
+charWidth("A");     // → 1 (normal character)
+charWidth("文");    // → 2 (CJK character)
+```
+
+Returns the display width of a character (1 or 2 columns) based on Unicode East Asian Width properties. The `Renderer` uses this internally during `flush()` to prevent wide characters from being overwritten by subsequent cell writes.
 
 ---
 

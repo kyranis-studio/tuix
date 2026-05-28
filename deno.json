@@ -3,7 +3,8 @@
   "version": "0.3.0",
   "license": "MIT",
   "tasks": {
-    "01_showcase": "deno run -A examples/01_showcase.ts"
+    "01_showcase": "deno run -A examples/01_showcase.ts",
+    "02_chat_app": "deno run -A examples/02_chat_app.ts"
   },
   "exports": {
     ".": "./src/mod.ts",

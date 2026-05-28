@@ -12,7 +12,8 @@ import { TextArea } from "jsr:@kyranis-studio/tuix";
 
 ```typescript
 const ta = new TextArea(
-  "Start typing...",          // placeholder
+  "TextArea",                 // label (shown in border)
+  "Start typing...",          // placeholder — ghost text when empty
   "initial\nvalue",           // initial value
   (val) => console.log(val),  // onChange
   10,                          // maxLines — max visible rows (null = no cap)
@@ -25,6 +26,7 @@ const ta = new TextArea(
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
+| `label` | `string` | `"TextArea"` | Border label |
 | `placeholder` | `string` | `""` | Ghost text when empty |
 | `value` | `string` | `""` | Initial value |
 | `onChange` | `(val) => void` | `null` | Called on every change |

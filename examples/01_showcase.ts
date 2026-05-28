@@ -590,7 +590,7 @@ function lbl(text: string): Box {
   return b;
 }
 
-const textInput = new TextInput("Type anything...");
+const textInput = new TextInput("Input", "Type anything...");
 const autoDropdown = new Autocomplete(
   "Search framework...",
   [
@@ -633,7 +633,7 @@ const autoInline = new Autocomplete(
     selectedCommand = item;
   },
 );
-autoInline.mode = "inline";  const textArea = new TextArea("Type multi-line here...", "", undefined, 5);
+autoInline.mode = "inline";  const textArea = new TextArea("TextArea", "Type multi-line here...", "", undefined, 5);
   // Customize textarea scrollbar with arrows and different characters
   textArea.style.scrollbar = {
     showArrows: true,
@@ -644,10 +644,12 @@ autoInline.mode = "inline";  const textArea = new TextArea("Type multi-line here
   };
 
 const longTextInput = new TextInput(
+  "Input",
   "",
   "A very long text that overflows the input field width — use ArrowLeft/Right or Home/End to scroll through the content. The overflow shows ... at the start/end when text doesn't fit.",
 );
 const pasteThreshTextArea = new TextArea(
+  "TextArea",
   "Paste >50 chars via terminal Ctrl+Shift+V to see marker...",
   "",
   undefined,
@@ -658,10 +660,10 @@ const pasteThreshTextArea = new TextArea(
   50,
 );
 
-const copyInput = new TextInput("", "Select text with mouse — auto-copies to clipboard");
-const pasteInput = new TextInput("Right-click here to paste from clipboard");
+const copyInput = new TextInput("Input", "", "Select text with mouse — auto-copies to clipboard");
+const pasteInput = new TextInput("Input", "Right-click here to paste from clipboard");
 
-const copyOnSelectInput = new TextInput("", "Select me — auto-copies ✓", undefined, true, true, "✧ Copied!");
+const copyOnSelectInput = new TextInput("Input", "", "Select me — auto-copies ✓", undefined, true, true, "✧ Copied!");
 
 const cpHint = new Box("cp-hint");
 cpHint.height = { fixed: 3 };
@@ -810,6 +812,8 @@ await app.run();
 const originalCode = demoCode; // baseline for real-time diffing
 
 const diffViewer = new DiffViewer(
+  "DiffViewer",
+  "Edit the code on the left to see changes",
   "",
   undefined,
   16,
@@ -818,6 +822,7 @@ const diffViewer = new DiffViewer(
 const splitDiffViewer = new SplitDiffViewer();
 
 const codeEditor = new CodeEditor(
+  "CodeEditor",
   "Type some code...",
   demoCode,
   (val: string) => {

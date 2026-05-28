@@ -34,7 +34,7 @@ import { App, Box, Button, TextInput } from "jsr:@kyranis-studio/tuix";
 const root = Box.col("root");
 
 // Add a text input and a button
-const input = new TextInput("What is your name?");
+const input = new TextInput("Input", "What is your name?");
 const btn = new Button("Greet");
 
 btn.onClick = () => {

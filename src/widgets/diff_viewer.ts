@@ -606,12 +606,14 @@ export class DiffViewer extends TextArea {
   diffTheme: DiffTheme = { ...defaultDiffTheme };
 
   constructor(
+    label = "DiffViewer",
+    placeholder = "Edit the code on the left to see changes",
     value = "",
     onChange?: (val: string) => void,
     maxLines?: number,
   ) {
     // burstThreshold high → no paste markers
-    super("Edit the code on the left to see changes", value, onChange, maxLines ?? undefined, false, false, "Copied!", 9999);
+    super(label, placeholder, value, onChange, maxLines ?? undefined, false, false, "Copied!", 9999);
     this._parseContent();
 
     // Override onPaint with diff-aware rendering

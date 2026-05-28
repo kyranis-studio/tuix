@@ -252,13 +252,14 @@ export class CodeEditor extends TextArea {
   syntaxTheme: SyntaxTheme = { ...defaultSyntaxTheme };
 
   constructor(
+    label = "CodeEditor",
     placeholder = "",
     value = "",
     onChange?: (val: string) => void,
     language = "typescript",
   ) {
     // maxLines = null → unlimited; burstThreshold high → no paste markers
-    super(placeholder, value, onChange, undefined, false, false, "Copied!", 9999);
+    super(label, placeholder, value, onChange, undefined, false, false, "Copied!", 9999);
     this.language = language;
 
     // Re-attach onPaint with syntax highlighting

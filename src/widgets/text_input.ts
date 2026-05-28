@@ -5,6 +5,7 @@ import { InputPrimitive } from "./input_primitive.ts";
 
 export class TextInput extends InputPrimitive {
   constructor(
+    label = "Input",
     placeholder = "",
     value = "",
     onChange?: (val: string) => void,
@@ -14,7 +15,7 @@ export class TextInput extends InputPrimitive {
     burstThreshold?: number,
   ) {
     super(
-      "Input",
+      label,
       placeholder,
       value,
       onChange ?? null,

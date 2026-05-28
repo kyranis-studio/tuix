@@ -8,6 +8,7 @@ export class TextArea extends InputPrimitive {
   maxLines: number | null = null;
 
   constructor(
+    label = "TextArea",
     placeholder = "",
     value = "",
     onChange?: (val: string) => void,
@@ -18,7 +19,7 @@ export class TextArea extends InputPrimitive {
     burstThreshold?: number,
   ) {
     super(
-      "TextArea",
+      label,
       placeholder,
       value,
       onChange ?? null,

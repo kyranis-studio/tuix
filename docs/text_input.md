@@ -12,8 +12,9 @@ import { TextInput } from "jsr:@kyranis-studio/tuix";
 
 ```typescript
 const input = new TextInput(
-  "Type here...",           // placeholder
-  "initial value",          // initial value
+  "Input",                   // label (shown in border)
+  "Type here...",            // placeholder — ghost text when empty
+  "initial value",           // initial value
   (val) => console.log(val), // onChange
   true,                      // copyOnSelect — auto-copy selected text
   true,                      // notifyOnCopy — show "Copied!" toast
@@ -24,6 +25,7 @@ const input = new TextInput(
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
+| `label` | `string` | `"Input"` | Border label |
 | `placeholder` | `string` | `""` | Ghost text when empty |
 | `value` | `string` | `""` | Initial value |
 | `onChange` | `(val) => void` | `null` | Called on every value change |

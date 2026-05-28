@@ -212,6 +212,38 @@ export class CellBuffer {
   }
 }
 
+// ─── Character width ───────────────────────────────────────────────────────────
+
+export function charWidth(ch: string): number {
+  const code = ch.codePointAt(0) ?? ch.charCodeAt(0);
+  if (code < 0x1100) return 1;
+
+  if (
+    (code >= 0x1100 && code <= 0x115F) || // Hangul Jamo
+    (code >= 0x2E80 && code <= 0x303E) || // CJK Radicals, Kangxi, Ideographic Description, CJK Symbols
+    (code >= 0x3040 && code <= 0x33FF) || // Hiragana, Katakana, Bopomofo, Hangul Compat, Kanbun, Enclosed CJK, CJK Compat
+    (code >= 0x3400 && code <= 0x4DBF) || // CJK Unified Extension A
+    (code >= 0x4E00 && code <= 0xA4CF) || // CJK Unified Ideographs + Yi
+    (code >= 0xA960 && code <= 0xA97F) || // Hangul Jamo Extended-A
+    (code >= 0xAC00 && code <= 0xD7AF) || // Hangul Syllables
+    (code >= 0xD7B0 && code <= 0xD7FF) || // Hangul Jamo Extended-B
+    (code >= 0xF900 && code <= 0xFAFF) || // CJK Compatibility Ideographs
+    (code >= 0xFE10 && code <= 0xFE19) || // Vertical forms
+    (code >= 0xFE30 && code <= 0xFE6F) || // CJK Compatibility Forms, Small Form Variants
+    (code >= 0xFF01 && code <= 0xFF60) || // Fullwidth Forms
+    (code >= 0xFFE0 && code <= 0xFFE6) || // Fullwidth Signs
+    (code >= 0x1B000 && code <= 0x1B0FF) || // Kana Supplement
+    (code >= 0x1B100 && code <= 0x1B12F) || // Kana Extended-A
+    (code >= 0x1F200 && code <= 0x1F2FF) || // Enclosed Ideographic Supplement
+    (code >= 0x20000 && code <= 0x2FFFD) || // CJK Unified Extension B+
+    (code >= 0x30000 && code <= 0x3FFFD)    // CJK Unified Extension I
+  ) {
+    return 2;
+  }
+
+  return 1;
+}
+
 // ─── Flusher ──────────────────────────────────────────────────────────────────
 
 const encoder = new TextEncoder();
@@ -250,6 +282,19 @@ export class Renderer {
         const cell = this.curr.get(col, row);
         const old = this.prev.get(col, row);
         if (cellEqual(cell, old)) continue;
+
+        // If prev had a wide character at this position, clear its trailing
+        // cells so stale glyph remnants don't ghost on screen.
+        const oldW = charWidth(old.char);
+        if (oldW > 1) {
+          for (let i = 1; i < oldW && col + i < cols; i++) {
+            const trailCell = this.curr.get(col + i, row);
+            const trailOld = this.prev.get(col + i, row);
+            if (!cellEqual(trailCell, trailOld)) {
+              out += ansi.moveTo(row, col + i) + " ";
+            }
+          }
+        }
 
         out += ansi.moveTo(row, col);
 
@@ -291,6 +336,15 @@ export class Renderer {
         }
 
         out += cell.char || " ";
+
+        // If the current character is wide, skip its trailing cells
+        const w = charWidth(cell.char);
+        if (w > 1) {
+          for (let i = 1; i < w && col + i < cols; i++) {
+            this.prev.set(col + i, row, this.curr.get(col + i, row));
+          }
+          col += w - 1;
+        }
       }
     }
 
