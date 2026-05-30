@@ -20,7 +20,7 @@
  * The engine computes scrollMaxX / scrollMaxY for both axes.
  */
 
-import { CellBuffer, charWidth, stringWidth } from "./terminal.ts";
+import { CellBuffer, charWidth, stringWidth, textClusters } from "./terminal.ts";
 import { Theme, getBorderChars, BorderStyle } from "./theme.ts";
 
 // ─── Geometry ─────────────────────────────────────────────────────────────────
@@ -975,7 +975,7 @@ export function paintCenteredText(
     const width = stringWidth(line);
     const startCol = rect.x + Math.floor((rect.width - width) / 2);
     let xOffset = 0;
-    for (const ch of [...line]) {
+    for (const ch of textClusters(line)) {
       const col = startCol + xOffset;
       if (col >= rect.x && col < rect.x + rect.width) {
         buf.set(col, startRow + li, {
@@ -1001,7 +1001,7 @@ export function paintText(
   const y = rect.y + row;
   if (y < rect.y || y >= rect.y + rect.height) return;
   let xOffset = 0;
-  for (const ch of [...text]) {
+  for (const ch of textClusters(text)) {
     const col = rect.x + xOffset;
     if (col >= rect.x + rect.width) break;
     buf.set(col, y, { char: ch, fg, bold });

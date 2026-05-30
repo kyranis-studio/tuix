@@ -190,9 +190,8 @@ export class CellBuffer {
     text: string,
     style: Partial<Cell> = {},
   ): void {
-    const chars = [...text]; // handle multi-byte
     let col = x;
-    for (const ch of chars) {
+    for (const ch of textClusters(text)) {
       if (col >= this.cols) break;
       this.set(col, y, { ...style, char: ch });
       col += charWidth(ch);
@@ -217,14 +216,41 @@ export class CellBuffer {
 
 // ─── Character width ───────────────────────────────────────────────────────────
 
-export function charWidth(ch: string): number {
-  if (!ch) return 1;
-  const code = ch.codePointAt(0) ?? ch.charCodeAt(0);
+const segmenter = typeof Intl !== "undefined" && "Segmenter" in Intl
+  ? new (Intl as typeof Intl & {
+    Segmenter: new (
+      locale?: string,
+      options?: { granularity?: "grapheme" | "word" | "sentence" },
+    ) => { segment: (input: string) => Iterable<{ segment: string }> };
+  }).Segmenter(undefined, { granularity: "grapheme" })
+  : null;
+
+export function textClusters(text: string): string[] {
+  if (!segmenter) return [...text];
+  return [...segmenter.segment(text)].map((part) => part.segment);
+}
+
+function isZeroWidthCodePoint(code: number): boolean {
+  return (
+    code === 0x200D || // zero width joiner
+    (code >= 0x0300 && code <= 0x036F) || // combining diacritical marks
+    (code >= 0x1AB0 && code <= 0x1AFF) ||
+    (code >= 0x1DC0 && code <= 0x1DFF) ||
+    (code >= 0x20D0 && code <= 0x20FF) ||
+    (code >= 0xFE00 && code <= 0xFE0F) || // variation selectors
+    (code >= 0xFE20 && code <= 0xFE2F) ||
+    (code >= 0xE0100 && code <= 0xE01EF)
+  );
+}
+
+function charCodeWidth(code: number): number {
+  if (isZeroWidthCodePoint(code)) return 0;
   if (code < 0x1100) return 1;
 
   if (
     (code >= 0x1100 && code <= 0x115F) || // Hangul Jamo
     (code >= 0x2329 && code <= 0x232A) || // Angle brackets
+    (code >= 0x2600 && code <= 0x27BF) || // Emoji-style symbols and dingbats
     (code >= 0x2E80 && code <= 0x303E) || // CJK Radicals, Kangxi, Ideographic Description, CJK Symbols
     (code >= 0x3040 && code <= 0x33FF) || // Hiragana, Katakana, Bopomofo, Hangul Compat, Kanbun, Enclosed CJK, CJK Compat
     (code >= 0x3400 && code <= 0x4DBF) || // CJK Unified Extension A
@@ -249,9 +275,33 @@ export function charWidth(ch: string): number {
   return 1;
 }
 
+export function charWidth(ch: string): number {
+  if (!ch) return 1;
+  if (ch === "\0") return 1;
+
+  let width = 0;
+  for (const part of textClusters(ch)) {
+    let clusterWidth = 0;
+    let sawCodePoint = false;
+    let hasTextPresentation = false;
+    let hasEmojiPresentation = false;
+    for (const cp of part) {
+      const code = cp.codePointAt(0) ?? cp.charCodeAt(0);
+      sawCodePoint = true;
+      hasTextPresentation ||= code === 0xFE0E;
+      hasEmojiPresentation ||= code === 0xFE0F;
+      clusterWidth = Math.max(clusterWidth, charCodeWidth(code));
+    }
+    if (hasTextPresentation) clusterWidth = Math.min(clusterWidth, 1);
+    if (hasEmojiPresentation) clusterWidth = Math.max(clusterWidth, 2);
+    width += sawCodePoint ? clusterWidth : 0;
+  }
+  return width || 0;
+}
+
 export function stringWidth(text: string): number {
   let width = 0;
-  for (const ch of [...text]) {
+  for (const ch of textClusters(text)) {
     width += charWidth(ch);
   }
   return width;
